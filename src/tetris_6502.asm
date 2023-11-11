@@ -5814,8 +5814,7 @@ AB29: D0 05    bne $ab30
 AB2B: A9 28    lda #$28
 AB2D: 20 70 D6 jsr $d670
 AB30: 60       rts
-AB31: 00       brk
-AB32: 03 06    slo ($06, x)
+
 AB34: A5 2F    lda $2f
 AB36: 18       clc
 AB37: 69 01    adc #$01
