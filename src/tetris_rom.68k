@@ -1,0 +1,3 @@
+	.include	"bank0_4000.68k"
+	.include	"bank1_4000.68k"
+	.include	"rom_8000.68k"

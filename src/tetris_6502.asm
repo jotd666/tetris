@@ -22,12 +22,11 @@
 ;    4000-7FFF   R     xxxxxxxx    Banked program ROM
 ;    8000-FFFF   R     xxxxxxxx    Program ROM
 ;
-; jotd: reading 6000 then 60xx again seems to trigger bank switch
-; 2 consecutive reads switch to bank 0
-; 2 reads spaced by at least 1 instruction switch to bank 1 after a few cycles
-
-* bank 0 contains code
-* bank 1 (starts with 00 00 00) contains only data
+; jotd: slapstic inner workings are complex but the MAME team
+; has already reversed so debugging with MAME gives the proper bank numbers
+; bank 1 contains code
+; bank 0 (starts with 00 00 00) contains only data
+; this is bank 1
 4000: 20 2D 40 jsr	$402d
 4003: 58       cli
 4004: E6 CA    inc	$00ca
@@ -2920,6 +2919,7 @@ display_screen_883b:
 89A8: 90 D0    bcc	$897a
 89AA: 60       rts
 
+89B7: A9 00    lda #$00                                            
 89B9: 8D 8B 06 sta	$068b
 89BC: AD A4 06 lda	$06a4
 89BF: D0 0B    bne	$89cc
@@ -3315,6 +3315,7 @@ display_screen_883b:
 9440: A9 01    lda #$01
 9442: 60       rts
 
+944B: A0 00    ldy #$00                                            
 944D: B1 AD    lda ($ad), y
 944F: 85 1F    sta	$001f
 9451: 4A       lsr a
@@ -4674,9 +4675,9 @@ A263: A9 00    lda #$00
 A265: 85 1D    sta	$001d
 A267: 4C 3F B5 jmp	$b53f
 A26A: 60       rts
-A26B: 2D 3C 4B and	$4b3c
-A26E: 90 86    bcc	$a1f6
-A270: 1D 85 1E ora	$1e85, x
+
+A26F: 86 1D    stx $1d                                             
+A271: 85 1E    sta $1e                                             
 A273: 0A       asl a
 A274: 0A       asl a
 A275: 65 1E    adc	$001e
@@ -5314,6 +5315,8 @@ A766: 90 E5    bcc	$a74d
 A768: A9 16    lda #$16
 A76A: 4C 59 E6 jmp	$e659
 
+A7AD: 8D 4D 06 sta $064d                                           
+A7B0: 98       tya                                                 
 A7B1: 48       pha
 A7B2: AD BB 08 lda	$08bb
 A7B5: 29 03    and #$03
@@ -6965,6 +6968,9 @@ B5BF: B9 C5 B5 lda	$b5c5, y
 B5C2: 95 91    sta	$0091, x
 B5C4: 60       rts
 
+B605: A2 07    ldx #$07                                            
+B607: B5 79    lda $79, x                                          
+B609: F0 5B    beq $b666                                           
 B60B: A9 00    lda #$00
 B60D: 95 79    sta	$0079, x
 B60F: 86 1D    stx	$001d
@@ -7406,7 +7412,8 @@ BA6F: 9D 9B 06 sta	$069b, x
 BA72: 4C 4E AD jmp	$ad4e
 BA75: 60       rts
 
-BA83: A5 06    lda	$0006
+BA80: A9 01    lda #$01                                            
+BA82: 8D A5 06 sta $06a5                                           
 BA85: A9 00    lda #$00
 BA87: 8D B1 06 sta	$06b1
 BA8A: 8D B2 06 sta	$06b2
@@ -7647,6 +7654,9 @@ BC69: 68       pla
 BC6A: AA       tax
 BC6B: 60       rts
 
+BC9E: BD 9B 06 lda $069b, x                                        
+BCA1: D0 01    bne $bca4                                           
+BCA3: 60       rts                                                 
 BCA4: BD 76 BA lda	$ba76, x
 BCA7: A8       tay
 BCA8: B9 35 00 lda	$0035, y
@@ -8788,6 +8798,7 @@ C89A: 68       pla
 C89B: AA       tax
 C89C: 60       rts
 
+C8A1: A8       tay
 C8A2: 8A       txa
 C8A3: 48       pha
 C8A4: 98       tya
@@ -11380,6 +11391,10 @@ EDEB: AA       tax
 EDEC: AD 78 09 lda	$0978
 EDEF: 9D 84 08 sta	$0884, x
 EDF2: 60       rts
+EDF7: A9 FF    lda #$ff                                            
+EDF9: 8D 78 09 sta $0978                                           
+EDFC: D0 EC    bne $edea   ; always branches!                                           
+
 
 EE0E: E6 71    inc	$0071
 EE10: A5 71    lda	$0071

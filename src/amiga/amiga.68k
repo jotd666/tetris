@@ -136,9 +136,6 @@ start:
 * osd layer		
 		.global osd_disable_vblank_interrupt
 		.global osd_enable_vblank_interrupt
-		.global osd_disable_display
-		.global osd_enable_display
-		.global osd_ack_vblank_interrupt
 		.global	osd_is_vblank_interrupt_enabled
 		.global osd_break		| for debug	
 		*.global osd_calibrate_display		| for debug
@@ -329,13 +326,13 @@ _user:
 	
 	move.l	misc_options,d1
 	btst	#0,d1
-	sne		hard_bags_flag
+	
 	btst	#1,d1
 	beq.b	0f
 	bset	#5,d0
 0:
 	btst	#2,d1
-	sne		guns_at_start_flag
+	
 	move.b	d0,dip_switches
 
 
@@ -343,13 +340,13 @@ _user:
 
 	move.l	cheat_flags,d0
 	btst	#0,d0
-	sne		invincible_flag
+	
 	btst	#1,d0
-	sne		infinite_lives_flag
+	
 	btst	#2,d0
-	sne		infinite_time_flag
+	
 	btst	#3,d0
-	sne		infinite_pickaxe_time_flag
+	
 	
 	jsr	 _detect_controller_types 
 	clr.b	controller_joypad_0
@@ -554,9 +551,9 @@ save_highscores:
     rts
     
 	
-* To get the core to run, you just need to jump to sbagman_reset after
+* To get the core to run, you just need to jump to tetris_reset after
 * you've initialised the platform (Amiga) stuff. That essentially does a
-* Z80 reset. You also need to call sbagman_im1_irq from the Amiga vblank
+* Z80 reset. You also need to call tetris_im1_irq from the Amiga vblank
 * routine. They are the only 2 entry points required for the core to run,
 * even if there's no other I/O.
 
@@ -567,7 +564,7 @@ demo_game:
 		bsr			platform_init					| amiga-specific init
 		
 0:	
-		jmp			sbagman_reset					| pass control to the sbagman core
+		jmp			tetris_reset					| pass control to the tetris core
 		
 	
 * just in case some hardware calls nmi
@@ -634,7 +631,7 @@ _vblank:
 
 	sub.w	d1,delay_timer
 	
-	jbsr		sbagman_irq
+	jbsr		tetris_irq
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING_BG
 	bsr		switch_screen_buffers
 	.endif
@@ -736,331 +733,8 @@ osd_wait:
 *	movem.l	(a7)+,a0/d0-d1
 *	rts
 
-* < A0: pointer on sprite shadow zone 65A0:
-
-osd_update_sprites:
-	*lea		test_sprites,a0
-	
-	* clear host sprites
-	moveq	#NB_HOST_SPRITES-1,d0
-
-	lea		host_sprites(pc),a2
-0:
-	clr.b	(SPRITE_X,a2)	| clear X is enough to know it's free
-	st.b	(SPRITE_CLUT,a2) | invalid clut
-	addq.w	#SPRITE_SIZEOF,a2
-	dbf		d0,0b
-	
-	* check active sprites, we'll disable the sprites that aren't active anymore
-	moveq	#NB_TARGET_SPRITES-1,d7
-1:
-	* code = 0 and clut = 0 => disabled
-	moveq	#0,d2
-	moveq	#0,d3
-	move.b	(a0),d2
-	beq.b	2f
-	move.b	(1,a0),d3
-	beq.b	2f
-	move.b	(3,a0),d1  | sprite Y
-	beq.b	2f			| Y set to 0: not shown
-	cmp.b	#255,d1
-	beq.b	2f			| Y set to 255: not shown	
-	move.b	(2,a0),d0  | sprite X
-	cmp.b	#240,d0
-	bcc.b	2f			| X >= 240: not shown	
-	* bits 6 and 7 are used to flip Y and X
-	* bit 6 is only set in cocktail mode, so we
-	* can let bit 7 pass, add 0x40 if second bank
-	* and filter it later when displaying
-	btst	#5,d3
-	beq.b	11f
-	add.w	#0x40,d2
-11:
-	and.b	#0x1F,d3	| get attributes
-12:
-* < D2: sprite code & flags
-* < D3: sprite color (clut index)
-* > D6: allocated sprite index
-
-	* special case: elevator
-	cmp.b	#0x33,d2
-	bne.b	21f
-	* elevator, change clut, match player clut
-	# (red instead of orange for the only elevator like that on screen 4)
-	move.b	#8,d3	| same CLUT as player so sprite alloc keeps grouping them
-	move.b	#10,d2	| but change graphics with a fake sprite derived from the original
-21:
-
-	* sprite active: allocate a sprite in host table
-	* it HAS to succeed (in Pengo it did, here I'm less sure)
-	bsr		alloc_sprite
-2:
-	addq.w	#4,a0
-	dbf		d7,1b
-	
-	* all sprites are allocated: now display them
-	lea		host_sprites(pc),a2		| input structure
-	lea		sprites,a3				| copperlist
-	lea		sprite_table,a4
-	moveq	#0,d6
-10:
-	move.b	(SPRITE_X,a2),d0
-	bne.b	20f		
-	* slot free: replace sprite by blank
-	move.l	#blank_sprite,d4
-	move.w	d4,(6,a3)
-	swap	d4
-	move.w	d4,(2,a3)
-	jra		30f
-20:
-	* lookup sprite code
-	
-	and.w	#0xFF,d0
-	moveq	#0,d1
-	move.b	(SPRITE_Y,a2),d1
-	moveq	#0,d2
-	move.b	(SPRITE_CODE,a2),d2
-	move.b	d2,d5		| for flip bit
-	bclr	#7,d2		| clear flip bit
-	
-	move.w	d2,d4
-	add.w	d4,d4
-	add.w	d4,d4
-	move.l	(a4,d4.w),d4	| get pointer
-	.ifndef	RELEASE
-	bne.b	25f
-	* sprite doesn't exist: bail out
-	
-	lea		sprite_doesnt_exist_error(pc),a0
-	jbsr	osd_break
-	
-	move.b	d1,d1
-	move.b	d2,d2
-	jra		30f
-25:
-	.endif
-	
-	move.l	d4,a5
-	move.w	d6,d4
-	add.w	d4,d4
-	add.w	d4,d4
-	move.l	(a5,d4.W),a5			| get buffer for this sprite index
-
-	tst.b	d5			| x flip bit
-	bpl.b	21f
-	addq.w	#4,a5
-21:
-	move.l	(a5),d4
-	bne.b	22f
-	.ifndef	RELEASE
-	lea		sprite_buffer_doesnt_exist_error(pc),a0
-	jbsr	osd_break
-	.endif
-	jra		30f
-22:
-	move.l	d4,a5	| sprite pointer
-
-	* add offsets to both X & Y
-	add.b	#9,d0
-	add.b	#15,d1
-
-	bsr		store_sprite_pos_16
-	move.l	d0,(a5)
-	* set colors
-	lea		cluts+2,a6
-	moveq	#0,d3
-	move.b	(SPRITE_CLUT,a2),d3
-	lsl.w	#3,d3		| times 8
-
-	add.w	d3,a6
-	* check if CLUT doesn't contain only color zero
-	* (we may as well cache the values in spare registers)
-	move.l	(a6)+,d3
-	move.w	(a6)+,d7
-	bne.b	24f
-	tst.l	d3
-	bne.b	24f
-	* all black sprites would hide sbagman sprites & tiles
-	* we want to hide them instead (no need to change palette)
-	* inherited from pengo, probably not required
-	move.l	#blank_sprite,d4
-	bra.b	25f
-24:
-	* d6 is the sprite index: compute/set proper color
-	move.w	d6,d5
-	bclr	#0,d5
-	lsl.w	#2,d5	| times 4*2
-	move.w	d5,d2
-	add.w	d2,d2
-	lea		sprite_cols+6,a5	| sprite palette + 2 (first color skipped)
-	add.w	d2,a5
-	* copy 3 colors from cached registers into sprite color copperlist
-	move.w	d3,(4,a5)
-	swap	d3
-	move.w	d3,(a5)
-	move.w	d7,(8,a5)
-25:
-	* set sprite in copperlist
-	move.w	d4,(6,a3)
-	swap	d4
-	move.w	d4,(2,a3)	
-30:
-	* next sprite
-	addq.w	#8,a3		| advance in copperlist
-	lea		(SPRITE_SIZEOF,a2),a2
-	addq	#1,d6
-	cmp.w	#NB_HOST_SPRITES,d6
-	jne	10b	
-	rts
-
-
-* priorities are from last to first
-test_sprites_demo:
-* guard chasing sbagman+barrow
-	.byte	0x3A,0x28,0x9D,0xC1,0x00,0x00,0x00,0x38,0x1E,0x08,0x90,0xC1,0x00,0x00,0x00,0xE1
-	.byte	0x00,0x00,0x00,0x41,0x00,0x00,0x00,0xC9,0x2E,0x0C,0x30,0xC1,0x00,0x00,0x00,0x00
-
-* guard only
-
-	.byte  0x30,0xc,0x64,0xc1
-	.rept	28
-	.byte  0x0
-	.endr
-
-* in game with wagons & guards
-	.byte  0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x12,0x1b,0x8,0x5e,0xe1,0x35,0x4,0x69,0xe1
-	.byte  0x35,0x4,0x67,0xff,0x35,0x4,0x18,0xff,0x0,0x0,0x0,0x0,0x31,0xc,0x51,0x63
-
-* 6 active sprites
-test_sprites:
-	.byte  0x3f,0x20,0x35,0xdf,0x33,0x4,0x97,0x15,0x1a,0x8,0x3d,0xe1,0x35,0x4,0x3d,0xe1
-	.byte  0x35,0x4,0x39,0x41,0x35,0x4,0x6e,0xff,0x31,0xc,0x1d,0xe1,0x27,0xc,0x1c,0x5c
-
-
-* < D0: sprite X
-* < D1: sprite Y
-* < D2: sprite code & flags
-* < D3: sprite color (clut index)
-* > D6: allocated sprite index
-alloc_sprite:
-	* first pass: find a free sprite next to a sprite with
-	* same clut
-	lea		host_sprites(pc),a2
-	moveq	#0,d6
-0:
-	cmp.b	(SPRITE_CLUT,a2),d3
-	bne.b	10f
-	* allocated (else would be -1/invalid) + same clut
-	* check even/odd index
-	btst	#0,d6
-	beq.b	1f
-	* odd: check if previous entry is free
-	tst.b	(SPRITE_X-SPRITE_SIZEOF,a2)
-	beq.b	8f
-	tst.b	(SPRITE_Y-SPRITE_SIZEOF,a2)
-	bne.b	10f
-8:
-	* previous entry is free, same clut: we can use that
-	* entry, no color conflict
-	lea		(-SPRITE_SIZEOF,a2),a2
-9:
-	move.b	d0,(a2)+		| X
-	move.b	d1,(a2)+		| Y
-	move.b	d2,(a2)+		| code
-	move.b	d3,(a2)+		| clut
-	rts						| done
-1:
-	* even: check if next entry is free
-	tst.b	(SPRITE_X+SPRITE_SIZEOF,a2)
-	beq.b	2f
-	tst.b	(SPRITE_Y+SPRITE_SIZEOF,a2)
-	bne.b	10f
-2:
-	* next entry is free, same clut: we can use that
-	* entry, no color conflict
-	lea		(SPRITE_SIZEOF,a2),a2
-	bra.b	9b
-10:
-	* next entry
-	addq.w	#SPRITE_SIZEOF,a2
-	addq	#1,d6
-	cmp.w	#NB_HOST_SPRITES,d6
-	bne.b	0b
-	* second pass if first pass failed (could not match
-	* a pair with one occupied slot with compatible clut,
-	* which happens when there are very few sprites
-	* displayed): we have to find 2 consecutive free slots
-
-	lea		host_sprites(pc),a2
-	moveq	#0,d6
-11:
-	* we consider that a sprite is not allocated
-	* if one of the coordinates is zero (real game
-	* doesn't care and sets X to 255, and Y to 0 at times
-	tst.b	(SPRITE_Y,a2)
-	beq.b	12f
-	tst.b	(SPRITE_X,a2)
-	bne.b	20f
-12:
-	* not allocated: test odd sprite
-	tst.b	(SPRITE_Y+SPRITE_SIZEOF,a2)
-	jeq	9b
-	tst.b	(SPRITE_X+SPRITE_SIZEOF,a2)
-	jeq	9b		| ok, both slots are free, allocate the first one
-20:
-	* next sprite pair
-	lea		(2*SPRITE_SIZEOF,a2),a2
-	addq	#2,d6
-	cmp.w	#NB_HOST_SPRITES,d6
-	bne.b	11b
-	
-	* third pass: last chance/emergency: there ARE free slots
-	* (since only 6 sprites on the target) but maybe too many
-	* different cluts so we can't find a suitable slot. In that
-	* case, pick the first free slot, we'll handle the color changes
-	* with a dynamic copperlist, let's hope that it works out
-	* (only happens in demo screens)
-	*
-	* the strategy globally works because during game, all 4 enemies
-	* share the same palette. sbagman uses another one, and ice block
-	* another one too. Blinking stunned enemies can be a problem
-	* because of the extra blue color
-	*
-	lea		host_sprites(pc),a2
-	moveq	#0,d6
-21:
-	tst.b	(SPRITE_X,a2)
-	beq.b	9b		| ok, a slot is free, allocate it
-	tst.b	(SPRITE_Y,a2)
-	beq.b	9b		| ok, a slot is free, allocate it
-30:
-	* next sprite
-	lea		(SPRITE_SIZEOF,a2),a2
-	addq	#1,d6
-	cmp.w	#NB_HOST_SPRITES,d6
-	bne.b	21b
-	* just cannot happen
-	* if we reach that point there's a big problem
-	.ifndef	RELEASE
-	lea	sprite_allocation_error(pc),a0
-	jbsr	osd_break
-	illegal
-	illegal
-	illegal
-	.endif
-	
-	rts
-	
-
 	
 osd_sound_start:
-	cmp.b	#CREDIT_SND,d0
-	bcs.b	0f			| always play sampled sounds
-	tst.b	music_playing
-	beq.b	0f
-	* don't play AY-sound when music is playing
-	rts
-0:
 	movem.l	d0/d1/a0/a6,-(a7)
 	tst.b	d0
 	jmi	7f		| should stop the sound
@@ -1069,7 +743,7 @@ osd_sound_start:
 	
 	
 	lsl.w	#3,d0
-	lea		sound_table,a0
+	*lea		sound_table,a0
 
 	move.w	(a0,d0.w),d1	| sound type
 	beq.b	0f		| no sound
@@ -1095,7 +769,7 @@ osd_sound_start:
 	* music
 4:
 	* don't play if game not in play
-	* could have been handled at generic sbagman.68k level
+	* could have been handled at generic tetris.68k level
 	* but it's way simpler here. I suppose than the real game
 	* just turns music volume off to get away with it
 	*tst.b	game_playing_8817
@@ -1117,7 +791,7 @@ osd_sound_start:
 	bsr		osd_sound_stop
     lea _custom,a6
  	movem.l	d0/a0,-(a7)
-    lea	sbagman_tunes,a0
+    *lea	tetris_tunes,a0
 	move.b	d1,music_track_start_number
 	move.w	d1,d0
     sub.l   a1,a1		| samples are in the module
@@ -1416,29 +1090,6 @@ load_palette_in_copperlist:
 	movem.l	(a7)+,d0-d1/a0-a1
 	rts
 	
-* enable display (palette)
-osd_enable_display:
-	jbra	load_palette_in_copperlist
-	rts
-	
-osd_disable_display:
-	jbsr	set_black_palette
-	jbsr	wait_tof
-wait_tof:
-	movem.w	d0/d1,-(a7)
-	move.w	#300,d1
-0:
-	* just in case loop locks up as it sometimes
-	* happens...
-	subq.w	#1,d1
-	beq.b	1f
-	MOVE.w	_custom+vhposr,D0
-	ANDI.w	#0xff00,D0
-	BNE.S	0b
-1:
-	movem.w	(a7)+,d0/d1
-    rts
-	
 * < D0: nonzero interrupts enabled
 osd_is_vblank_interrupt_enabled:
 	move.w	_custom+intenar,d0
@@ -1467,24 +1118,6 @@ osd_disable_vblank_interrupt:
 
 
 	
-
-
-* < D4: sprite properties
-*     Y code+attrs clut X
-* > D0,D1: X,Y.B
-* > D5: clut index
-* > D6: sprite index + attributes
-* 
-decode_sprite_data:
-	move.b	d4,d1	| sprite X (aka Y on amiga)
-	lsr.l	#8,d4
-	move.b	d4,d5	| clut index
-	lsr.l	#8,d4
-	move.b	d4,d6	| sprite index
-	lsr.l	#8,d4	
-	move.b	d4,d0	| sprite Y (aka X on amiga)
-	rts
-
 
 	
 * d6=screen address (preserved), d0=tile (preserved)
@@ -1696,7 +1329,7 @@ update_bg_tile:
 	cmp.w	#0x10,d0	| empty character
 	jeq	11f
 
-	lea		character_table,a0
+	*lea		character_table,a0
 	add.w	d0,d0
 	add.w	d0,d0
 	move.l	(a0,d0.w),d0
@@ -1740,62 +1373,6 @@ update_bg_tile:
 
 
 			
-store_sprite_pos_16:
-	move.l	a1,-(a7)
-	lea		HW_SpriteYTable_16,a1
-	bsr		store_sprite_pos
-	move.l	(a7)+,a1
-	rts
-	
-* < d0.w: x
-* < d1.w: y
-* < a1: sprite pos table (depending on height)
-* > d0.L: control word
-store_sprite_pos:
-    move.l  a0,-(a7)
-
-    lea	HW_SpriteXTable(pc),a0
-	
-	.ifdef	NO68020
-    add.w	d0,d0
-    add.w	d0,d0
-    move.l	(a0,d0.w),d0
-	move.w	d1,-(a7)
-    add.w	d1,d1
-    add.w	d1,d1
-    or.l	(a1,d1.w),d0
-	move.w	(a7)+,d1
-	.else
-    move.l	(a0,d0.w*4),d0
-    or.l	(a1,d1.w*4),d0	
-	.endc
-    move.l  (a7)+,a0
-    rts
-	
-HW_SpriteXTable:
-	.set	reptn,0
-	.rept 320
-	.set	x,reptn+0x80
-	.set reptn,reptn+1
-    .byte  0,x>>1,0,x&1
-  .endr
-
-	.macro DEF_HW_SPRITE_Y_TABLE	height
-HW_SpriteYTable_\height:
-  .set	reptn,0
-  .rept 288
-	.set	ys,reptn+0x1c
-	.set	ye,ys+\height
-    .byte  ys&255, 0, ye&255, ((ys>>6)&4)+((ye>>7)&2)
-	.set	reptn,reptn+1
-  .endr
-	.endm
-
-
-	DEF_HW_SPRITE_Y_TABLE	16
-
-
-
 
 	
 * set_bitplanes
@@ -1816,27 +1393,6 @@ set_bg_bitplanes:
     dbf d1,1b
     rts
 
-	
-
-osd_debug_hook:
-	rts
-	
-osd_get_random:
-* > D0: pseudo random value (8 bits, all other bits zeroed)
-	movem.l	a0,-(a7)
-	lea	seed(pc),a0
-	move.l	(a0),d0
-	* thanks meynaf
-	mulu #0xa57b,d0
-	addi.l #0xbb40e62d,d0
-	rol.l #6,d0	
-	move.l	d0,(a0) 
-	movem.l	(a7)+,a0
-	add.b	_custom+vposr,d0
-	and.l	#0xFF,d0
-	rts
-seed:
-	dc.l	0x12345678
 
 	
 * d6=screen address
@@ -1971,13 +1527,13 @@ osd_read_inputs:
 0:
 	* test all those flags to see if normal controls
 	* could be used to insert coins/start game
-	tst.b	gameplay_allowed_6054
-	beq.b	1f			| demo mode: enable
-	tst.b	check_scenery_disabled_61ED		| intro: enable
-	bne.b	1f
-	tst.b	game_locked_6053		| start screen: enable
-	beq.b	3f
-1:
+*	tst.b	gameplay_allowed_6054
+*	beq.b	1f			| demo mode: enable
+*	tst.b	check_scenery_disabled_61ED		| intro: enable
+*	bne.b	1f
+*	tst.b	game_locked_6053		| start screen: enable
+*	beq.b	3f
+*1:
 	move.l	d2,-(a7)
 	move.l	_previous_joypad_state(pc),d2
 	* save prev state as game loops within vblank
@@ -2103,52 +1659,22 @@ handle_keyboard:
 	* cheat keys
 	cmp.b	#0x50,d0	| F1 key
 	bne.b	0f
-	move.w	#0x0FF,_custom+color
 	st.b	cheat_used
-	st.b	next_bag_completes_level_flag
+	move.w	#0x0FF,_custom+color
 	
 0:
 	cmp.b	#0x51,d0	| F2 key
 	bne.b	0f
 	st.b	cheat_used
 	move.w	#0x0FF,_custom+color
-	eor.b	#1,invincible_flag
 	
 0:
 	cmp.b	#0x52,d0	| F3 key
 	bne.b	0f
 	st.b	cheat_used
 	* add 10000 points
-	add.b	#1,player_1_score_6176+2
-0:
-	cmp.b	#0x53,d0	| F4 key
-	bne.b	0f
-	st.b	cheat_used
-	move.w	#0x0FF,_custom+color
-	eor.b	#1,guard_1_inactive
-0:
-	cmp.b	#0x54,d0	| F5 key
-	bne.b	0f
-	st.b	cheat_used
-	move.w	#0x0FF,_custom+color
-	eor.b	#1,guard_2_inactive
-0:
+	nop  |add.b	#1,player_1_score_6176+2
 
-	cmp.b	#0x55,d0	| F6 key
-	bne.b	0f
-	* high X
-	move.b	#0xD8,player_struct_6580+2
-0:
-	cmp.b	#0x56,d0	| F7 key
-	bne.b	0f
-	* low Y
-	move.b	#0x1A,player_struct_6580+3
-0:
-	cmp.b	#0x57,d0	| F8 key
-	bne.b	0f
-	* game over, no lives
-	move.b	#1,player_death_flag_6025
-	clr.b	lives_6056
 0:
 10:
 	.ifndef	RELEASE
@@ -2177,12 +1703,12 @@ handle_keyboard:
 	
 toggle_pause:
 	* pause only within game
-	tst.b	gameplay_allowed_6054
-	beq.b	0f
-	tst.b	check_scenery_disabled_61ED
-	bne.b	0f
-	tst.b	game_locked_6053
-	bne.b	0f
+*	tst.b	gameplay_allowed_6054
+*	beq.b	0f
+*	tst.b	check_scenery_disabled_61ED
+*	bne.b	0f
+*	tst.b	game_locked_6053
+*	bne.b	0f
 	eor.b   #1,pause_flag
 0:
 	rts
@@ -2295,12 +1821,9 @@ highscore_needs_saving:
 	.byte	0
 highscore_loaded:
 	.byte	0
-flip_flop:
-	.byte	0
+
 	.align	2
 
-host_sprites:
-	ds.b	8*SPRITE_SIZEOF
 keyboard_table:
 	ds.b	0x100
 
@@ -2345,38 +1868,8 @@ bg_displayed_screen_ptr:
 	.endif
 
 
-	.include	"sound_entries.68k"
-	* continuing on sound table for guard step/climb sounds
-	* which are the same as the player, only less loud
-	.word	1,0
-	.long	guard_climb_sound | 15
+	*.include	"sound_entries.68k"
 
-	.word	1,0
-	.long	guard_walk_sound | 16
-
-	.word	1,0
-	.long	typing_sound
-
-guard_climb_sound:
-    .long    player_climb_raw
-    .word   4566    | copied from player climb
-    .word   FXFREQBASE/HQ_SOUNDFREQ,8
-    .byte    2
-    .byte    2		| priority
-	
-typing_sound:
-    .long    player_climb_raw
-    .word   4566    | copied from player climb
-    .word   FXFREQBASE/HQ_SOUNDFREQ,16
-    .byte    2
-    .byte    2		| priority
-
-guard_walk_sound:
-    .long    player_walk_raw
-    .word   3970   | copied from player walk
-    .word   FXFREQBASE/HQ_SOUNDFREQ,8
-    .byte    2
-    .byte    2		| priority
 
 	
 _keyexit:
@@ -2401,7 +1894,7 @@ graphicsname:
 	.ascii	"graphics.library"
 	.byte	0
 normal_hiscorename:
-	.asciz	"sbagman.high"
+	.asciz	"tetris.high"
 floppy_file:
 	.ascii	"floppy"
 	.byte	0
@@ -2411,28 +1904,10 @@ _end_of_ng_code:
 		
 	.align 2
 palette:
-	.include "palette.68k"
-	* sprites "individual" 4-color palettes
+	**.include "palette.68k"
 
-	.include "palette_cluts.68k"
 	
-	
-	* on amiga, this file is included in sbagman.68k file
-	* so the assembler can optimize by using PC-relative addressing
-	* whenever possible (and it does)
-	.ifndef	RELEASE
-	* easier to debug game to have memory aligned on 0x10000
-	.align	0x10000
 
-	.ifne	OPT_ENABLE_LOGGING
-	.section	.bss
-	.ascii	"TILE"
-tile_log_table:
-	* 32 cluts, 1024 tiles
-	* a lot of combinations aren't used (fortunately!)
-	ds.w	0x10000
-	.endif
-	.endif
 	.ascii	"CODE_END"
 
 

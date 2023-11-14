@@ -1,9 +1,55 @@
+* Tetris (c) 1988 Atari
+*
 * Converted with 6502to68k by JOTD
 *
 * make sure you call "cpu_init" first so bits 8-15 of data registers
 * are zeroed out so we can use (ax,dy.w) addressing mode
 * without systematic masking
+*
+* to debug slapstic calls
+* mame  -log -oslog -debug -window atetris
 
+
+*    ========================================================================
+*    CPU #1
+*    ========================================================================
+*    0000-0FFF   R/W   xxxxxxxx    Program RAM
+*    1000-1FFF   R/W   xxxxxxxx    Playfield RAM
+*                      xxxxxxxx       (byte 0: LSB of character code)
+*                      -----xxx       (byte 1: MSB of character code)
+*                      xxxx----       (byte 1: palette index)
+*    2000-20FF   R/W   xxxxxxxx    Palette RAM
+*                      xxx----        (red component)
+*                      ---xxx--       (green component)
+*                      ------xx       (blue component)
+*    2400-25FF   R/W   xxxxxxxx    EEPROM
+*    2800-280F   R/W   xxxxxxxx    POKEY #1
+*    2810-281F   R/W   xxxxxxxx    POKEY #2
+*    3000          W   --------    Watchdog
+*    3400          W   --------    EEPROM write enable
+*    3800          W   --------    IRQ acknowledge
+*    3C00          W   --xx----    Coin counters
+*                  W   --x-----       (right coin counter)
+*                  W   ---x----       (left coin counter)
+*    4000-7FFF   R     xxxxxxxx    Banked program ROM
+*    8000-FFFF   R     xxxxxxxx    Program ROM
+*
+* jotd: slapstic inner workings are complex but the MAME team
+* has already reversed so debugging with MAME gives the proper bank numbers
+* bank 1 contains code @0x4000
+* bank 0 (starts with 00 00 00) contains only data
+
+* offsets (aka known variables)
+
+first_byte_of_bank_0d = 0x000D
+number_of_credits_00c1 = 0x00C1
+number_of_coins_inserted_00c2 = 0x00C2
+context_name_06a1 = 0x06a1
+sync_variable_06a3 = 0x06a3
+
+	.global		tetris_reset
+	.global		tetris_irq
+	
 	.macro CLR_XC_FLAGS
 	moveq	#0,d7
 	roxl.b	#1,d7
@@ -40,6 +86,15 @@
 	.endm
 	.endif
 
+	.macro READ_LE_WORD	srcreg
+	PUSH_SR
+	move.b	(1,\srcreg),d4
+	lsl.w	#8,d4
+	move.b	(\srcreg),d4
+	move.w	d4,\srcreg
+	POP_SR
+	.endm
+
 	.macro GET_ADDRESS	offset
 	lea	\offset,a0
 	jbsr	get_address
@@ -49,13 +104,13 @@
 	lea	\offset,a0
 	jbsr	get_address
 	lea	(a0,d1.w),a0
-	move.w	(a0),a0
+	READ_LE_WORD	a0
 	jbsr	get_address
 	.endm
 
 	.macro GET_ADDRESS_Y	offset
 	GET_ADDRESS	\offset
-	move.w	(a0),a0
+	READ_LE_WORD	a0
 	jbsr	get_address
 	.endm
 
@@ -72,45 +127,66 @@ cpu_init:
 	rts
 
 * < A0: offset
+* flags preserved
 get_address:
+	PUSH_SR
 	cmp.w	#0x1000,a0
 	bcc.b	0f
 	* RAM
-	add.l	#game_ram,a0
+	add.l	#game_ram-0x1000,a0
+	POP_SR
+	rts
 0:
-* do not use add to preserve X flag!
+	* above 0x1000
+	cmp.w	#0x2100,a0
+	bcc.b	0f
+	lea		address_1000_20FF_loaded_message(pc),a1
+	jbsr	osd_break
+	illegal
+0:
+	* above 0x2100
+	cmp.w	#0x4000,a0
+	bcc.b	0f
+	lea		address_2100_3FFF_loaded_message(pc),a1
+	jbsr	osd_break
+	illegal	
+	illegal	
+0:
+	* above 0x4000
+	cmp.w	#0x8000,a0
+	bcc.b	0f
+	* banked ROM, check which bank
+	lea		bank1_4000-0x4000,a1
+	tst.b	current_bank
+	bne.b	0f
+	lea		bank0_4000-0x4000,a1
+0:
+	add.l	a1,a0
+	POP_SR
+	rts
+0:
+	* above 0x8000: ROM
+	add.l	#rom_8000-0x8000,a0
+	POP_SR
 	rts
 
-*    ========================================================================
-*    CPU #1
-*    ========================================================================
-*    0000-0FFF   R/W   xxxxxxxx    Program RAM
-*    1000-1FFF   R/W   xxxxxxxx    Playfield RAM
-*                      xxxxxxxx       (byte 0: LSB of character code)
-*                      -----xxx       (byte 1: MSB of character code)
-*                      xxxx----       (byte 1: palette index)
-*    2000-20FF   R/W   xxxxxxxx    Palette RAM
-*                      xxx----        (red component)
-*                      ---xxx--       (green component)
-*                      ------xx       (blue component)
-*    2400-25FF   R/W   xxxxxxxx    EEPROM
-*    2800-280F   R/W   xxxxxxxx    POKEY #1
-*    2810-281F   R/W   xxxxxxxx    POKEY #2
-*    3000          W   --------    Watchdog
-*    3400          W   --------    EEPROM write enable
-*    3800          W   --------    IRQ acknowledge
-*    3C00          W   --xx----    Coin counters
-*                  W   --x-----       (right coin counter)
-*                  W   ---x----       (left coin counter)
-*    4000-7FFF   R     xxxxxxxx    Banked program ROM
-*    8000-FFFF   R     xxxxxxxx    Program ROM
-*
-* jotd: reading 6000 then 60xx again seems to trigger bank switch
-* 2 consecutive reads switch to bank 0
-* 2 reads spaced by at least 1 instruction switch to bank 1 after a few cycles
+address_1000_20FF_loaded_message:
+	.asciz	"video address 0x1000-0x20FF loaded!"
+address_2100_3FFF_loaded_message:
+	.asciz	"video address 0x2100-0x3FFF loaded!"
+	.align	2
+	
+switch_to_bank_00:
+	clr.b	current_bank
+	rts
+	
+switch_to_bank_01:
+	move.b	#1,current_bank
+	rts
+	
 
-* bank 0 contains code
-* bank 1 (starts with 00 00 00) contains only data
+* this is bank 1
+
 	jbsr	l_402d                            	| [$4000: jsr	$402d]
 	CLR_I_FLAG                             	| [$4003: cli]
 l_4004:
@@ -3933,7 +4009,7 @@ l_4f8e:
 	SET_XC_FLAGS                           	| [$5006: sec]
 	rts                                    	| [$5007: rts]
 
-
+tetris_reset:
 startup_8000:
 l_8000:
 	SET_I_FLAG                             	| [$8000: sei] block interrupts
@@ -4331,7 +4407,7 @@ l_81d8:
 	move.b	#0x25,d0                        	| [$81e0: lda #$25]
 	clr.b	d2                               	| [$81e2: ldy #$00]
 	jbsr	l_8cbc                            	| [$81e4: jsr	$8cbc]
-	jbsr	switch_to_bank_0_D5B8             	| [$81e7: jsr switch_to_bank_0_D5B8]
+	jbsr	switch_to_bank_01_D5B8             	| [$81e7: jsr switch_to_bank_01_D5B8]
 	clr.b	d0                               	| [$81ea: lda #$00]
 	move.b	#0x40,d1                        	| [$81ec: ldx #$40]
 	move.b	#0x40,d2                        	| [$81ee: ldy #$40]
@@ -4340,7 +4416,7 @@ l_81d8:
 	GET_ADDRESS	0x6000                     	| [$81f4: adc	$6000]
 	add.b	(a0),d0                         	| [$81f4: adc	$6000]
 	move.w	d0,-(sp)                        	| [$81f7: pha]
-	jbsr	switch_to_bank_0_d5c2             	| [$81f8: jsr switch_to_bank_0_d5c2]
+	jbsr	switch_to_bank_01_d5c2             	| [$81f8: jsr switch_to_bank_01_d5c2]
 	move.w	(sp)+,d0                        	| [$81fb: pla]
 	move.b	#0x40,d1                        	| [$81fc: ldx #$40]
 	move.b	#0xc0,d2                        	| [$81fe: ldy #$c0]
@@ -4374,7 +4450,7 @@ l_81d8:
 	clr.b	d2                               	| [$821e: ldy #$00]
 	jbsr	l_8cbc                            	| [$8220: jsr	$8cbc]
 l_8223:
-	jbsr	switch_to_bank_0_d5c2             	| [$8223: jsr switch_to_bank_0_d5c2]
+	jbsr	switch_to_bank_01_d5c2             	| [$8223: jsr switch_to_bank_01_d5c2]
 	GET_ADDRESS	0x00af                     	| [$8226: lda	$00af]
 	move.b	(a0),d0                         	| [$8226: lda	$00af]
 	and.b	#0x0c,d0                         	| [$8228: and #$0c]
@@ -4472,9 +4548,9 @@ l_827f:
 	GET_ADDRESS	0x280b                     	| [$827f: sta	$280b]
 	move.b	d0,(a0)                         	| [$827f: sta	$280b]
 	POP_SR
-	tst.b	0x2808                           	| [$8282: bit	$2808]
-	bvc	l_827f                             	| [$8285: bvc	$827f]
-          ^^^^^^ TODO: handle bit 6 of operand / change overflow test
+	GET_ADDRESS	0x2808                     	| [$8282: bit	$2808]
+	btst.b	#6,(a0)                             	| [$8282: bit	$2808]
+	beq	l_827f                             	| [$8285: bvc	$827f]
 l_8287:
 	GET_ADDRESS	0x00ac                     	| [$8287: lda	$00ac]
 	move.b	(a0),d0                         	| [$8287: lda	$00ac]
@@ -4483,9 +4559,9 @@ l_8287:
 	GET_ADDRESS	0x280b                     	| [$828b: sta	$280b]
 	move.b	d0,(a0)                         	| [$828b: sta	$280b]
 	POP_SR
-	tst.b	0x2808                           	| [$828e: bit	$2808]
-	bvs	l_8287                             	| [$8291: bvs	$8287]
-          ^^^^^^ TODO: handle bit 6 of operand / change overflow test
+	GET_ADDRESS	0x2808                     	| [$828e: bit	$2808]
+	btst.b	#6,(a0)                             	| [$828e: bit	$2808]
+	bne	l_8287                             	| [$8291: bvs	$8287]
 l_8293:
 	clr.b	d0                               	| [$8293: lda #$00]
 	PUSH_SR
@@ -5441,11 +5517,11 @@ display_screen_883b:
 	move.b	#0x08,d4                        	| [$883f: cmp #$08]
 	cmp.b	d0,d4                            	| [$883f: cmp #$08]
 	bne	l_8849                             	| [$8841: bne	$8849]
-	jbsr	switch_to_bank_0_d5c2             	| [$8843: jsr switch_to_bank_0_d5c2]
+	jbsr	switch_to_bank_01_d5c2             	| [$8843: jsr switch_to_bank_01_d5c2]
 * clv+bvc => jra
 	jra	l_884c                             	| [$8847: jra	$884c]
 l_8849:
-	jbsr	switch_to_bank_0_D5B8             	| [$8849: jsr switch_to_bank_0_D5B8]
+	jbsr	switch_to_bank_01_D5B8             	| [$8849: jsr switch_to_bank_01_D5B8]
 l_884c:
 	GET_ADDRESS	0x889c                     	| [$884c: lda	$889c, y]
 	move.b	(a0,d2.w),d0                    	| [$884c: lda	$889c, y]
@@ -5714,7 +5790,7 @@ l_8952:
 	move.b	d2,d0                           	| [$896a: tya]
 	asl.b	#1,d0                            	| [$896b: asl a]
 	move.b	d0,d2                           	| [$896c: tay]
-	jbsr	switch_to_bank_0_D5B8             	| [$896d: jsr switch_to_bank_0_D5B8]
+	jbsr	switch_to_bank_01_D5B8             	| [$896d: jsr switch_to_bank_01_D5B8]
 	GET_ADDRESS	0x89ab                     	| [$8970: lda	$89ab, y]
 	move.b	(a0,d2.w),d0                    	| [$8970: lda	$89ab, y]
 	PUSH_SR
@@ -5806,7 +5882,7 @@ l_89cc:
 	move.b	d0,(a0)                         	| [$89d2: sta	$00ab]
 	POP_SR
 l_89d4:
-	jbsr	switch_to_bank_0_D5B8             	| [$89d4: jsr switch_to_bank_0_D5B8]
+	jbsr	switch_to_bank_01_D5B8             	| [$89d4: jsr switch_to_bank_01_D5B8]
 	move.b	d2,d0                           	| [$89d7: tya]
 	asl.b	#1,d0                            	| [$89d8: asl a]
 	move.b	d0,d2                           	| [$89d9: tay]
@@ -8039,24 +8115,24 @@ l_9d8e:
 	move.b	d0,(a0)                         	| [$9d94: sta	$001b]
 	POP_SR
 l_9d96:
-	PUSH_SR                                	| [$9d96: php]
-	SET_I_FLAG                             	| [$9d97: sei]
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$9d98: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$9d98: lda bank_switch_start_6000]
-	GET_ADDRESS	0x7546                     	| [$9d9b: lda	$7546]
-	move.b	(a0),d0                         	| [$9d9b: lda	$7546]
-	GET_ADDRESS	0x6090                     	| [$9d9e: lda	$6090]
-	move.b	(a0),d0                         	| [$9d9e: lda	$6090]
-	GET_ADDRESS	0x7542                     	| [$9da1: lda	$7542]
-	move.b	(a0),d0                         	| [$9da1: lda	$7542]
-	GET_ADDRESS	0x7543                     	| [$9da4: lda	$7543]
-	move.b	(a0),d0                         	| [$9da4: lda	$7543]
-	GET_ADDRESS	0x7554                     	| [$9da7: lda	$7554]
-	move.b	(a0),d0                         	| [$9da7: lda	$7554]
-	GET_ADDRESS	0x60b0                     	| [$9daa: lda	$60b0]
-	move.b	(a0),d0                         	| [$9daa: lda	$60b0]
-	POP_SR                                 	| [$9dad: plp]
+	     	| [$9d96: php]
+	     	| [$9d97: sei]
+	jbsr	switch_to_bank_00
+	     	| [$9d98: lda bank_switch_start_6000]
+	      	| [$9d98: lda bank_switch_start_6000]
+	     	| [$9d9b: lda	$7546]
+	      	| [$9d9b: lda	$7546]
+	     	| [$9d9e: lda	$6090]
+	      	| [$9d9e: lda	$6090]
+	     	| [$9da1: lda	$7542]
+	      	| [$9da1: lda	$7542]
+	     	| [$9da4: lda	$7543]
+	      	| [$9da4: lda	$7543]
+	     	| [$9da7: lda	$7554]
+	      	| [$9da7: lda	$7554]
+	     	| [$9daa: lda	$60b0]
+	      	| [$9daa: lda	$60b0]
+	     	| [$9dad: plp]
 	GET_ADDRESS_Y	0x1f                     	| [$9dae: lda ($1f), y]
 	move.b	(a0,d2.w),d0                    	| [$9dae: lda ($1f), y]
 	move.b	#0x80,d4                        	| [$9db0: cmp #$80]
@@ -8528,26 +8604,26 @@ l_9f6c:
 	or.b	(a0,d1.w),d0                      	| [$9f72: ora	$008f, x]
 	asl.b	#1,d0                            	| [$9f74: asl a]
 	move.b	d0,d2                           	| [$9f75: tay]
-	PUSH_SR                                	| [$9f76: php]
-	SET_I_FLAG                             	| [$9f77: sei]
+	                         	| [$9f76: php]
+	                         	| [$9f77: sei]
 * switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$9f78: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$9f78: lda bank_switch_start_6000]
-	GET_ADDRESS	0x7549                     	| [$9f7b: lda	$7549]
-	move.b	(a0),d0                         	| [$9f7b: lda	$7549]
-	GET_ADDRESS	0x60a0                     	| [$9f7e: lda	$60a0]
-	move.b	(a0),d0                         	| [$9f7e: lda	$60a0]
-	GET_ADDRESS	0x7543                     	| [$9f81: lda	$7543]
-	move.b	(a0),d0                         	| [$9f81: lda	$7543]
-	GET_ADDRESS	0x7543                     	| [$9f84: lda	$7543]
-	move.b	(a0),d0                         	| [$9f84: lda	$7543]
-	GET_ADDRESS	0x7542                     	| [$9f87: lda	$7542]
-	move.b	(a0),d0                         	| [$9f87: lda	$7542]
-	GET_ADDRESS	0x7554                     	| [$9f8a: lda	$7554]
-	move.b	(a0),d0                         	| [$9f8a: lda	$7554]
-	GET_ADDRESS	0x60b0                     	| [$9f8d: lda	$60b0]
-	move.b	(a0),d0                         	| [$9f8d: lda	$60b0]
-	POP_SR                                 	| [$9f90: plp]
+	jbsr	switch_to_bank_00     	| [$9f78: lda bank_switch_start_6000]
+	      	| [$9f78: lda bank_switch_start_6000]
+	     	| [$9f7b: lda	$7549]
+	      	| [$9f7b: lda	$7549]
+	     	| [$9f7e: lda	$60a0]
+	      	| [$9f7e: lda	$60a0]
+	     	| [$9f81: lda	$7543]
+	      	| [$9f81: lda	$7543]
+	     	| [$9f84: lda	$7543]
+	      	| [$9f84: lda	$7543]
+	     	| [$9f87: lda	$7542]
+	      	| [$9f87: lda	$7542]
+	     	| [$9f8a: lda	$7554]
+	      	| [$9f8a: lda	$7554]
+	     	| [$9f8d: lda	$60b0]
+	      	| [$9f8d: lda	$60b0]
+	     	| [$9f90: plp]
 	GET_ADDRESS	0x4000                     	| [$9f91: lda	$4000, y]
 	move.b	(a0,d2.w),d0                    	| [$9f91: lda	$4000, y]
 	PUSH_SR
@@ -9158,24 +9234,16 @@ l_a26a:
 	addx.b	d4,d0                         	| [$a275: adc	$001e]
 	asl.b	#3,d0                            	| [$a277: asl a] * 3
 	move.b	d0,d1                           	| [$a27a: tax]
-	PUSH_SR                                	| [$a27b: php]
-	SET_I_FLAG                             	| [$a27c: sei]
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$a27d: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$a27d: lda bank_switch_start_6000]
-	GET_ADDRESS	0x754e                     	| [$a280: lda	$754e]
-	move.b	(a0),d0                         	| [$a280: lda	$754e]
-	GET_ADDRESS	0x60b0                     	| [$a283: lda	$60b0]
-	move.b	(a0),d0                         	| [$a283: lda	$60b0]
-	GET_ADDRESS	0x7542                     	| [$a286: lda	$7542]
-	move.b	(a0),d0                         	| [$a286: lda	$7542]
-	GET_ADDRESS	0x7543                     	| [$a289: lda	$7543]
-	move.b	(a0),d0                         	| [$a289: lda	$7543]
-	GET_ADDRESS	0x7556                     	| [$a28c: lda	$7556]
-	move.b	(a0),d0                         	| [$a28c: lda	$7556]
-	GET_ADDRESS	0x60b0                     	| [$a28f: lda	$60b0]
-	move.b	(a0),d0                         	| [$a28f: lda	$60b0]
-	POP_SR                                 	| [$a292: plp]
+	jbsr	switch_to_bank_00     	| [$a27b: php]
+	     	| [$a27c: sei]
+	     	| [$a27d: lda bank_switch_start_6000]
+	      	| [$a280: lda	$754e] start
+	      	| [$a283: lda	$60b0] load
+	      	| [$a286: lda	$7542] clear 1
+	     	| [$a289: lda	$7543] clear 0
+	     	| [$a28c: lda	$7556] commit 0
+	      	| [$a28f: lda	$60b0]
+	     	| [$a292: plp]
 	GET_ADDRESS	0x001d                     	| [$a293: lda	$001d]
 	move.b	(a0),d0                         	| [$a293: lda	$001d]
 	asl.b	#1,d0                            	| [$a295: asl a]
@@ -9250,24 +9318,18 @@ l_a2d0:
 	POP_SR
 	GET_ADDRESS	0xa2cd                     	| [$a2db: lda	$a2cd, y]
 	move.b	(a0,d2.w),d0                    	| [$a2db: lda	$a2cd, y]
-	PUSH_SR
 	GET_ADDRESS	0x0003                     	| [$a2de: sta	$0003]
 	move.b	d0,(a0)                         	| [$a2de: sta	$0003]
-	SET_I_FLAG                             	| [$a2e1: sei]
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$a2e2: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$a2e2: lda bank_switch_start_6000]
-	GET_ADDRESS	0x7542                     	| [$a2e5: lda	$7542]
-	move.b	(a0),d0                         	| [$a2e5: lda	$7542]
-	GET_ADDRESS	0x6080                     	| [$a2e8: lda	$6080]
-	move.b	(a0),d0                         	| [$a2e8: lda	$6080]
-	GET_ADDRESS	0x7540                     	| [$a2eb: lda	$7540]
-	move.b	(a0),d0                         	| [$a2eb: lda	$7540]
-	GET_ADDRESS	0x7556                     	| [$a2ee: lda	$7556]
-	move.b	(a0),d0                         	| [$a2ee: lda	$7556]
-	GET_ADDRESS	0x60b0                     	| [$a2f1: lda	$60b0]
-	move.b	(a0),d0                         	| [$a2f1: lda	$60b0]
-	POP_SR                                 	| [$a2f4: plp]
+	                             	| [$a2e1: sei]
+
+	jbsr	switch_to_bank_00    	| [$a2e2: lda bank_switch_start_6000]
+	     	| [$a2e2: lda bank_switch_start_6000]
+	     	| [$a2e5: lda	$7542]
+	     	| [$a2e8: lda	$6080]
+	     	| [$a2eb: lda	$7540]
+	     	| [$a2ee: lda	$7556]
+	     	| [$a2f1: lda	$60b0]
+	    	| [$a2f4: plp]
 	clr.b	d0                               	| [$a2f5: lda #$00]
 	PUSH_SR
 	GET_ADDRESS	0x001e                     	| [$a2f7: sta	$001e]
@@ -12016,21 +12078,21 @@ l_ae7b:
 	PUSH_SR
 	GET_ADDRESS	0x0022                     	| [$ae8c: sta	$0022]
 	move.b	d0,(a0)                         	| [$ae8c: sta	$0022]
-	SET_I_FLAG                             	| [$ae8f: sei]
+	                             	| [$ae8f: sei]
 * switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$ae90: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$ae90: lda bank_switch_start_6000]
-	GET_ADDRESS	0x754c                     	| [$ae93: lda	$754c]
-	move.b	(a0),d0                         	| [$ae93: lda	$754c]
-	GET_ADDRESS	0x6090                     	| [$ae96: lda	$6090]
-	move.b	(a0),d0                         	| [$ae96: lda	$6090]
-	GET_ADDRESS	0x7541                     	| [$ae99: lda	$7541]
-	move.b	(a0),d0                         	| [$ae99: lda	$7541]
-	GET_ADDRESS	0x7551                     	| [$ae9c: lda	$7551]
-	move.b	(a0),d0                         	| [$ae9c: lda	$7551]
-	GET_ADDRESS	0x6090                     	| [$ae9f: lda	$6090]
-	move.b	(a0),d0                         	| [$ae9f: lda	$6090]
-	POP_SR                                 	| [$aea2: plp]
+	jbsr	switch_to_bank_01     	| [$ae90: lda bank_switch_start_6000]
+	      	| [$ae90: lda bank_switch_start_6000]
+	     	| [$ae93: lda	$754c]
+	      	| [$ae93: lda	$754c]
+	     	| [$ae96: lda	$6090]
+	      	| [$ae96: lda	$6090]
+	     	| [$ae99: lda	$7541]
+	      	| [$ae99: lda	$7541]
+	     	| [$ae9c: lda	$7551]
+	      	| [$ae9c: lda	$7551]
+	     	| [$ae9f: lda	$6090]
+	      	| [$ae9f: lda	$6090]
+	     	| [$aea2: plp]
 	GET_ADDRESS	0x0079                     	| [$aea3: inc	$0079, x]
     addq.b	#1,(a0,d1.w)                 	| [$aea3: inc	$0079, x]
 	move.b	#0x12,d0                        	| [$aea5: lda #$12]
@@ -12600,27 +12662,21 @@ l_b1a3:
 	POP_SR
 	move.b	#0x09,d0                        	| [$b1a9: lda #$09]
 	clr.b	d2                               	| [$b1ab: ldy #$00]
-	PUSH_SR
+	
 	GET_ADDRESS_Y	0x02                     	| [$b1ad: sta ($02), y]
 	move.b	d0,(a0,d2.w)                    	| [$b1ad: sta ($02), y]
 
-	SET_I_FLAG                             	| [$b1b0: sei]
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$b1b1: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$b1b1: lda bank_switch_start_6000]
-	GET_ADDRESS	0x754b                     	| [$b1b4: lda	$754b]
-	move.b	(a0),d0                         	| [$b1b4: lda	$754b]
-	GET_ADDRESS	0x6090                     	| [$b1b7: lda	$6090]
-	move.b	(a0),d0                         	| [$b1b7: lda	$6090]
-	GET_ADDRESS	0x7542                     	| [$b1ba: lda	$7542]
-	move.b	(a0),d0                         	| [$b1ba: lda	$7542]
-	GET_ADDRESS	0x7543                     	| [$b1bd: lda	$7543]
-	move.b	(a0),d0                         	| [$b1bd: lda	$7543]
-	GET_ADDRESS	0x7554                     	| [$b1c0: lda	$7554]
-	move.b	(a0),d0                         	| [$b1c0: lda	$7554]
-	GET_ADDRESS	0x60a0                     	| [$b1c3: lda	$60a0]
-	move.b	(a0),d0                         	| [$b1c3: lda	$60a0]
-	POP_SR                                 	| [$b1c6: plp]
+	                             	| [$b1b0: sei]
+
+	jbsr	switch_to_bank_00     	| [$b1b1: lda bank_switch_start_6000]
+	      	| [$b1b1: lda bank_switch_start_6000]
+	     	| [$b1b4: lda	$754b]
+	     	| [$b1b7: lda	$6090]
+	      	| [$b1ba: lda	$7542]
+	      	| [$b1bd: lda	$7543]
+	     	| [$b1c0: lda	$7554]
+	      	| [$b1c3: lda	$60a0]
+	     	| [$b1c6: plp]
 	GET_ADDRESS	0x6521                     	| [$b1c7: lda	$6521]
 	move.b	(a0),d0                         	| [$b1c7: lda	$6521]
 	PUSH_SR
@@ -14526,57 +14582,52 @@ l_bab9:
 	bcc	l_bab9                             	| [$babe: bcc	$bab9]
 	tst.b	d0                               	| [$bac0: cmp #$00]
 	bne	l_bb3a                             	| [$bac2: bne	$bb3a]
-	PUSH_SR                                	| [$bac4: php]
-	SET_I_FLAG                             	| [$bac5: sei]
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$bac6: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$bac6: lda bank_switch_start_6000]
-	GET_ADDRESS	0x7547                     	| [$bac9: lda	$7547]
-	move.b	(a0),d0                         	| [$bac9: lda	$7547]
-	GET_ADDRESS	0x60b0                     	| [$bacc: lda	$60b0]
-	move.b	(a0),d0                         	| [$bacc: lda	$60b0]
-	GET_ADDRESS	0x7541                     	| [$bacf: lda	$7541]
-	move.b	(a0),d0                         	| [$bacf: lda	$7541]
-	GET_ADDRESS	0x7543                     	| [$bad2: lda	$7543]
-	move.b	(a0),d0                         	| [$bad2: lda	$7543]
-	GET_ADDRESS	0x7555                     	| [$bad5: lda	$7555]
-	move.b	(a0),d0                         	| [$bad5: lda	$7555]
-	GET_ADDRESS	0x6090                     	| [$bad8: lda	$6090]
-	move.b	(a0),d0                         	| [$bad8: lda	$6090]
-	POP_SR                                 	| [$badb: plp]
+	                          	| [$bac4: php]
+	                          	| [$bac5: sei]
+
+	jbsr	switch_to_bank_00   	| [$bac6: lda bank_switch_start_6000]
+	    	| [$bac6: lda bank_switch_start_6000]
+	   	| [$bac9: lda	$7547]
+	   	| [$bacc: lda	$60b0]
+	   	| [$bacf: lda	$7541]
+	   	| [$bad2: lda	$7543]
+	   	| [$bad5: lda	$7555]
+	   	| [$bad8: lda	$6090]
+	   	| [$badb: plp]
+	* read bank immediately after bank switching
 	GET_ADDRESS	0x6505                     	| [$badc: lda	$6505]
 	move.b	(a0),d0                         	| [$badc: lda	$6505]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0100                     	| [$badf: sta	$0100]
 	move.b	d0,(a0)                         	| [$badf: sta	$0100]
-	POP_SR
+	
 	move.b	#0xf0,d0                        	| [$bae2: lda #$f0]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0101                     	| [$bae4: sta	$0101]
 	move.b	d0,(a0)                         	| [$bae4: sta	$0101]
 	GET_ADDRESS	0x0113                     	| [$bae7: sta	$0113]
 	move.b	d0,(a0)                         	| [$bae7: sta	$0113]
-	POP_SR
+	
 	GET_ADDRESS	0x6509                     	| [$baea: lda	$6509]
 	move.b	(a0),d0                         	| [$baea: lda	$6509]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0112                     	| [$baed: sta	$0112]
 	move.b	d0,(a0)                         	| [$baed: sta	$0112]
-	POP_SR
+	
 	clr.b	d2                               	| [$baf0: ldy #$00]
 l_baf2:
 	GET_ADDRESS	0x6507                     	| [$baf2: lda	$6507]
 	move.b	(a0),d0                         	| [$baf2: lda	$6507]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0102                     	| [$baf5: sta	$0102, y]
     move.b	d0,(a0,d2.w)                 	| [$baf5: sta	$0102, y]
-	POP_SR
+	
 	addq.b	#1,d2                           	| [$baf8: iny]
 	move.b	#0xf0,d0                        	| [$baf9: lda #$f0]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0102                     	| [$bafb: sta	$0102, y]
     move.b	d0,(a0,d2.w)                 	| [$bafb: sta	$0102, y]
-	POP_SR
+	
 	addq.b	#1,d2                           	| [$bafe: iny]
 	move.b	#0x10,d4                        	| [$baff: cpy #$10]
 	cmp.b	d2,d4                            	| [$baff: cpy #$10]
@@ -15112,30 +15163,28 @@ l_bd83:
 	bne	l_bd94                             	| [$bd8f: bne	$bd94]
 	jra	l_be3b                             	| [$bd91: jmp	$be3b]
 l_bd94:
-	PUSH_SR                                	| [$bd94: php]
-	SET_I_FLAG                             	| [$bd95: sei]
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$bd96: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$bd96: lda bank_switch_start_6000]
-	GET_ADDRESS	0x7545                     	| [$bd99: lda	$7545]
-	move.b	(a0),d0                         	| [$bd99: lda	$7545]
-	GET_ADDRESS	0x60b0                     	| [$bd9c: lda	$60b0]
-	move.b	(a0),d0                         	| [$bd9c: lda	$60b0]
-	GET_ADDRESS	0x7543                     	| [$bd9f: lda	$7543]
-	move.b	(a0),d0                         	| [$bd9f: lda	$7543]
-	GET_ADDRESS	0x7543                     	| [$bda2: lda	$7543]
-	move.b	(a0),d0                         	| [$bda2: lda	$7543]
-	GET_ADDRESS	0x7543                     	| [$bda5: lda	$7543]
-	move.b	(a0),d0                         	| [$bda5: lda	$7543]
-	GET_ADDRESS	0x7541                     	| [$bda8: lda	$7541]
-	move.b	(a0),d0                         	| [$bda8: lda	$7541]
-	GET_ADDRESS	0x7540                     	| [$bdab: lda	$7540]
-	move.b	(a0),d0                         	| [$bdab: lda	$7540]
-	GET_ADDRESS	0x7552                     	| [$bdae: lda	$7552]
-	move.b	(a0),d0                         	| [$bdae: lda	$7552]
-	GET_ADDRESS	0x60b0                     	| [$bdb1: lda	$60b0]
-	move.b	(a0),d0                         	| [$bdb1: lda	$60b0]
-	POP_SR                                 	| [$bdb4: plp]
+	jbsr	switch_to_bank_00 	| [$bd94: php]
+ 	| [$bd95: sei]
+
+  	| [$bd96: lda bank_switch_start_6000]
+ 	| [$bd99: lda	$7545]
+ 	| [$bd9c: lda	$60b0]
+  	| [$bd9c: lda	$60b0]
+ 	| [$bd9f: lda	$7543]
+  	| [$bd9f: lda	$7543]
+ 	| [$bda2: lda	$7543]
+  	| [$bda2: lda	$7543]
+ 	| [$bda5: lda	$7543]
+  	| [$bda5: lda	$7543]
+ 	| [$bda8: lda	$7541]
+  	| [$bda8: lda	$7541]
+ 	| [$bdab: lda	$7540]
+  	| [$bdab: lda	$7540]
+ 	| [$bdae: lda	$7552]
+  	| [$bdae: lda	$7552]
+ 	| [$bdb1: lda	$60b0]
+  	| [$bdb1: lda	$60b0]
+ 	| [$bdb4: plp]
 	GET_ADDRESS	0x06a5                     	| [$bdb5: ldy	$06a5]
 	move.b	(a0),d2                         	| [$bdb5: ldy	$06a5]
 	GET_ADDRESS	0x06a7                     	| [$bdb8: lda	$06a7]
@@ -15260,22 +15309,17 @@ l_be3b:
 	bne	l_be47                             	| [$be42: bne	$be47]
 	jra	l_beeb                             	| [$be44: jmp	$beeb]
 l_be47:
-	PUSH_SR                                	| [$be47: php]
-	SET_I_FLAG                             	| [$be48: sei]
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$be49: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$be49: lda bank_switch_start_6000]
-	GET_ADDRESS	0x7549                     	| [$be4c: lda	$7549]
-	move.b	(a0),d0                         	| [$be4c: lda	$7549]
-	GET_ADDRESS	0x6080                     	| [$be4f: lda	$6080]
-	move.b	(a0),d0                         	| [$be4f: lda	$6080]
-	GET_ADDRESS	0x7540                     	| [$be52: lda	$7540]
-	move.b	(a0),d0                         	| [$be52: lda	$7540]
-	GET_ADDRESS	0x755e                     	| [$be55: lda	$755e]
-	move.b	(a0),d0                         	| [$be55: lda	$755e]
-	GET_ADDRESS	0x6090                     	| [$be58: lda	$6090]
-	move.b	(a0),d0                         	| [$be58: lda	$6090]
-	POP_SR                                 	| [$be5b: plp]
+		| [$be47: php]
+		| [$be48: sei]
+		* no bank switch, this is fake
+		*jbsr	switch_to_bank_??	| [$be49: lda bank_switch_start_6000]
+		| [$be4c: lda	$7549]
+		| [$be4f: lda	$6080]
+		| [$be52: lda	$7540]
+		| [$be55: lda	$755e]
+		| [$be58: lda	$6090]
+		| [$be5b: plp]
+		
 	GET_ADDRESS	0x06a5                     	| [$be5c: ldy	$06a5]
 	move.b	(a0),d2                         	| [$be5c: ldy	$06a5]
 	GET_ADDRESS	0x06a7                     	| [$be5f: lda	$06a7]
@@ -17106,6 +17150,8 @@ l_c86c:
 	move.b	d0,d1                           	| [$c89b: tax]
 	rts                                    	| [$c89c: rts]
 
+l_c8a1:
+	move.b	d0,d2                           	| [$c8a1: tay]
 	move.b	d1,d0                           	| [$c8a2: txa]
 	move.w	d0,-(sp)                        	| [$c8a3: pha]
 	move.b	d2,d0                           	| [$c8a4: tya]
@@ -18385,24 +18431,25 @@ l_d598:
 l_d5b5:
 	jra	l_a945                             	| [$d5b5: jmp	$a945]
 
-switch_to_bank_0_D5B8:
-	PUSH_SR                                	| [$d5b8: php]
-	SET_I_FLAG                             	| [$d5b9: sei]
-	GET_ADDRESS	bank_switch_start_6000     	| [$d5ba: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$d5ba: lda bank_switch_start_6000]
-	GET_ADDRESS	0x6080                     	| [$d5bd: lda	$6080]
-	move.b	(a0),d0                         	| [$d5bd: lda	$6080]
-	POP_SR                                 	| [$d5c0: plp]
+switch_to_bank_01_D5B8:
+	
+	jbsr	switch_to_bank_00	   	| [$d5b8: php]
+	   	| [$d5b9: sei]
+	   	| [$d5ba: lda bank_switch_start_6000]
+	    	| [$d5ba: lda bank_switch_start_6000]
+	   	| [$d5bd: lda	$6080]
+	    	| [$d5bd: lda	$6080]
+	   	| [$d5c0: plp]
 	rts                                    	| [$d5c1: rts]
 
-switch_to_bank_0_d5c2:
-	PUSH_SR                                	| [$d5c2: php]
-	SET_I_FLAG                             	| [$d5c3: sei]
-	GET_ADDRESS	bank_switch_start_6000     	| [$d5c4: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$d5c4: lda bank_switch_start_6000]
-	GET_ADDRESS	0x6090                     	| [$d5c7: lda	$6090]
-	move.b	(a0),d0                         	| [$d5c7: lda	$6090]
-	POP_SR                                 	| [$d5ca: plp]
+switch_to_bank_01_d5c2:
+	jbsr	switch_to_bank_01 	| [$d5c2: php]
+	 	| [$d5c3: sei]
+	 	| [$d5c4: lda bank_switch_start_6000]
+	  	| [$d5c4: lda bank_switch_start_6000]
+	 	| [$d5c7: lda	$6090]
+	  	| [$d5c7: lda	$6090]
+	 	| [$d5ca: plp]
 	rts                                    	| [$d5cb: rts]
 
 l_d5cc:
@@ -18438,28 +18485,13 @@ l_d5d2:
 	move.b	(a0),d2                         	| [$d5e1: ldy	$0006]
 	rts                                    	| [$d5e3: rts]
 l_d5e4:
-	PUSH_SR
+	
 	GET_ADDRESS	0x0004                     	| [$d5e4: sta	$0004]
 	move.b	d0,(a0)                         	| [$d5e4: sta	$0004]
 	GET_ADDRESS	0x0006                     	| [$d5e6: sty	$0006]
 	move.b	d2,(a0)                         	| [$d5e6: sty	$0006]
-	SET_I_FLAG                             	| [$d5e9: sei]
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$d5ea: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$d5ea: lda bank_switch_start_6000]
-	GET_ADDRESS	0x754f                     	| [$d5ed: lda	$754f]
-	move.b	(a0),d0                         	| [$d5ed: lda	$754f]
-	GET_ADDRESS	0x60b0                     	| [$d5f0: lda	$60b0]
-	move.b	(a0),d0                         	| [$d5f0: lda	$60b0]
-	GET_ADDRESS	0x7540                     	| [$d5f3: lda	$7540]
-	move.b	(a0),d0                         	| [$d5f3: lda	$7540]
-	GET_ADDRESS	0x7541                     	| [$d5f6: lda	$7541]
-	move.b	(a0),d0                         	| [$d5f6: lda	$7541]
-	GET_ADDRESS	0x7551                     	| [$d5f9: lda	$7551]
-	move.b	(a0),d0                         	| [$d5f9: lda	$7551]
-	GET_ADDRESS	0x6090                     	| [$d5fc: lda	$6090]
-	move.b	(a0),d0                         	| [$d5fc: lda	$6090]
-	POP_SR                                 	| [$d5ff: plp]
+	                             	| [$d5e9: sei]
+	jbsr	switch_to_bank_00           	| [$d5ff: plp]
 	clr.b	d2                               	| [$d600: ldy #$00]
 l_d602:
 	GET_ADDRESS_Y	0x00                     	| [$d602: lda ($00), y]
@@ -18595,24 +18627,24 @@ l_d660:
 l_d670:
 	asl.b	#1,d0                            	| [$d670: asl a]
 	move.b	d0,d2                           	| [$d671: tay]
-	PUSH_SR                                	| [$d672: php]
-	SET_I_FLAG                             	| [$d673: sei]
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$d674: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$d674: lda bank_switch_start_6000]
-	GET_ADDRESS	0x754f                     	| [$d677: lda	$754f]
-	move.b	(a0),d0                         	| [$d677: lda	$754f]
-	GET_ADDRESS	0x6090                     	| [$d67a: lda	$6090]
-	move.b	(a0),d0                         	| [$d67a: lda	$6090]
-	GET_ADDRESS	0x7541                     	| [$d67d: lda	$7541]
-	move.b	(a0),d0                         	| [$d67d: lda	$7541]
-	GET_ADDRESS	0x7543                     	| [$d680: lda	$7543]
-	move.b	(a0),d0                         	| [$d680: lda	$7543]
-	GET_ADDRESS	0x7552                     	| [$d683: lda	$7552]
-	move.b	(a0),d0                         	| [$d683: lda	$7552]
-	GET_ADDRESS	0x6090                     	| [$d686: lda	$6090]
-	move.b	(a0),d0                         	| [$d686: lda	$6090]
-	POP_SR                                 	| [$d689: plp]
+	jbsr	switch_to_bank_00	| [$d672: php]
+    	| [$d673: sei]
+
+    	| [$d674: lda bank_switch_start_6000]
+     	| [$d674: lda bank_switch_start_6000]
+    	| [$d677: lda	$754f]
+     	| [$d677: lda	$754f]
+    	| [$d67a: lda	$6090]
+     	| [$d67a: lda	$6090]
+    	| [$d67d: lda	$7541]
+     	| [$d67d: lda	$7541]
+    	| [$d680: lda	$7543]
+     	| [$d680: lda	$7543]
+    	| [$d683: lda	$7552]
+     	| [$d683: lda	$7552]
+    	| [$d686: lda	$6090]
+     	| [$d686: lda	$6090]
+    	| [$d689: plp]
 	GET_ADDRESS	0x4040                     	| [$d68a: lda	$4040, y]
 	move.b	(a0,d2.w),d0                    	| [$d68a: lda	$4040, y]
 	PUSH_SR
@@ -18766,6 +18798,8 @@ l_d6db:
 	POP_SR
 	rts                                    	| [$d70d: rts]
 
+* main IRQ
+tetris_irq:
 periodic_interrupt_D70E:
 * save registers
 	move.w	d0,-(sp)                        	| [$d70e: pha]
@@ -18953,24 +18987,22 @@ l_d7d4:
 	GET_ADDRESS	first_byte_of_bank_0d      	| [$d7da: lda first_byte_of_bank_0d]
 	move.b	(a0),d0                         	| [$d7da: lda first_byte_of_bank_0d]
 	bne	l_d7f6                             	| [$d7dc: bne	$d7f6]
-	PUSH_SR                                	| [$d7de: php]
-	SET_I_FLAG                             	| [$d7df: sei]
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$d7e0: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$d7e0: lda bank_switch_start_6000]
-	GET_ADDRESS	0x754f                     	| [$d7e3: lda	$754f]
-	move.b	(a0),d0                         	| [$d7e3: lda	$754f]
-	GET_ADDRESS	0x60b0                     	| [$d7e6: lda	$60b0]
-	move.b	(a0),d0                         	| [$d7e6: lda	$60b0]
-	GET_ADDRESS	0x7542                     	| [$d7e9: lda	$7542]
-	move.b	(a0),d0                         	| [$d7e9: lda	$7542]
-	GET_ADDRESS	0x7543                     	| [$d7ec: lda	$7543]
-	move.b	(a0),d0                         	| [$d7ec: lda	$7543]
-	GET_ADDRESS	0x7553                     	| [$d7ef: lda	$7553]
-	move.b	(a0),d0                         	| [$d7ef: lda	$7553]
-	GET_ADDRESS	0x60b0                     	| [$d7f2: lda	$60b0]
-	move.b	(a0),d0                         	| [$d7f2: lda	$60b0]
-	POP_SR                                 	| [$d7f5: plp]
+    jbsr	switch_to_bank_00 	| [$d7df: sei]
+
+     	| [$d7e0: lda bank_switch_start_6000]
+     	| [$d7e3: lda	$754f]
+      	| [$d7e3: lda	$754f]
+     	| [$d7e6: lda	$60b0]
+      	| [$d7e6: lda	$60b0]
+     	| [$d7e9: lda	$7542]
+      	| [$d7e9: lda	$7542]
+     	| [$d7ec: lda	$7543]
+      	| [$d7ec: lda	$7543]
+     	| [$d7ef: lda	$7553]
+      	| [$d7ef: lda	$7553]
+     	| [$d7f2: lda	$60b0]
+      	| [$d7f2: lda	$60b0]
+     	| [$d7f5: plp]
 
 l_d7f6:
 	GET_ADDRESS	0x000e                     	| [$d7f6: lda	$000e]
@@ -18992,22 +19024,22 @@ l_d7fb:
 	POP_SR
 	and.b	#0x40,d0                         	| [$d803: and #$40]
 	beq	l_d7fb                             	| [$d805: beq	$d7fb]
-	PUSH_SR
-	GET_ADDRESS	0x3800                     	| [$d807: sta	$3800]
-	move.b	d0,(a0)                         	| [$d807: sta	$3800]
-	POP_SR
+	
+	       	| [$d807: sta	$3800]
+	        	| [$d807: sta	$3800]
+	
 * restore registers, end of interrupt
 	move.w	(sp)+,d0                        	| [$d80a: pla]
 	move.b	d0,d2                           	| [$d80b: tay]
 	move.w	(sp)+,d0                        	| [$d80c: pla]
 	move.b	d0,d1                           	| [$d80d: tax]
 	move.w	(sp)+,d0                        	| [$d80e: pla]
-rti
+	rts
 
 * switch to bank 1 (not sure but probably, yes)
 l_d810:
-	GET_ADDRESS	bank_switch_start_6000     	| [$d810: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$d810: lda bank_switch_start_6000]
+	     	| [$d810: lda bank_switch_start_6000]
+										| [$d810: lda bank_switch_start_6000]
 	GET_ADDRESS	0x06a2                     	| [$d813: lda	$06a2]
 	move.b	(a0),d0                         	| [$d813: lda	$06a2]
 	bne	l_d81e                             	| [$d816: bne	$d81e]
@@ -19018,19 +19050,19 @@ l_d81e:
 	move.b	#0x03,d4                        	| [$d81e: cmp #$03]
 	cmp.b	d0,d4                            	| [$d81e: cmp #$03]
 	bne	l_d841                             	| [$d820: bne	$d841]
-	GET_ADDRESS	0x754f                     	| [$d822: lda	$754f]
-	move.b	(a0),d0                         	| [$d822: lda	$754f]
+	                   	| [$d822: lda	$754f]
+	                    	| [$d822: lda	$754f]
 * second part of the switch, only switches if reaches there
-	GET_ADDRESS	0x6090                     	| [$d825: lda	$6090]
-	move.b	(a0),d0                         	| [$d825: lda	$6090]
-	GET_ADDRESS	0x7541                     	| [$d828: lda	$7541]
-	move.b	(a0),d0                         	| [$d828: lda	$7541]
-	GET_ADDRESS	0x7543                     	| [$d82b: lda	$7543]
-	move.b	(a0),d0                         	| [$d82b: lda	$7543]
-	GET_ADDRESS	0x7552                     	| [$d82e: lda	$7552]
-	move.b	(a0),d0                         	| [$d82e: lda	$7552]
-	GET_ADDRESS	0x6090                     	| [$d831: lda	$6090]
-	move.b	(a0),d0                         	| [$d831: lda	$6090]
+	jbsr	switch_to_bank_00                     	| [$d825: lda	$6090]
+							| [$d825: lda	$6090]
+						| [$d828: lda	$7541]
+							| [$d828: lda	$7541]
+						| [$d82b: lda	$7543]
+							| [$d82b: lda	$7543]
+						| [$d82e: lda	$7552]
+							| [$d82e: lda	$7552]
+						| [$d831: lda	$6090]
+							| [$d831: lda	$6090]
 	jbsr	l_d8ca                            	| [$d834: jsr	$d8ca]
 	clr.b	d0                               	| [$d837: lda #$00]
 	PUSH_SR
@@ -19078,36 +19110,29 @@ l_d85d:
 	move.b	d0,(a0)                         	| [$d860: sta	$00b8]
 	POP_SR
 * bank switching occurs here too
-	GET_ADDRESS	0x6090                     	| [$d862: lda	$6090]
-	move.b	(a0),d0                         	| [$d862: lda	$6090]
-	PUSH_SR
-	GET_ADDRESS	0x00bc                     	| [$d865: sta	$00bc]
-	move.b	d0,(a0)                         	| [$d865: sta	$00bc]
-	POP_SR
-	GET_ADDRESS	0x7541                     	| [$d867: lda	$7541]
-	move.b	(a0),d0                         	| [$d867: lda	$7541]
-	PUSH_SR
-	GET_ADDRESS	0x00ba                     	| [$d86a: sta	$00ba]
-	move.b	d0,(a0)                         	| [$d86a: sta	$00ba]
-	POP_SR
-	GET_ADDRESS	0x7543                     	| [$d86c: lda	$7543]
-	move.b	(a0),d0                         	| [$d86c: lda	$7543]
-	PUSH_SR
-	GET_ADDRESS	0x00bb                     	| [$d86f: sta	$00bb]
-	move.b	d0,(a0)                         	| [$d86f: sta	$00bb]
-	POP_SR
-	GET_ADDRESS	0x7553                     	| [$d871: lda	$7553]
-	move.b	(a0),d0                         	| [$d871: lda	$7553]
-	PUSH_SR
-	GET_ADDRESS	0x00b9                     	| [$d874: sta	$00b9]
-	move.b	d0,(a0)                         	| [$d874: sta	$00b9]
-	POP_SR
-	GET_ADDRESS	0x6090                     	| [$d876: lda	$6090]
-	move.b	(a0),d0                         	| [$d876: lda	$6090]
-	PUSH_SR
-	GET_ADDRESS	0x00bd                     	| [$d879: sta	$00bd]
-	move.b	d0,(a0)                         	| [$d879: sta	$00bd]
-	POP_SR
+	jbsr	switch_to_bank_00
+											| [$d862: lda	$6090]
+						
+											| [$d865: sta	$00bc]
+											| [$d865: sta	$00bc]
+						
+											| [$d867: lda	$7541]
+						
+											| [$d86a: sta	$00ba]
+						
+											| [$d86c: lda	$7543]
+						
+											| [$d86f: sta	$00bb]
+						
+											| [$d871: lda	$7553]
+						
+											| [$d874: sta	$00b9]
+
+											| [$d876: lda	$6090]
+						
+											| [$d879: sta	$00bd]
+	* 0xBA... is as follows after reading slapstic shit
+	* 0x01 0x13 0x29 0x00
 	jbsr	l_e0f9                            	| [$d87b: jsr	$e0f9]
 	jbsr	l_d8ca                            	| [$d87e: jsr	$d8ca]
 	GET_ADDRESS	0x0008                     	| [$d881: lda	$0008]
@@ -20318,19 +20343,19 @@ l_e643:
 
 l_e649:
 	move.w	d0,-(sp)                        	| [$e649: pha]
-	jbsr	switch_to_bank_0_d5c2             	| [$e64a: jsr switch_to_bank_0_d5c2]
+	jbsr	switch_to_bank_01_d5c2             	| [$e64a: jsr switch_to_bank_01_d5c2]
 	move.w	(sp)+,d0                        	| [$e64d: pla]
 	jra	l_402d                             	| [$e64e: jmp	$402d]
 
 l_e651:
 	move.w	d0,-(sp)                        	| [$e651: pha]
-	jbsr	switch_to_bank_0_d5c2             	| [$e652: jsr switch_to_bank_0_d5c2]
+	jbsr	switch_to_bank_01_d5c2             	| [$e652: jsr switch_to_bank_01_d5c2]
 	move.w	(sp)+,d0                        	| [$e655: pla]
 	jra	l_4004                             	| [$e656: jmp	$4004]
 
 l_e659:
 	move.w	d0,-(sp)                        	| [$e659: pha]
-	jbsr	switch_to_bank_0_d5c2             	| [$e65a: jsr switch_to_bank_0_d5c2]
+	jbsr	switch_to_bank_01_d5c2             	| [$e65a: jsr switch_to_bank_01_d5c2]
 	move.w	(sp)+,d0                        	| [$e65d: pla]
 	jra	l_4141                             	| [$e65e: jmp	$4141]
 
@@ -20340,21 +20365,20 @@ continue_startup_e661:
 											| [$e663: ldx #$ff]
 	lea		stack_top,sp			| txs			; set stack on top
 	addq.b	#1,d1                           	| [$e666: inx] X=0
-* switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$e667: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$e667: lda bank_switch_start_6000]
-	GET_ADDRESS	0x754f                     	| [$e66a: lda	$754f]
-	move.b	(a0),d0                         	| [$e66a: lda	$754f]
-	GET_ADDRESS	0x6090                     	| [$e66d: lda	$6090]
-	move.b	(a0),d0                         	| [$e66d: lda	$6090]
-	GET_ADDRESS	0x7541                     	| [$e670: lda	$7541]
-	move.b	(a0),d0                         	| [$e670: lda	$7541]
-	GET_ADDRESS	0x7543                     	| [$e673: lda	$7543]
-	move.b	(a0),d0                         	| [$e673: lda	$7543]
-	GET_ADDRESS	0x7552                     	| [$e676: lda	$7552]
-	move.b	(a0),d0                         	| [$e676: lda	$7552]
-	GET_ADDRESS	0x6090                     	| [$e679: lda	$6090]
-	move.b	(a0),d0                         	| [$e679: lda	$6090]
+
+	jbsr	switch_to_bank_00     	| [$e667: lda bank_switch_start_6000]
+	               	| [$e667: lda bank_switch_start_6000]
+	              	| [$e66a: lda	$754f]
+	               	| [$e66a: lda	$754f]
+	              	| [$e66d: lda	$6090]
+	               	| [$e66d: lda	$6090]
+	              	| [$e670: lda	$7541]
+	               	| [$e670: lda	$7541]
+	              	| [$e673: lda	$7543]
+	               	| [$e673: lda	$7543]
+	              	| [$e676: lda	$7552]
+	               	| [$e676: lda	$7552]
+	              	| [$e679: lda	$6090]
 	move.b	#0x18,d2                        	| [$e67c: ldy #$18]
 	move.b	#0x30,d0                        	| [$e67e: lda #$30]
 * put	$0030 in	$0600-$617
@@ -20553,24 +20577,24 @@ l_e793:
 	move.b	(a0),d0                         	| [$e793: lda	$280a]
 	and.b	#0x3c,d0                         	| [$e796: and #$3c]
 	move.b	d0,d1                           	| [$e798: tax]
-	PUSH_SR                                	| [$e799: php]
-	SET_I_FLAG                             	| [$e79a: sei]
+	                          	| [$e799: php]
+	                          	| [$e79a: sei]
 * switch to bank 1
-	GET_ADDRESS	bank_switch_start_6000     	| [$e79b: lda bank_switch_start_6000]
-	move.b	(a0),d0                         	| [$e79b: lda bank_switch_start_6000]
-	GET_ADDRESS	0x754f                     	| [$e79e: lda	$754f]
-	move.b	(a0),d0                         	| [$e79e: lda	$754f]
-	GET_ADDRESS	0x60b0                     	| [$e7a1: lda	$60b0]
-	move.b	(a0),d0                         	| [$e7a1: lda	$60b0]
-	GET_ADDRESS	0x7540                     	| [$e7a4: lda	$7540]
-	move.b	(a0),d0                         	| [$e7a4: lda	$7540]
-	GET_ADDRESS	0x7542                     	| [$e7a7: lda	$7542]
-	move.b	(a0),d0                         	| [$e7a7: lda	$7542]
-	GET_ADDRESS	0x7554                     	| [$e7aa: lda	$7554]
-	move.b	(a0),d0                         	| [$e7aa: lda	$7554]
-	GET_ADDRESS	0x60a0                     	| [$e7ad: lda	$60a0]
-	move.b	(a0),d0                         	| [$e7ad: lda	$60a0]
-	POP_SR                                 	| [$e7b0: plp]
+	jbsr	switch_to_bank_01     	| [$e79b: lda bank_switch_start_6000]
+	     	| [$e79b: lda bank_switch_start_6000]
+	    	| [$e79e: lda	$754f]
+		      	| [$e79e: lda	$754f]
+	     	| [$e7a1: lda	$60b0]
+	      	| [$e7a1: lda	$60b0]
+	     	| [$e7a4: lda	$7540]
+	      	| [$e7a4: lda	$7540]
+	     	| [$e7a7: lda	$7542]
+	      	| [$e7a7: lda	$7542]
+	     	| [$e7aa: lda	$7554]
+	      	| [$e7aa: lda	$7554]
+	     	| [$e7ad: lda	$60a0]
+	      	| [$e7ad: lda	$60a0]
+	                                 	| [$e7b0: plp]
 	GET_ADDRESS	0x765c                     	| [$e7b1: lda	$765c, x]
 	move.b	(a0,d1.w),d0                    	| [$e7b1: lda	$765c, x]
 	PUSH_SR
