@@ -2274,7 +2274,9 @@ jump_table_82c2:
 	.word	$8657
 	.word	$86ea
 	.word	$8657
-	
+
+8302: 78       sei                                                 
+8303: 20 90 92 jsr $9290                                           
 8306: 20 49 E6 jsr	$e649
 8309: A9 00    lda #$00
 830B: 85 5E    sta	$005e
@@ -2500,6 +2502,7 @@ jump_table_82c2:
 8503: E6 B0    inc	$00b0
 8505: 4C 2E 82 jmp	$822e
 
+8510: A9 00    lda #$00                                            
 8512: 85 B1    sta	$00b1
 8514: 85 5E    sta	$005e
 8516: 85 5F    sta	$005f
@@ -4379,6 +4382,8 @@ clear_player_grid_9E8F:
 9FAB: A0 10    ldy #$10
 9FAD: 60       rts
 
+A02E: BD 77 06 lda $0677, x                                        
+A031: F0 0A    beq $a03d                                           
 A033: DE 77 06 dec	$0677, x
 A036: D0 05    bne	$a03d
 A038: A9 00    lda #$00
@@ -4911,6 +4916,7 @@ A417: 68       pla
 A418: AA       tax
 A419: 60       rts
 
+A43A: A9 00    lda #$00
 A43C: 85 1F    sta	$001f
 A43E: A5 20    lda	$0020
 A440: 29 FE    and #$fe
@@ -6792,6 +6798,11 @@ B453: F6 A0    inc	$00a0, x
 B455: F6 A0    inc	$00a0, x
 B457: 60       rts
 
+B45E: A5 0B    lda $0b
+B460: 10 07    bpl $b469                                  
+B462: BD 58 B4 lda $b458, x                               
+B465: A0 01    ldy #$01                                   
+B467: D0 05    bne $b46e                                  
 B469: BD 5A B4 lda	$b45a, x
 B46C: A0 04    ldy #$04
 B46E: 94 87    sty	$0087, x
@@ -7019,6 +7030,9 @@ B666: CA       dex
 B667: 10 9E    bpl	$b607
 B669: 60       rts
 
+B69C: A9 03    lda #$03                                            
+B69E: 85 2B    sta $2b                                             
+B6A0: A9 00    lda #$00                                            
 B6A2: 85 2E    sta	$002e
 B6A4: A9 16    lda #$16
 B6A6: 85 2D    sta	$002d
@@ -7027,6 +7041,15 @@ B6AA: BD B0 B6 lda	$b6b0, x
 B6AD: 85 2C    sta	$002c
 B6AF: 60       rts
 
+B6CE: A5 2B    lda $2b                                             
+B6D0: C9 03    cmp #$03                                            
+B6D2: D0 55    bne $b729                                           
+B6D4: A4 2E    ldy $2e                                             
+B6D6: 20 52 89 jsr $8952                                           
+B6D9: A5 11    lda $11                                             
+B6DB: D0 4C    bne $b729                                           
+B6DD: A5 2E    lda $2e                                             
+B6DF: D0 12    bne $b6f3                                           
 B6E1: A5 77    lda	$0077
 B6E3: F0 05    beq	$b6ea
 B6E5: A2 00    ldx #$00
@@ -9121,6 +9144,7 @@ CB34: A9 3F    lda #$3f
 CB36: 20 70 D6 jsr	$d670
 CB39: 60       rts
 
+CB42: A5 08    lda $08                                             
 CB44: C9 FE    cmp #$fe
 CB46: F0 01    beq	$cb49
 CB48: 60       rts
@@ -10598,7 +10622,7 @@ E747: 8D 63 06 sta	$0663
 E74A: 8D 64 06 sta	$0664
 E74D: 60       rts
 
-
+E77E: 86 1B    stx $1b                                             
 E780: 8A       txa
 E781: 0A       asl a
 E782: 0A       asl a
@@ -11391,10 +11415,12 @@ EDEB: AA       tax
 EDEC: AD 78 09 lda	$0978
 EDEF: 9D 84 08 sta	$0884, x
 EDF2: 60       rts
+
+EDF3: A5 67    lda $67                                             
+EDF5: F0 EF    beq $ede6                                           
 EDF7: A9 FF    lda #$ff                                            
 EDF9: 8D 78 09 sta $0978                                           
 EDFC: D0 EC    bne $edea   ; always branches!                                           
-
 
 EE0E: E6 71    inc	$0071
 EE10: A5 71    lda	$0071
