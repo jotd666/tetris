@@ -32,16 +32,18 @@ WHDASM = vasmm68k_mot -DDATETIME -I$(HDBASE)/amiga39_JFF_OS/include -I$(WHDBASE)
 
 
 # leave MAIN_OBJ first
-#OBJS =  sounds.o $(PROGNAME).o vbr.o graphics.o ReadJoyPad.o ptplayer.o 
-OBJS = $(MAIN_OBJ) $(PROGNAME).o vbr.o tetris_rom.o tetris_ram.o ReadJoyPad.o ptplayer.o 
+#OBJS =  sounds.o $(PROGNAME).o vbr.o ReadJoyPad.o ptplayer.o 
+OBJS = $(MAIN_OBJ) $(PROGNAME).o vbr.o tetris_rom.o graphics.o tetris_ram.o ReadJoyPad.o ptplayer.o 
 #all: $(AMIGASRC)/graphics.68k $(AMIGASRC)/sounds.68k $(MAIN) $(WHDLOADER) $(WHDLOADER_CHIP)
-all: $(MAIN) $(WHDLOADER) $(WHDLOADER_CHIP)
+all: $(AMIGASRC)/graphics.68k $(MAIN) $(WHDLOADER) $(WHDLOADER_CHIP)
+
 
 
 clean:
 	del $(OBJS) "$(MAIN)"
 	
-$(AMIGASRC)/graphics.68k: $(ASSETS)/convert_graphics.py $(ASSETS)/../$(PROGNAME)_gfx.c
+#$(AMIGASRC)/graphics.68k: $(ASSETS)/convert_graphics.py $(ASSETS)/../$(PROGNAME)_gfx.c
+$(AMIGASRC)/graphics.68k: $(ASSETS)/convert_graphics.py
 	cmd /c $(ASSETS)\convert_graphics.py
 
 

@@ -13,22 +13,14 @@
 AttnFlags = 0x128
 AFB_68010 = 0
 AFB_68020 = 1
-NO68020 = 1
 
 
-SCREEN_ADDRESS = 0x9000
+
+SCREEN_ADDRESS = 0x1000
 
 
 SCORE_FILE_SIZE = 0x50
 
-* sprites:
-
-* guards X2
-* player+barrow
-* wagons
-* bag+pickaxe+bomb
-* elevator
-* bullet
 
 	.ifdef	RELEASE
 OPT_ENABLE_PROFILING = 0         | DO NOT CHANGE THIS
@@ -51,8 +43,8 @@ _custom = 0xDFF000
 
 NB_PLAYFIELD_PLANES = 4
 TOTAL_NB_COLORS = 32
-NB_BYTES_PER_ROW = 40
-NB_LINES = 288
+NB_BYTES_PER_ROW = 42
+NB_LINES = 240
 NB_PLAYFIELD_LINES = NB_LINES
 
 BG_SCREEN_PLANE_SIZE = NB_BYTES_PER_ROW*NB_PLAYFIELD_LINES
@@ -140,9 +132,7 @@ start:
 		.global osd_break		| for debug	
 		*.global osd_calibrate_display		| for debug
 		.global osd_w_videoram
-		.global osd_w_colorram
-		.global osd_r_videoram
-		.global osd_r_colorram
+
 		.global osd_update_sprites
 		.global osd_read_dipswitches
 		.global osd_read_inputs
@@ -315,15 +305,7 @@ _user:
 	move.l	dip_switch_difficulty(pc),d0
 	lsl.b	#3,d0
 	
-	move.b	dip_switch_start_lives+3(pc),d1
-	bne.b	1f
-	moveq	#4,d1	| 3 lives is default
-1:
-	* DSW 0 = 2 lives
-	subq.b	#1,d1
-	or.b	d1,d0
 
-	
 	move.l	misc_options,d1
 	btst	#0,d1
 	
@@ -562,7 +544,19 @@ demo_game:
 		move		#0x4000,_custom+intena						| disable interrupts
 		move		#0x7FFF,_custom+intreq						| ack all interrupts
 		bsr			platform_init					| amiga-specific init
+
+		* to test the video
+		lea		tetris_game,a1
+		lea		0x1000,a0
+		move.w	#0xFFF,d1
+0:		
+		move.b	(a1)+,d0
+		jbsr	osd_w_videoram
+		addq.w	#1,a0
+		dbf		d1,0b
 		
+
+		jbsr	osd_break
 0:	
 		jmp			tetris_reset					| pass control to the tetris core
 		
@@ -657,6 +651,7 @@ _vblank:
 osd_break:
 	* sends a WinUAE command to enter WinUAE debugger
 	.ifndef	RELEASE
+	move.l	D0,-(a7)
 	pea     0.w
 	* Normally it would point to where the result of the command is written, but since the last parameter (first pushed)
 	* indicating the number of bytes to write is 0, nothing is written.
@@ -667,6 +662,7 @@ osd_break:
 	pea     82.w
 	jsr     0xf0ff60
 	lea     24(sp),sp
+	move.l	(a7)+,d0
 	.endif
     rts
 		
@@ -994,7 +990,7 @@ platform_init:
 	
 
     move.w #0,bplcon1(a5)    | foreground tiles
-	move.w	#0,d0
+	move.w	#2,d0
     move.w d0,bpl1mod(a5)
     move.w d0,bpl2mod(a5)
 
@@ -1120,18 +1116,17 @@ osd_disable_vblank_interrupt:
 	
 
 	
-* d6=screen address (preserved), d0=tile (preserved)
-* d6 starts at 0x8000 ends at 0x83FF
+* < A0=screen address (preserved)
+* (A0 starts at 0x1000 and ends at 0x1FFF)
+* < D0: code
 * should preserve all registers
 
 osd_w_videoram:
-    .ifeq OPT_DISABLE_BG_LAYER
 	movem.l	d0-d3/d6/a0-a2,-(a7)
 	
-
-	sub.w	#SCREEN_ADDRESS,d6
+	sub.w	#SCREEN_ADDRESS,a0
 	bcs.b	0f
-	cmp.w	#0x400,d6
+	cmp.w	#0x1000,a0
 	bcs.b	1f
 0:
 	* should not happen
@@ -1143,97 +1138,36 @@ osd_w_videoram:
 	bra.b	0f
 	
 1:
-	cmp.w	#0x85,d6
-	bne.b	2f
-	* location of VA logo tile (to detect title)
-	lea		palette+2,a0			| points on second color 
-	lea		copperlist_colors+4,a1	| second color copperlist entry
-	cmp.b	#0xE5,d0
-	bne.b	22f
-	* title: set proper colors for V/A logo in title: note: if palette is
-	* reordered in python convert_graphics.py script
-	* this will fail changing the proper colors!
-	* But palette is fixed now so it's going to work.
-	* Not as clean as it should be but this is a hack anyway...)
-	move.w	#0xF90,(2,a1)
-	move.w	#0x0DF,(6,a1)
-	bra.b	2f
-22:
-	* not title: remove copperlist dynamic color changes
-	move.w	(A0)+,(2,a1)
-	move.w	(a0),(6,a1)
-2:
 	lea		bg_videoram,a1
-	add.w	d6,a1
+	add.w	a0,a1
 	
 	cmp.b	(a1),d0
 	beq.b	0f		| already the proper value
 3:
 
 	move.b	d0,(a1)	| update logical grid
-	lea		bg_colorram,a1
-	move.b	(a1,d6.W),d1
-	
+	move.l	a1,d0
+	bclr	#0,d0
+	move.l	d0,a1
+	* get 16-bit word for tile&color
+	move.w	(a1),d0
 
-	jbsr		update_bg_tile
+	move.w	a0,d1
+	lsr.w	#1,d1
+	jbsr		update_tile
 0:
 	movem.l	(a7)+,d0-d3/d6/a0-a2
-    .endif | OPT_DISABLE_BG_LAYER
-	rts
-
-* d6=screen address (preserved), d0=attribute (preserved)
-* d6 starts at 0x8000 ends at 0x83FF
-* should preserve all registers
-
-osd_w_colorram:
-    .ifeq OPT_DISABLE_BG_LAYER
-	movem.l	d0-d3/d6/a0-a2,-(a7)
-	sub.w	#SCREEN_ADDRESS+0x800,d6
-	bcs.b	0f
-	cmp.w	#0x400,d6
-	bcs.b	1f
-0:
-	* should not happen
-	.ifndef	RELEASE
-	lea		write_colorram_out_of_range_error(pc),a0
-	jbsr	osd_break
-	.endif
-
-	bra.b	0f
-1:
-	lea		bg_colorram,a1
-	add.w	d6,a1
-	cmp.b	(a1),d0
-	beq.b	0f		| already the proper value
-	
-
-	move.b	d0,(a1)	| update logical grid
-	move.b	d0,d1
-	lea		bg_videoram,a1
-	move.b	(a1,d6.W),d0
-	
-	jbsr		update_bg_tile
-0:
-	movem.l	(a7)+,d0-d3/d6/a0-a2
-    .endif | OPT_DISABLE_BG_LAYER
 	rts
 
 
-* d6: screen offset
-* d0: tile code
-* d1: attribute
-*
-* the layout is strange to say the least
-* first row (last row in memory) is shown "normally" (X is mirrored, but horizontal,
-* Y is at top of the screen)
-* other rows use a X/Y transposed system like Galaxian or Xevious!
-*
-update_bg_tile:
-	* compute Y
-
-	and.w	#0xFF,d0	| mask up to 255
-	and.w	#0xFF,d1	| mask up to 255
-
+* < D0.W: tile+color 
+* < D1.W: screen offset
+update_tile:
+	move.w	d0,d2
+	ror.w	#8,d0		| invert bytes
+	and.w	#0x07FF,d0	| 2048 tiles: tile index
+	and.w	#0xF0,d2
+	lsr.w	#4,d2		| tile CLUT (ignored ATM)
 	
 	.ifne	OPT_ENABLE_LOGGING
 	* when logging is enabled, play a while
@@ -1251,58 +1185,12 @@ update_bg_tile:
 	movem.w	(a7)+,d0-d1
 	.endif
 	
-	* is it bank 2 ?
-	btst	#4,D1
-	beq.b	0f
-	add.w	#0x200,d0
-0:
-	* is it upper part of bank ?
-	btst	#5,D1
-	beq.b	0f
-	add.w	#0x100,d0
-0:
-	* color tile
-	and.w	#0xF,d1
+	* layout is simple: X = offset % 0x40
+	*                   Y = offset // 0x40
+	move.w	d1,d3
+	and.w	#0x3F,d1	| X
+	lsr.w	#6,d3		| Y
 	
-	* special case parasite brown N when switching screens
-	cmp.w	#0x2E0,d0
-	bne.b	0f
-	cmp.b	#3,d1
-	beq.b	0f
-	* "N" of "PRESENTS", but not purple: skip
-	rts
-0:
-	cmp.w	#0x3C0,d6
-	jcc		0f
-	cmp.w	#0x40,d6
-	bcs.b	2f
-	move.w	d6,d3
-	lsr.w	#5,d6		| this is X
-	neg.w	d6
-	add.w	#32,d6
-	and.w	#0x1F,d3	| this is Y
-	addq.w	#2,d3
-	bra.b	1f
-	* two first rows are special???
-*0:
-*	move.w	d6,d3
-*	lsr.w	#5,d3		| this is Y
-*	
-*	sub.w	#30,d3		| minus 2
-*	and.w	#0x1F,d6	| this is X
-*	neg.w	d6
-*	add.w	#32,d6
-*	jra	0f			| this is not enough to hide 2 first rows
-*	bra.b	1f
-*	* two last rows as well
-2:
-	move.w	d6,d3
-	lsr.w	#5,d3		| this is Y
-	add.w	#34,d3		| plus 2
-	and.w	#0x1F,d6	| this is X
-	neg.w	d6
-	add.w	#32,d6
-1:
 	lea		mulNB_BYTES_PER_ROW_table(pc),a0
 
 	
@@ -1313,31 +1201,31 @@ update_bg_tile:
 	move.w	(a0,d3.w),d3
 	lsl.w	#3,d3		| times 8
 	add.w	d3,a1
-	add.w	d6,a1
+	add.w	d1,a1
 
 	moveq	#NB_PLAYFIELD_PLANES-1,d3
 
-	* optimization when a well-known
-	* empty character is passed (standard charset)
-	* doesn't seem to depend on the attribute
-	cmp.w	#0xE0,d0	| empty character
-	jeq	11f
-	cmp.w	#0x1E0,d0	| empty character
-	jeq	11f
-	cmp.w	#0x3E0,d0	| empty character
-	jeq	11f
-	cmp.w	#0x10,d0	| empty character
-	jeq	11f
+*	* optimization when a well-known
+*	* empty character is passed (standard charset)
+*	* doesn't seem to depend on the attribute
+*	cmp.w	#0xE0,d0	| empty character
+*	jeq	11f
+*	cmp.w	#0x1E0,d0	| empty character
+*	jeq	11f
+*	cmp.w	#0x3E0,d0	| empty character
+*	jeq	11f
+*	cmp.w	#0x10,d0	| empty character
+*	jeq	11f
 
-	*lea		character_table,a0
+	lea		character_table,a0
 	add.w	d0,d0
 	add.w	d0,d0
 	move.l	(a0,d0.w),d0
 	jeq	2f				| isn't declared as used
 	move.l	d0,a0		| pointer on clut table
-	* now we use d1 (attribute)
-	add.w	d1,d1
-	add.w	(a0,d1.w),a0
+	* now we use d2 (attribute)
+	moveq	#0,d2   | TEMP TEMP
+	add.w	(a0,d2.w),a0
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
@@ -1393,49 +1281,6 @@ set_bg_bitplanes:
     dbf d1,1b
     rts
 
-
-	
-* d6=screen address
-osd_r_colorram:
-	movem.l	a0/d6,-(a7)
-	sub.w	#SCREEN_ADDRESS+0x800,d6
-	bmi.b	0f
-	cmp.w	#0x400,d6
-	bcs.b	1f
-0:
-	* should not happen
-	.ifndef	RELEASE
-	lea		read_colorram_out_of_range_error(pc),a0
-	jbsr	osd_break
-	.endif
-	bra.b	2f
-1:
-	lea		bg_colorram,a0
-	move.b	(a0,d6.w),d0
-2:
-	movem.l	(a7)+,a0/d6
-	rts
-
-* d6=screen address
-osd_r_videoram:
-	movem.l	a0/d6,-(a7)
-	sub.w	#SCREEN_ADDRESS,d6
-	bmi.b	0f
-	cmp.w	#0x400,d6
-	bcs.b	1f
-0:
-	* should not happen
-	.ifndef	RELEASE
-	lea		read_videoram_out_of_range_error(pc),a0
-	jbsr	osd_break
-	.endif
-	bra.b	2f
-1:
-	lea		bg_videoram,a0
-	move.b	(a0,d6.w),d0
-2:
-	movem.l	(a7)+,a0/d6
-	rts
 
 osd_read_dipswitches:
 	* actual dipswitches
@@ -1727,7 +1572,7 @@ beamdelay:
 	rts
 
 	
-	MUL_TABLE	NB_BYTES_PER_ROW,288
+	MUL_TABLE	NB_BYTES_PER_ROW,NB_LINES
 
 	.align	4		| leave this long word alignment
 program_args:	ds.l	64,0
@@ -1904,8 +1749,10 @@ _end_of_ng_code:
 		
 	.align 2
 palette:
-	**.include "palette.68k"
+	.include "palette.68k"
 
+	* TEMP
+	.include	"tetris_game_pic.s"
 	
 
 	.ascii	"CODE_END"

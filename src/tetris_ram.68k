@@ -3,14 +3,11 @@
 	.global		stack_top
 	.global		current_bank
 	.global		bg_videoram
-	.global		bg_colorram
 	.global		palette_entries
 	.global		vb_ticks_count
 game_ram:
 	ds.b	0x1000
 bg_videoram:
-	ds.b	0x1000
-bg_colorram:
 	ds.b	0x1000
 palette_entries:
 	ds.b	0x100
