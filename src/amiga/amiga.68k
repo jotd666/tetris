@@ -1189,6 +1189,8 @@ update_tile:
 	*                   Y = offset // 0x40
 	move.w	d1,d3
 	and.w	#0x3F,d1	| X
+	cmp.w	#42,d1
+	jcc		0f			| last tiles are invisible
 	lsr.w	#6,d3		| Y
 	
 	lea		mulNB_BYTES_PER_ROW_table(pc),a0

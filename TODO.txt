@@ -1,1 +1,3 @@
-deduce score, round, line numbers... from screen writes
+- deduce score, round, line numbers... from screen writes
+- check if first w_videoram is the same in MAME
+- cmp + bmi??
