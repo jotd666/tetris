@@ -556,7 +556,6 @@ demo_game:
 		dbf		d1,0b
 		
 
-		jbsr	osd_break
 0:	
 		jmp			tetris_reset					| pass control to the tetris core
 		
