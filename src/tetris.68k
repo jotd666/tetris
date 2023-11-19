@@ -34,7 +34,7 @@
 *    4000-7FFF   R     xxxxxxxx    Banked program ROM
 *    8000-FFFF   R     xxxxxxxx    Program ROM
 *
-*	// These ports are read via the Pokeys
+*	// These ports are read via the Pokeys 0x2808
 *	PORT_START("IN0")
 *	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_COIN2 )
 *	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_COIN1 )
@@ -49,6 +49,7 @@
 *	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_CUSTOM ) PORT_VBLANK("screen")
 *	PORT_SERVICE( 0x80, IP_ACTIVE_HIGH )
 *
+*   0x2818
 *	// The control panel has a start and an action button for both players. The board has them connected together on the JAMMA connector.
 *	// So bit 0x01 actually is used by both player 1 start and action buttons and bit 0x10 is used by both player 2 start and action buttons
 *	PORT_START("IN1")
@@ -83,6 +84,13 @@ number_of_coins_inserted_00c2 = 0x00C2
 pokey_pointer_00ce = 0x00CE
 context_name_06a1 = 0x06a1
 sync_variable_06a3 = 0x06a3
+pokey1_state_copy_0700 = 0x0700
+
+* pokey 0
+allpot_2808 = 0x2808
+potgo_280b = 0x280b
+
+* misc
 eeprom_write_enable_3400 = 0x3400
 coin_counters_3C00 = 0x3C00
 
@@ -160,7 +168,11 @@ coin_counters_3C00 = 0x3C00
 	add.w	d2,a0
 	.endm
 
-
+	.macro	STORE_D0_TO_PALETTE	address
+	lea		\address-0x2000,a0
+	jbsr	osd_set_palette_entry
+	.endm
+	
 cpu_init:
 	moveq	#0,d0
 	moveq	#0,d1
@@ -3979,7 +3991,7 @@ l_4f79:
 	rts                                    	| [$4f83: rts]
 l_4f84:
 	move.b	#0x0a,d2                        	| [$4f84: ldy #$0a]
-	* pokey shit
+	* pokey POT0, skipped
 	*GET_ADDRESS	0x2800                     	| [$4f86: lda	$2800, y]
 	*move.b	(a0,d2.w),d0                    	| [$4f86: lda	$2800, y]
 	move.w	d0,-(sp)                        	| [$4f89: pha]
@@ -4112,7 +4124,7 @@ l_8008:
 	                            	| [$8008: cld] clear decimal flag
 	                               	| [$8009: ldx #$ff]
 	lea		stack_top,sp			| txs		        ; set stack to	$01ff
-* write into pokey
+* write into pokey, SKCTL debounce shit, we can ignore
 *	clr.b	d0                               	| [$800c: lda #$00]
 *	PUSH_SR
 *	GET_ADDRESS	0x280f                     	| [$800e: sta	$280f]
@@ -4127,7 +4139,7 @@ l_8008:
 *	move.b	#0x07,d4                        	| [$8017: cmp #$07]
 *	cmp.b	d0,d4                            	| [$8017: cmp #$07]
 *	bne	l_8014                             	| [$8019: bne	$8014]
-** write into pokey (reinit?)
+** write into pokey
 *	PUSH_SR
 *	GET_ADDRESS	0x280f                     	| [$801b: sta	$280f]
 *	move.b	d0,(a0)                         	| [$801b: sta	$280f]
@@ -4136,6 +4148,7 @@ l_8008:
 *	POP_SR
 *	clr.b	d0                               	| [$8021: lda #$00]
 *	move.b	#0x07,d2                        	| [$8023: ldy #$07]
+*   reinit all pokeys, write 0 everywhere
 *l_8025:
 *	PUSH_SR
 *	GET_ADDRESS	0x2800                     	| [$8025: sta	$2800, y]
@@ -4149,7 +4162,6 @@ l_8008:
 	clr.b	d1                               	| [$8030: ldx #$00]
 * clear RAM 0-2FFF
 l_8032:
-	PUSH_SR
 	GET_ADDRESS	0x0000                     	| [$8032: sta	$0000, x]
     move.b	d0,(a0,d1.w)                 	| [$8032: sta	$0000, x]
 	GET_ADDRESS	0x0100                     	| [$8034: sta	$0100, x]
@@ -4164,7 +4176,7 @@ l_8032:
     move.b	d0,(a0,d1.w)                 	| [$8040: sta	$0500, x]
 	GET_ADDRESS	0x0600                     	| [$8043: sta	$0600, x]
     move.b	d0,(a0,d1.w)                 	| [$8043: sta	$0600, x]
-	GET_ADDRESS	0x0700                     	| [$8046: sta	$0700, x]
+	GET_ADDRESS	pokey1_state_copy_0700                     	| [$8046: sta	$0700, x]
     move.b	d0,(a0,d1.w)                 	| [$8046: sta	$0700, x]
 	GET_ADDRESS	0x0800                     	| [$8049: sta	$0800, x]
     move.b	d0,(a0,d1.w)                 	| [$8049: sta	$0800, x]
@@ -4218,21 +4230,21 @@ l_8032:
 *    move.b	d0,(a0,d1.w)                 	| [$8091: sta	$2000, x]
                                          | [$8094: sta watchdog_3000] kick watchdog
                                          | [$8094: sta watchdog_3000] kick watchdog
-	POP_SR
+
 	addq.b	#1,d1                           	| [$8097: inx]
 	bne	l_8032                             	| [$8098: bne	$8032]
-* pokey again
+* read pokey to see if service mode is on
 *	PUSH_SR
-*	GET_ADDRESS	0x280b                     	| [$809a: sta	$280b]
+*	GET_ADDRESS	potgo_280b                     	| [$809a: sta	$280b]
 *	move.b	d0,(a0)                         	| [$809a: sta	$280b]
 *	POP_SR
-*	GET_ADDRESS	0x2808                     	| [$809d: bit	$2808]
+*	GET_ADDRESS	allpot_2808                     	| [$809d: bit	$2808]
 *	tst.b	(a0)                             	| [$809d: bit	$2808]
-*	bmi	l_80a8                             	| [$80a0: bmi	$80a8]
+*	bmi	service_mode_80a8                             	| [$80a0: bmi	$80a8]
 	jbsr	l_e649                            	| [$80a2: jsr	$e649]
 	jmp	continue_startup_e661              	| [$80a5: jmp continue_startup_e661]
-* not reached? probably self-test
-l_80a8:
+
+service_mode_80a8:
 	clr.b	d1                               	| [$80a8: ldx #$00]
 l_80aa:
 	GET_ADDRESS	0x0000                     	| [$80aa: lda	$0000, x]
@@ -4466,7 +4478,7 @@ l_81af:
 	bne	l_81b5                             	| [$81b1: bne	$81b5]
 	clr.b	d0                               	| [$81b3: lda #$00]
 l_81b5:
-	* pokey shit
+	* pokey audio write
 	*GET_ADDRESS	0x2800                     	| [$81b5: sta	$2800]
 	*move.b	d0,(a0)                         	| [$81b5: sta	$2800]
 	*GET_ADDRESS	0x2801                     	| [$81b8: sta	$2801]
@@ -4485,6 +4497,7 @@ l_81c5:
 	and.b	#0x08,d0                         	| [$81c7: and #$08]
 	beq	l_81d5                             	| [$81c9: beq	$81d5]
 	clr.b	d0                               	| [$81cb: lda #$00]
+	* pokey audio write
 	*GET_ADDRESS	0x2800                     	| [$81cd: sta	$2800]
 	*move.b	d0,(a0)                         	| [$81cd: sta	$2800]
 	*GET_ADDRESS	0x2801                     	| [$81d0: sta	$2801]
@@ -4558,11 +4571,15 @@ l_822e:
 	
 	GET_ADDRESS	0x00b6                     	| [$8230: sta	$00b6]
 	move.b	d0,(a0)                         	| [$8230: sta	$00b6]
-*	GET_ADDRESS	0x280b                     	| [$8232: sta	$280b]
+
+	jbsr	osd_read_pokey1
+*	GET_ADDRESS	potgo_280b                     	| [$8232: sta	$280b]
 *	move.b	d0,(a0)                         	| [$8232: sta	$280b]
 	
-*	GET_ADDRESS	0x2808                     	| [$8235: ldx	$2808]
+*	GET_ADDRESS	allpot_2808                     	| [$8235: ldx	$2808]
 *	move.b	(a0),d1                         	| [$8235: ldx	$2808]
+	move.b	d0,d1
+	
 	PUSH_SR
 	GET_ADDRESS	0x00b2                     	| [$8238: stx	$00b2]
 	move.b	d1,(a0)                         	| [$8238: stx	$00b2]
@@ -4640,23 +4657,26 @@ l_827c:
 	subq.b	#1,d1                           	| [$827c: dex]
 	bpl	l_8254                             	| [$827d: bpl	$8254]
 l_827f:
-	* pokey shit
+	move.w	#0x0f0,0xDFF180
+	* wait for vblank, loop until vblank interrupt is active
 *	PUSH_SR
-*	GET_ADDRESS	0x280b                     	| [$827f: sta	$280b]
+*	GET_ADDRESS	potgo_280b                     	| [$827f: sta	$280b]
 *	move.b	d0,(a0)                         	| [$827f: sta	$280b]
 *	POP_SR
-*	GET_ADDRESS	0x2808                     	| [$8282: bit	$2808]
+*	GET_ADDRESS	allpot_2808                     	| [$8282: bit	$2808]
 *	btst.b	#6,(a0)                             	| [$8282: bit	$2808]
 *	beq	l_827f                             	| [$8285: bvc	$827f]
+*   then wait until vblank interrupt is not active
+*   we can probably skip this ATM, maybe it's a sync
 l_8287:
 *	GET_ADDRESS	0x00ac                     	| [$8287: lda	$00ac]
 *	move.b	(a0),d0                         	| [$8287: lda	$00ac]
 *	bne	l_8293                             	| [$8289: bne	$8293]
 *	PUSH_SR
-*	GET_ADDRESS	0x280b                     	| [$828b: sta	$280b]
+*	GET_ADDRESS	potgo_280b                     	| [$828b: sta	$280b]
 *	move.b	d0,(a0)                         	| [$828b: sta	$280b]
 *	POP_SR
-*	GET_ADDRESS	0x2808                     	| [$828e: bit	$2808]
+*	GET_ADDRESS	allpot_2808                     	| [$828e: bit	$2808]
 *	btst.b	#6,(a0)                             	| [$828e: bit	$2808]
 *	bne	l_8287                             	| [$8291: bvs	$8287]
 l_8293:
@@ -5583,30 +5603,30 @@ l_8796:
 * 0: demo/game
 * 6: difficulty select
 display_screen_and_other_stuff_8818:
-	PUSH_SR
+	jsr		osd_break
+	* save D0 in context name
 	GET_ADDRESS	context_name_06a1          	| [$8818: sta context_name_06a1]
 	move.b	d0,(a0)                         	| [$8818: sta context_name_06a1]
-	POP_SR
 	move.b	#0x01,d0                        	| [$881b: lda #$01]
-	PUSH_SR
 	GET_ADDRESS	0x06a2                     	| [$881d: sta	$06a2]
 	move.b	d0,(a0)                         	| [$881d: sta	$06a2]
-	POP_SR
-	clr.b	d0                               	| [$8820: lda #$00]
+	                              	| [$8820: lda #$00]
+	* wait for sync
 	GET_ADDRESS	sync_variable_06a3         	| [$8822: sta sync_variable_06a3]
-	move.b	d0,(a0)                         	| [$8822: sta sync_variable_06a3]
+	clr.b	(a0)                         	| [$8822: sta sync_variable_06a3]
 l_8825:
 	GET_ADDRESS	sync_variable_06a3         	| [$8825: lda sync_variable_06a3]
-	move.b	(a0),d0                         	| [$8825: lda sync_variable_06a3]
+	tst.b	(a0)                         	| [$8825: lda sync_variable_06a3]
 	beq	l_8825                             	| [$8828: beq	$8825]
+	
+	* now screen is in sync, display screen
 	GET_ADDRESS	context_name_06a1          	| [$882a: lda context_name_06a1]
 	move.b	(a0),d0                         	| [$882a: lda context_name_06a1]
 	jbsr	display_screen_883b               	| [$882d: jsr display_screen_883b]
 	move.b	#0x03,d0                        	| [$8830: lda #$03]
-	PUSH_SR
 	GET_ADDRESS	0x06a2                     	| [$8832: sta	$06a2]
 	move.b	d0,(a0)                         	| [$8832: sta	$06a2]
-	POP_SR
+	* sync again
 l_8835:
 	GET_ADDRESS	sync_variable_06a3         	| [$8835: lda sync_variable_06a3]
 	move.b	(a0),d0                         	| [$8835: lda sync_variable_06a3]
@@ -6366,7 +6386,7 @@ l_8c63:
 	move.b	d0,(a0)                         	| [$8c6d: sta	$2000]
 	POP_SR
 	move.b	#0xa8,d0	| [$8c70: lda #$a8]
-	* pokey shit
+	* pokey set audio channel frequency 1
 	*PUSH_SR
 	*GET_ADDRESS	0x2800                     	| [$8c72: sta	$2800]
 	*move.b	d0,(a0)                         	| [$8c72: sta	$2800]
@@ -6384,7 +6404,7 @@ l_8c7b:
 	addq.b	#1,d1                           	| [$8c7e: inx]
 	bne	l_8c78                             	| [$8c7f: bne	$8c78]
 	clr.b	d0                               	| [$8c81: lda #$00]
-	* pokey shit
+	* pokey shit set audio channel frequency 1
 	*PUSH_SR
 	*GET_ADDRESS	0x2800                     	| [$8c83: sta	$2800]
 	*move.b	d0,(a0)                         	| [$8c83: sta	$2800]
@@ -10870,6 +10890,7 @@ l_a88f:
 	GET_ADDRESS	0x0045                     	| [$a8a0: lda	$0045]
 	move.b	(a0),d0                         	| [$a8a0: lda	$0045]
 	asl.b	#1,d0                            	| [$a8a2: asl a]
+	jbsr	osd_break
 	jbsr	display_screen_and_other_stuff_8818	| [$a8a3: jsr display_screen_and_other_stuff_8818]
 	clr.b	d0                               	| [$a8a6: lda #$00]
 	move.b	d0,d1                           	| [$a8a8: tax]
@@ -19039,10 +19060,10 @@ tetris_irq:
 periodic_interrupt_D70E:
 * save registers
 	move.w	d0,-(sp)                        	| [$d70e: pha]
-	move.b	d1,d0                           	| [$d70f: txa]
-	move.w	d0,-(sp)                        	| [$d710: pha]
-	move.b	d2,d0                           	| [$d711: tya]
-	move.w	d0,-(sp)                        	| [$d712: pha]
+	                           	| [$d70f: txa]
+	move.w	d1,-(sp)                        	| [$d710: pha]
+	                           	| [$d711: tya]
+	move.w	d2,-(sp)                        	| [$d712: pha]
 * copy first byte of rom bank in first_byte_of_bank_0d
 	GET_ADDRESS	0x4000                     	| [$d713: lda	$4000]
 	move.b	(a0),d0                         	| [$d713: lda	$4000]
@@ -19050,18 +19071,22 @@ periodic_interrupt_D70E:
 	GET_ADDRESS	first_byte_of_bank_0d      	| [$d716: sta first_byte_of_bank_0d]
 	move.b	d0,(a0)                         	| [$d716: sta first_byte_of_bank_0d]
 	POP_SR
-	* pokey shit                                    	| [$d718: cld]
+	
+	jbsr	osd_read_pokey1						| [$d718: cld]
 	*PUSH_SR
-	*GET_ADDRESS	0x280b                     	| [$d719: sta	$280b]
+	*GET_ADDRESS	potgo_280b                     	| [$d719: sta	$280b]
 	*move.b	d0,(a0)                         	| [$d719: sta	$280b]
 	*POP_SR
-	*GET_ADDRESS	0x2808                     	| [$d71c: lda	$2808]
+	*GET_ADDRESS	allpot_2808                     	| [$d71c: lda	$2808]
 	*move.b	(a0),d0                         	| [$d71c: lda	$2808]
-	PUSH_SR
-	GET_ADDRESS	0x0700                     	| [$d71f: sta	$0700]
+	
+	
+	GET_ADDRESS	pokey1_state_copy_0700                     	| [$d71f: sta	$0700]
 	move.b	d0,(a0)                         	| [$d71f: sta	$0700]
-	POP_SR
 	bpl	l_d745                             	| [$d722: bpl	$d745]
+	
+	illegal
+	* service mode! probably never reached
 	and.b	#0x40,d0                         	| [$d724: and #$40]
 	bne	l_d742                             	| [$d726: bne	$d742]
 	GET_ADDRESS	0x00ac                     	| [$d728: inc	$00ac]
@@ -19095,6 +19120,7 @@ l_d738:
 l_d742:
 	jra	l_d7d4                             	| [$d742: jmp	$d7d4]
 l_d745:
+	* check VBLANK 
 	and.b	#0x40,d0                         	| [$d745: and #$40]
 	bne	l_d76c                             	| [$d747: bne	$d76c]
 	GET_ADDRESS	0x0009                     	| [$d749: lda	$0009]
@@ -19102,10 +19128,9 @@ l_d745:
 	bpl	l_d750                             	| [$d74b: bpl	$d750]
 	jra	l_829b                             	| [$d74d: jmp	$829b]
 l_d750:
-	PUSH_SR
+	
                                          | [$d750: sta watchdog_3000]
                                          | [$d750: sta watchdog_3000]
-	POP_SR
 	GET_ADDRESS	0x0009                     	| [$d753: inc	$0009]
 	addq.b	#1,(a0)                         	| [$d753: inc	$0009]
 	jbsr	l_d810                            	| [$d755: jsr	$d810]
@@ -19249,12 +19274,12 @@ l_d7f6:
 	*move.b	d0,(a0)                         	| [$d7f8: sta	$3c00]
 	POP_SR
 l_d7fb:
-* pokey shit/loop disabled
+* pokey shit/loop disabled, wait until interrupt is cleared?
 *	PUSH_SR
-*	GET_ADDRESS	0x280b                     	| [$d7fb: sta	$280b]
+*	GET_ADDRESS	potgo_280b                     	| [$d7fb: sta	$280b]
 *	move.b	d0,(a0)                         	| [$d7fb: sta	$280b]
 *	POP_SR
-*	GET_ADDRESS	0x2808                     	| [$d7fe: lda	$2808]
+*	GET_ADDRESS	allpot_2808                     	| [$d7fe: lda	$2808]
 *	move.b	(a0),d0                         	| [$d7fe: lda	$2808]
 *	GET_ADDRESS	0x0058                     	| [$d801: sta	$0058]
 *	move.b	d0,(a0)                         	| [$d801: sta	$0058]
@@ -19273,7 +19298,9 @@ l_d7fb:
 	rts
 
 * switch to bank 1 (not sure but probably, yes)
+* called during periodic interrupt
 l_d810:
+	jbsr	osd_break
 	     	| [$d810: lda bank_switch_start_6000]
 										| [$d810: lda bank_switch_start_6000]
 	GET_ADDRESS	0x06a2                     	| [$d813: lda	$06a2]
@@ -19301,15 +19328,15 @@ l_d81e:
 							| [$d831: lda	$6090]
 	jbsr	l_d8ca                            	| [$d834: jsr	$d8ca]
 	clr.b	d0                               	| [$d837: lda #$00]
-	PUSH_SR
+	
 	GET_ADDRESS	0x06a2                     	| [$d839: sta	$06a2]
 	move.b	d0,(a0)                         	| [$d839: sta	$06a2]
-	POP_SR
+	
 	clr.b	d0                               	| [$d83c: lda #$00]
-	PUSH_SR
+	
 	GET_ADDRESS	sync_variable_06a3         	| [$d83e: sta sync_variable_06a3]
 	move.b	d0,(a0)                         	| [$d83e: sta sync_variable_06a3]
-	POP_SR
+	
 l_d841:
 	GET_ADDRESS	0x06a2                     	| [$d841: lda	$06a2]
 	move.b	(a0),d0                         	| [$d841: lda	$06a2]
@@ -19317,19 +19344,20 @@ l_d841:
 	cmp.b	d0,d4                            	| [$d844: cmp #$01]
 	bne	l_d85c                             	| [$d846: bne	$d85c]
 	clr.b	d2                               	| [$d848: ldy #$00]
+	* clear zone 0x2000 => 0x20FF
 l_d84a:
 	clr.b	d0                               	| [$d84a: lda #$00]
-	PUSH_SR
+	
 	GET_ADDRESS	0x2000                     	| [$d84c: sta	$2000, y]
     move.b	d0,(a0,d2.w)                 	| [$d84c: sta	$2000, y]
-	POP_SR
+	
 	addq.b	#1,d2                           	| [$d84f: iny]
 	bne	l_d84a                             	| [$d850: bne	$d84a]
 	move.b	#0x01,d0                        	| [$d852: lda #$01]
-	PUSH_SR
+	
 	GET_ADDRESS	sync_variable_06a3         	| [$d854: sta sync_variable_06a3]
 	move.b	d0,(a0)                         	| [$d854: sta sync_variable_06a3]
-	POP_SR
+	
 	move.b	#0x02,d0                        	| [$d857: lda #$02]
 	PUSH_SR
 	GET_ADDRESS	0x06a2                     	| [$d859: sta	$06a2]
@@ -19478,18 +19506,20 @@ l_e10c:
 	                           	| [$e10f: clc]
 	add.b	#0x01,d0                        	| [$e110: adc #$01]
 	and.b	#0x07,d0                         	| [$e112: and #$07]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0641                     	| [$e114: sta	$0641]
 	move.b	d0,(a0)                         	| [$e114: sta	$0641]
-	POP_SR
+	
 	move.b	d0,d1                           	| [$e117: tax]
 	GET_ADDRESS	0xe135                     	| [$e118: lda	$e135, x]
 	move.b	(a0,d1.w),d0                    	| [$e118: lda	$e135, x]
-	PUSH_SR
-	* pokey shit
+	
+	* palette color 252
+	STORE_D0_TO_PALETTE		0x20fb
+	
 *	GET_ADDRESS	0x20fb                     	| [$e11b: sta	$20fb]
 *	move.b	d0,(a0)                         	| [$e11b: sta	$20fb]
-	POP_SR
+	
 	GET_ADDRESS	0x0011                     	| [$e11e: lda	$0011]
 	move.b	(a0),d0                         	| [$e11e: lda	$0011]
 	bne	l_e134                             	| [$e120: bne	$e134]
@@ -19506,7 +19536,8 @@ l_e10c:
 	GET_ADDRESS	0xe13d                     	| [$e12e: lda	$e13d, x]
 	move.b	(a0,d1.w),d0                    	| [$e12e: lda	$e13d, x]
 	PUSH_SR
-	* pokey shit
+	
+	STORE_D0_TO_PALETTE	0x20f6
 *	GET_ADDRESS	0x20f6                     	| [$e131: sta	$20f6]
 *	move.b	d0,(a0)                         	| [$e131: sta	$20f6]
 	POP_SR
@@ -23516,6 +23547,11 @@ l_f2dd:
 	move.b	#0x0f,d0                        	| [$f2e0: lda #$0f]
 l_f2e2:
 	move.w	d0,-(sp)                        	| [$f2e2: pha]
+	* CPU dependent loop uses DEX after having set the carry
+	* on 68000 subq sets X flag and trashes the result, on 6502
+	* DEX only sets N and Z, not C... (logical as it doesn't read
+	* the carry at all)
+	* maybe such constructs should be reviewed manually...
 	*SET_XC_FLAGS                           	| [$f2e3: sec]
 	*move.b	#0x08,d0                        	| [$f2e4: lda #$08]
 l_f2e6:
@@ -23546,7 +23582,7 @@ l_f37e:
 	clr.b	d2                               	| [$f37e: ldy #$00]
 	move.b	#0x01,d1                        	| [$f380: ldx #$01]
 l_f382:
-	GET_ADDRESS	0x0700                     	| [$f382: lda	$0700]
+	GET_ADDRESS	pokey1_state_copy_0700                     	| [$f382: lda	$0700]
 	move.b	(a0),d0                         	| [$f382: lda	$0700]
 	move.b	#0x01,d4                        	| [$f385: cpx #$01]
 	cmp.b	d1,d4                            	| [$f385: cpx #$01]

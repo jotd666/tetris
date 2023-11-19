@@ -3,3 +3,4 @@
 - write to 1000 not working "debug here" in screen display
 - check if first w_videoram is the same in MAME
 - cmp + bmi??
+- sec/clc + dex/dec + adc/sbc sandwich

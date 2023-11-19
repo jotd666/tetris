@@ -134,7 +134,6 @@ start:
 		.global osd_w_videoram
 
 		.global osd_update_sprites
-		.global osd_read_dipswitches
 		.global osd_read_inputs
 		.global osd_read_high_scores
 		.global osd_write_high_scores
@@ -142,7 +141,8 @@ start:
 		.global osd_sound_stop
 		.global	osd_get_random
 		.global	osd_wait
-
+		.global	osd_set_palette_entry
+		.global	osd_read_pokey1
 	
 	.include	"ReadJoypad.i"
 	.include	"whdload_funcs.i"
@@ -669,8 +669,22 @@ osd_break:
 1003:
         .align	2
 
-	
+* < A0.W: palette index
+* < D0: new palette value
+*  xxxxxxxx    Palette RAM
+*  xxx----        (red component)
+*  ---xxx--       (green component)
+*  ------xx       (blue component)
 
+osd_set_palette_entry:
+	rts
+	
+osd_read_pokey1:
+	moveq	#0,d0
+	rts
+osd_read_pokey2:
+	moveq	#0,d0
+	rts
 	
 
 	
