@@ -70,36 +70,36 @@
 405D: 10 EE    bpl	$404d
 405F: A2 01    ldx #$01
 4061: BD 08 50 lda	$5008, x
-4064: 85 CE    sta	$00ce
+4064: 85 CE    sta	pokey_pointer_00ce
 4066: BD 0A 50 lda	$500a, x
 4069: 85 CF    sta	$00cf
 406B: A9 00    lda #$00
 406D: A0 08    ldy #$08
-406F: 91 CE    sta ($ce), y
+406F: 91 CE    sta (pokey_pointer_00ce), y
 4071: 86 D9    stx	$00d9
 4073: 18       clc
-4074: A5 CE    lda	$00ce
+4074: A5 CE    lda	pokey_pointer_00ce
 4076: 85 DA    sta	$00da
 4078: A9 0F    lda #$0f
-407A: 65 CE    adc	$00ce
-407C: 85 CE    sta	$00ce
+407A: 65 CE    adc	pokey_pointer_00ce
+407C: 85 CE    sta	pokey_pointer_00ce
 407E: A2 00    ldx #$00
 4080: 8A       txa
-4081: 81 CE    sta ($ce, x)
+4081: 81 CE    sta (pokey_pointer_00ce, x)
 4083: 69 01    adc #$01
 4085: C9 07    cmp #$07
 4087: D0 FA    bne	$4083
-4089: 81 CE    sta ($ce, x)
+4089: 81 CE    sta (pokey_pointer_00ce, x)
 408B: A6 D9    ldx	$00d9
 408D: A5 DA    lda	$00da
-408F: 85 CE    sta	$00ce
+408F: 85 CE    sta	pokey_pointer_00ce
 4091: A0 08    ldy #$08
 4093: A9 00    lda #$00
-4095: 91 CE    sta ($ce), y
+4095: 91 CE    sta (pokey_pointer_00ce), y
 4097: A9 00    lda #$00
 4099: A0 08    ldy #$08
 409B: 88       dey
-409C: 91 CE    sta ($ce), y
+409C: 91 CE    sta (pokey_pointer_00ce), y
 409E: D0 FB    bne	$409b
 40A0: CA       dex
 40A1: 30 03    bmi	$40a6
@@ -1339,18 +1339,18 @@
 4AFB: 8D 50 0E sta	$0e50
 4AFE: A0 04    ldy #$04
 4B00: AD 49 0E lda	$0e49
-4B03: 91 CE    sta ($ce), y
+4B03: 91 CE    sta (pokey_pointer_00ce), y
 4B05: C8       iny
 4B06: C8       iny
 4B07: AD 4A 0E lda	$0e4a
-4B0A: 91 CE    sta ($ce), y
+4B0A: 91 CE    sta (pokey_pointer_00ce), y
 4B0C: 88       dey
 4B0D: AD 46 0E lda	$0e46
-4B10: 91 CE    sta ($ce), y
+4B10: 91 CE    sta (pokey_pointer_00ce), y
 4B12: C8       iny
 4B13: C8       iny
 4B14: AD 47 0E lda	$0e47
-4B17: 91 CE    sta ($ce), y
+4B17: 91 CE    sta (pokey_pointer_00ce), y
 4B19: 68       pla
 4B1A: A8       tay
 4B1B: 20 E3 49 jsr	$49e3
@@ -1362,24 +1362,24 @@
 4B27: AD 50 0E lda	$0e50
 4B2A: 2D 54 0E and	$0e54
 4B2D: A0 08    ldy #$08
-4B2F: 91 CE    sta ($ce), y
+4B2F: 91 CE    sta (pokey_pointer_00ce), y
 4B31: A0 00    ldy #$00
 4B33: AD 49 0E lda	$0e49
-4B36: 91 CE    sta ($ce), y
+4B36: 91 CE    sta (pokey_pointer_00ce), y
 4B38: C8       iny
 4B39: C8       iny
 4B3A: AD 4A 0E lda	$0e4a
-4B3D: 91 CE    sta ($ce), y
+4B3D: 91 CE    sta (pokey_pointer_00ce), y
 4B3F: 88       dey
 4B40: AD 46 0E lda	$0e46
-4B43: 91 CE    sta ($ce), y
+4B43: 91 CE    sta (pokey_pointer_00ce), y
 4B45: C8       iny
 4B46: C8       iny
 4B47: AD 47 0E lda	$0e47
-4B4A: 91 CE    sta ($ce), y
+4B4A: 91 CE    sta (pokey_pointer_00ce), y
 4B4C: 60       rts
 4B4D: BD 08 50 lda	$5008, x
-4B50: 85 CE    sta	$00ce
+4B50: 85 CE    sta	pokey_pointer_00ce
 4B52: BD 0A 50 lda	$500a, x
 4B55: 85 CF    sta	$00cf
 4B57: BD 0C 50 lda	$500c, x
@@ -2614,15 +2614,15 @@ jump_table_82c2:
 860C: 4C 2E 82 jmp	$822e
 
 8618: A9 00    lda #$00
-861A: 85 AA    sta	$00aa
+861A: 85 AA    sta	screen_address_00aa
 861C: A9 10    lda #$10
 861E: 85 AB    sta	$00ab
 8620: A0 00    ldy #$00
 8622: A5 5E    lda	$005e
-8624: 91 AA    sta ($aa), y
+8624: 91 AA    sta (screen_address_00aa), y
 8626: C8       iny
 8627: A5 5F    lda	$005f
-8629: 91 AA    sta ($aa), y
+8629: 91 AA    sta (screen_address_00aa), y
 862B: C8       iny
 862C: D0 F4    bne	$8622
 862E: E6 AB    inc	$00ab
@@ -2668,7 +2668,7 @@ jump_table_82c2:
 870E: 85 5F    sta	$005f
 8710: 20 18 86 jsr	$8618
 8713: A9 88    lda #$88
-8715: 85 AA    sta	$00aa
+8715: 85 AA    sta	screen_address_00aa
 8717: A9 11    lda #$11
 8719: 85 AB    sta	$00ab
 871B: A2 00    ldx #$00
@@ -2706,17 +2706,17 @@ jump_table_82c2:
 8760: 29 0F    and #$0f
 8762: 85 5E    sta	$005e
 8764: A5 5E    lda	$005e
-8766: 91 AA    sta ($aa), y
+8766: 91 AA    sta (screen_address_00aa), y
 8768: C8       iny
 8769: A5 5F    lda	$005f
-876B: 91 AA    sta ($aa), y
+876B: 91 AA    sta (screen_address_00aa), y
 876D: C8       iny
 876E: C0 40    cpy #$40
 8770: 90 B2    bcc	$8724
-8772: A5 AA    lda	$00aa
+8772: A5 AA    lda	screen_address_00aa
 8774: 18       clc
 8775: 69 80    adc #$80
-8777: 85 AA    sta	$00aa
+8777: 85 AA    sta	screen_address_00aa
 8779: A5 AB    lda	$00ab
 877B: 69 00    adc #$00
 877D: 85 AB    sta	$00ab
@@ -2774,23 +2774,23 @@ display_screen_883b:
 885B: A9 00    lda #$00
 885D: 8D 83 06 sta	$0683
 8860: 8D 84 06 sta	$0684
-8863: 85 AA    sta	$00aa
+8863: 85 AA    sta	screen_address_00aa
 8865: A9 10    lda #$10
 8867: 85 AB    sta	$00ab
 8869: A0 00    ldy #$00
 886B: 20 AA 88 jsr	$88aa
 886E: AD 85 06 lda	$0685
-8871: 91 AA    sta ($aa), y
+8871: 91 AA    sta (screen_address_00aa), y
 8873: C8       iny
 8874: AD 86 06 lda	$0686
-8877: 91 AA    sta ($aa), y
+8877: 91 AA    sta (screen_address_00aa), y
 8879: C8       iny
 887A: C0 54    cpy #$54
 887C: 90 ED    bcc	$886b
-887E: A5 AA    lda	$00aa
+887E: A5 AA    lda	screen_address_00aa
 8880: 18       clc
 8881: 69 80    adc #$80
-8883: 85 AA    sta	$00aa
+8883: 85 AA    sta	screen_address_00aa
 8885: A5 AB    lda	$00ab
 8887: 69 00    adc #$00
 8889: 85 AB    sta	$00ab
@@ -2886,7 +2886,7 @@ display_screen_883b:
 895C: 8D 84 06 sta	$0684
 895F: 8D 8B 06 sta	$068b
 8962: A9 20    lda #$20
-8964: 85 AA    sta	$00aa
+8964: 85 AA    sta	screen_address_00aa
 8966: A9 16    lda #$16
 8968: 85 AB    sta	$00ab
 896A: 98       tya
@@ -2900,19 +2900,19 @@ display_screen_883b:
 897A: A0 00    ldy #$00
 897C: 20 AA 88 jsr	$88aa
 897F: AD 85 06 lda	$0685
-8982: 91 AA    sta ($aa), y
+8982: 91 AA    sta (screen_address_00aa), y
 8984: C8       iny
 8985: AD 86 06 lda	$0686
 8988: 29 0F    and #$0f
 898A: 09 80    ora #$80
-898C: 91 AA    sta ($aa), y
+898C: 91 AA    sta (screen_address_00aa), y
 898E: C8       iny
 898F: C0 14    cpy #$14
 8991: 90 E9    bcc	$897c
-8993: A5 AA    lda	$00aa
+8993: A5 AA    lda	screen_address_00aa
 8995: 18       clc
 8996: 69 80    adc #$80
-8998: 85 AA    sta	$00aa
+8998: 85 AA    sta	screen_address_00aa
 899A: A5 AB    lda	$00ab
 899C: 69 00    adc #$00
 899E: 85 AB    sta	$00ab
@@ -2927,13 +2927,13 @@ display_screen_883b:
 89BC: AD A4 06 lda	$06a4
 89BF: D0 0B    bne	$89cc
 89C1: A9 22    lda #$22
-89C3: 85 AA    sta	$00aa
+89C3: 85 AA    sta	screen_address_00aa
 89C5: A9 13    lda #$13
 89C7: 85 AB    sta	$00ab
 89C9: B8       clv
 89CA: 50 08    bvc	$89d4
 89CC: A9 2A    lda #$2a
-89CE: 85 AA    sta	$00aa
+89CE: 85 AA    sta	screen_address_00aa
 89D0: A9 13    lda #$13
 89D2: 85 AB    sta	$00ab
 89D4: 20 B8 D5 jsr switch_to_bank_0_D5B8
@@ -2946,19 +2946,19 @@ display_screen_883b:
 89E2: 85 5B    sta	$005b
 89E4: A0 00    ldy #$00
 89E6: B1 5A    lda ($5a), y
-89E8: 91 AA    sta ($aa), y
+89E8: 91 AA    sta (screen_address_00aa), y
 89EA: C8       iny
 89EB: B1 5A    lda ($5a), y
 89ED: 29 0F    and #$0f
 89EF: 09 50    ora #$50
-89F1: 91 AA    sta ($aa), y
+89F1: 91 AA    sta (screen_address_00aa), y
 89F3: C8       iny
 89F4: C0 08    cpy #$08
 89F6: 90 EE    bcc	$89e6
-89F8: A5 AA    lda	$00aa
+89F8: A5 AA    lda	screen_address_00aa
 89FA: 18       clc
 89FB: 69 80    adc #$80
-89FD: 85 AA    sta	$00aa
+89FD: 85 AA    sta	screen_address_00aa
 89FF: A5 AB    lda	$00ab
 8A01: 69 00    adc #$00
 8A03: 85 AB    sta	$00ab
@@ -3188,17 +3188,17 @@ display_screen_883b:
 8CCA: A0 00    ldy #$00
 8CCC: A2 00    ldx #$00
 8CCE: B1 A8    lda ($a8), y
-8CD0: 85 AA    sta	$00aa
+8CD0: 85 AA    sta	screen_address_00aa
 8CD2: C8       iny
 8CD3: B1 A8    lda ($a8), y
 8CD5: 85 AB    sta	$00ab
 8CD7: C8       iny
 8CD8: B1 A8    lda ($a8), y
-8CDA: 81 AA    sta ($aa, x)
-8CDC: E6 AA    inc	$00aa
+8CDA: 81 AA    sta (screen_address_00aa, x)
+8CDC: E6 AA    inc	screen_address_00aa
 8CDE: A5 21    lda	$0021
-8CE0: 81 AA    sta ($aa, x)
-8CE2: E6 AA    inc	$00aa
+8CE0: 81 AA    sta (screen_address_00aa, x)
+8CE2: E6 AA    inc	screen_address_00aa
 8CE4: C8       iny
 8CE5: B1 A8    lda ($a8), y
 8CE7: C9 FF    cmp #$ff
@@ -3653,7 +3653,7 @@ display_screen_883b:
 9738: 85 AB    sta	$00ab
 973A: A9 08    lda #$08
 973C: 6A       ror a
-973D: 85 AA    sta	$00aa
+973D: 85 AA    sta	screen_address_00aa
 973F: 4C 52 97 jmp	$9752
 9742: AD 8B 06 lda	$068b
 9745: 18       clc
@@ -3663,7 +3663,7 @@ display_screen_883b:
 974B: 85 AB    sta	$00ab
 974D: A9 0C    lda #$0c
 974F: 6A       ror a
-9750: 85 AA    sta	$00aa
+9750: 85 AA    sta	screen_address_00aa
 9752: A0 00    ldy #$00
 9754: A2 00    ldx #$00
 9756: B1 AD    lda ($ad), y
@@ -3672,16 +3672,16 @@ display_screen_883b:
 975C: 29 01    and #$01
 975E: F0 09    beq	$9769
 9760: A9 00    lda #$00
-9762: 81 AA    sta ($aa, x)
-9764: E6 AA    inc	$00aa
+9762: 81 AA    sta (screen_address_00aa, x)
+9764: E6 AA    inc	screen_address_00aa
 9766: B8       clv
 9767: 50 08    bvc	$9771
 9769: B1 AD    lda ($ad), y
-976B: 81 AA    sta ($aa, x)
-976D: E6 AA    inc	$00aa
+976B: 81 AA    sta (screen_address_00aa, x)
+976D: E6 AA    inc	screen_address_00aa
 976F: A5 05    lda	$0005
-9771: 81 AA    sta ($aa, x)
-9773: E6 AA    inc	$00aa
+9771: 81 AA    sta (screen_address_00aa, x)
+9773: E6 AA    inc	screen_address_00aa
 9775: C8       iny
 9776: 4C 56 97 jmp	$9756
 9779: 60       rts
