@@ -1,21 +1,7 @@
 - deduce score, round, line numbers... from screen writes
-- sync loop not working
-- write to 1000 not working "debug here" in screen display: 8860: pb add/sub avec retenue
-- bc45 debug in progress write to screen
-- check if first w_videoram is the same in MAME
 - cmp + bmi??
 - sec/clc + dex/dec + adc/sbc sandwich
 - php+sei => review
 - stray bcc/bcs/bvs/bvc not before cmp (label, bsr...)
-
-  vérifier les PUSH/POP manquants?
-
-crash: >d 0007ad20
-0007ad20 1030 2000                move.b (a0,d2.w,$00) == $0009689e [0f],d0
-0007ad24 4e75                     rts  == $0007a7b2  <====== 00eb0042
-0007ad26 e500                     asl.b #$02,d0
-0007ad28 42e7                     move.b ccr,-(a7)
-0007ad2a 41f8 00db                lea.l $00db.w,a0
-0007ad2e 6100 f92e                bsr.w #$f92e == $0007a65e
-0007ad32 1080                     move.b d0,(a0) [00]
-0007ad34 44df                     move.b (a7)+,ccr
+- switch to demo screen working! playfield is trashed, and palette write error
+- figure out palette stuff

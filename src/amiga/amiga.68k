@@ -545,18 +545,7 @@ demo_game:
 		move		#0x7FFF,_custom+intreq						| ack all interrupts
 		bsr			platform_init					| amiga-specific init
 
-		* to test the video
-		lea		tetris_game,a1
-		lea		0x1000,a0
-		move.w	#0xFFF,d1
-0:		
-		move.b	(a1)+,d0
-		jbsr	osd_w_videoram
-		addq.w	#1,a0
-		dbf		d1,0b
-		
 
-0:	
 		jmp			tetris_reset					| pass control to the tetris core
 		
 	
@@ -677,6 +666,14 @@ osd_break:
 *  ------xx       (blue component)
 
 osd_set_palette_entry:
+	.ifndef	RELEASE
+	cmp.w	#0x100,a0
+	bcs.b	0f
+	move.l	a0,a1
+	lea		write_palette_out_of_range_error(pc),a0
+	jbsr	osd_break
+	.endif
+0:
 	rts
 	
 osd_read_pokey1:
@@ -988,10 +985,9 @@ platform_init:
 	.ifndef	VARIABLE_BLITTER_MASKS_AND_MODS
     move.l  #-1,bltafwm(a5)
 	.endif
-	
-	* restrict borders: we don't see bobs on the borders!
-    move.w #0x1C99,diwstrt(a5)
-    move.w #0x2C81-8,diwstop(a5)
+
+    move.w #0x2C81,diwstrt(a5)
+    move.w #0x1cf9,diwstop(a5)
     move.w #0x0038,ddfstrt(a5)
     move.w #0x00D0,ddfstop(a5)
     move.w #0x200+(NB_PLAYFIELD_PLANES<<12),bplcon0(a5) | 5 bitplanes
@@ -1136,6 +1132,7 @@ osd_disable_vblank_interrupt:
 
 osd_w_videoram:
 	movem.l	d0-d3/d6/a0-a2,-(a7)
+	move.l	a0,0x100.W
 	
 	sub.w	#SCREEN_ADDRESS,a0
 	bcs.b	0f
@@ -1144,6 +1141,8 @@ osd_w_videoram:
 0:
 	* should not happen
 	.ifndef	RELEASE
+	movem.l	(a7),d0-d3/d6/a0-a2
+	move.l	a0,a1
 	lea		write_videoram_out_of_range_error(pc),a0
 	jbsr	osd_break
 	.endif
@@ -1611,10 +1610,8 @@ read_videoram_out_of_range_error:
 	.asciz	"read videoram out of range"
 write_videoram_out_of_range_error:
 	.asciz	"write videoram out of range"
-read_colorram_out_of_range_error:
-	.asciz	"read colorram out of range"
-write_colorram_out_of_range_error:
-	.asciz	"write colorram out of range"
+write_palette_out_of_range_error:
+	.asciz	"write palette out of range"
 	
 	.endif
 	.align	2
@@ -1765,9 +1762,6 @@ _end_of_ng_code:
 	.align 2
 palette:
 	.include "palette.68k"
-
-	* TEMP
-	.include	"tetris_game_pic.s"
 	
 
 	.ascii	"CODE_END"
