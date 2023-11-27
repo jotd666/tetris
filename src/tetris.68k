@@ -1083,9 +1083,11 @@ l_42eb:
 	asl.b	#1,d0                            	| [$42ef: asl a]
 	move.b	d0,d1                           	| [$42f0: tax]
 	bcs	l_42f8                             	| [$42f1: bcs	$42f8]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x528e                     	| [$42f3: lda	$528e, x]
 	move.b	(a0,d1.w),d0                    	| [$42f3: lda	$528e, x]
 	bcc	l_42fb                             	| [$42f6: bcc	$42fb]
+         ^^^^^^ TODO: warning: stray bcc test
 l_42f8:
 	GET_ADDRESS	0x538e                     	| [$42f8: lda	$538e, x]
 	move.b	(a0,d1.w),d0                    	| [$42f8: lda	$538e, x]
@@ -1095,9 +1097,11 @@ l_42fb:
 	move.b	d0,(a0)                         	| [$42fb: sta	$00d0]
 	POP_SR
 	bcs	l_4304                             	| [$42fd: bcs	$4304]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x528f                     	| [$42ff: lda	$528f, x]
 	move.b	(a0,d1.w),d0                    	| [$42ff: lda	$528f, x]
 	bcc	l_4307                             	| [$4302: bcc	$4307]
+         ^^^^^^ TODO: warning: stray bcc test
 l_4304:
 	GET_ADDRESS	0x538f                     	| [$4304: lda	$538f, x]
 	move.b	(a0,d1.w),d0                    	| [$4304: lda	$538f, x]
@@ -1333,6 +1337,7 @@ l_43c4:
 	addq.b	#1,d2                           	| [$43d9: iny]
 	move.b	d2,d0                           	| [$43da: tya]
 	bcs	l_43ee                             	| [$43db: bcs	$43ee]
+         ^^^^^^ TODO: warning: review stray bcs test
 l_43dd:
 	move.b	d1,d0                           	| [$43dd: txa]
 	move.w	d0,-(sp)                        	| [$43de: pha]
@@ -1660,6 +1665,7 @@ l_455b:
 	move.b	d0,(a0)                         	| [$456e: sta	$00cc]
 	POP_SR
 	bcs	l_454d                             	| [$4570: bcs	$454d]
+         ^^^^^^ TODO: warning: review stray bcs test
 l_4572:
 	GET_ADDRESS	0x0e42                     	| [$4572: lda	$0e42]
 	move.b	(a0),d0                         	| [$4572: lda	$0e42]
@@ -1701,6 +1707,7 @@ l_4596:
 	asl.b	#1,d0                            	| [$459e: asl a]
 	st.b	d0                                	| [$459f: lda #$ff]
 	bcs	l_45a5                             	| [$45a1: bcs	$45a5]
+         ^^^^^^ TODO: warning: review stray bcs test
 	clr.b	d0                               	| [$45a3: lda #$00]
 l_45a5:
 	PUSH_SR
@@ -2274,6 +2281,7 @@ l_47ce:
     move.b	d0,(a0,d1.w)                 	| [$47d6: sta	$0cf7, x]
 	POP_SR
 	bcs	l_47b1                             	| [$47d9: bcs	$47b1]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x00cd                     	| [$47db: dec	$00cd]
 	subq.b	#1,(a0)                         	| [$47db: dec	$00cd]
 	GET_ADDRESS	0x0d01                     	| [$47dd: dec	$0d01, x]
@@ -2524,6 +2532,7 @@ l_48a6:
     move.b	d0,(a0,d1.w)                 	| [$48ae: sta	$0ce3, x]
 	POP_SR
 	bcs	l_4889                             	| [$48b1: bcs	$4889]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x00cd                     	| [$48b3: dec	$00cd]
 	subq.b	#1,(a0)                         	| [$48b3: dec	$00cd]
 	GET_ADDRESS	0x0ced                     	| [$48b5: dec	$0ced, x]
@@ -2573,6 +2582,7 @@ l_48db:
 	bvc	l_48e9                             	| [$48e1: bvc	$48e9]
 	move.b	#0x80,d0                        	| [$48e3: lda #$80]
 	bcs	l_48e9                             	| [$48e5: bcs	$48e9]
+         ^^^^^^ TODO: warning: review stray bcs test
 	move.b	#0x7f,d0                        	| [$48e7: lda #$7f]
 l_48e9:
 	PUSH_SR
@@ -2588,6 +2598,7 @@ l_48e9:
 	bvc	l_48fb                             	| [$48f3: bvc	$48fb]
 	move.b	#0x80,d0                        	| [$48f5: lda #$80]
 	bcs	l_48fb                             	| [$48f7: bcs	$48fb]
+         ^^^^^^ TODO: warning: review stray bcs test
 	move.b	#0x7f,d0                        	| [$48f9: lda #$7f]
 l_48fb:
 	move.w	d0,-(sp)                        	| [$48fb: pha]
@@ -4318,6 +4329,7 @@ l_80c5:
 	jra	l_8bf4                             	| [$80ce: jmp	$8bf4]
 l_80d1:
 	bcs	l_80c5                             	| [$80d1: bcs	$80c5]
+         ^^^^^^ TODO: warning: review stray bcs test
                                          | [$80d3: sta watchdog_3000]
                                          | [$80d3: sta watchdog_3000]
 	addq.b	#1,d1                           	| [$80d6: inx]
@@ -4391,6 +4403,7 @@ l_8113:
 	CLR_XC_FLAGS                           	| [$811f: clc]
 l_8120:
 	bcs	l_8113                             	| [$8120: bcs	$8113]
+         ^^^^^^ TODO: warning: review stray bcs test
                                          | [$8122: sta watchdog_3000]
                                          | [$8122: sta watchdog_3000]
 	addq.b	#1,d2                           	| [$8125: iny]
@@ -7889,6 +7902,7 @@ l_9bf9:
     subq.b	#1,(a0,d1.w)                 	| [$9c0b: dec	$0089, x]
 	jbsr	l_9f2a                            	| [$9c0d: jsr	$9f2a]
 	bcs	l_9c19                             	| [$9c10: bcs	$9c19]
+         ^^^^^^ TODO: warning: review stray bcs test
 	move.b	#0x09,d0                        	| [$9c12: lda #$09]
 	PUSH_SR
 	GET_ADDRESS	0x0622                     	| [$9c14: sta	$0622, x]
@@ -7905,6 +7919,7 @@ l_9c19:
     addq.b	#1,(a0,d1.w)                 	| [$9c1f: inc	$0089, x]
 	jbsr	l_9f2a                            	| [$9c21: jsr	$9f2a]
 	bcs	l_9c2d                             	| [$9c24: bcs	$9c2d]
+         ^^^^^^ TODO: warning: review stray bcs test
 	move.b	#0x09,d0                        	| [$9c26: lda #$09]
 	PUSH_SR
 	GET_ADDRESS	0x0624                     	| [$9c28: sta	$0624, x]
@@ -7932,10 +7947,12 @@ l_9c2d:
 	POP_SR
 	jbsr	l_9f2a                            	| [$9c3e: jsr	$9f2a]
 	bcs	l_9c50                             	| [$9c41: bcs	$9c50]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x0089                     	| [$9c43: dec	$0089, x]
     subq.b	#1,(a0,d1.w)                 	| [$9c43: dec	$0089, x]
 	jbsr	l_9f2a                            	| [$9c45: jsr	$9f2a]
 	bcs	l_9c50                             	| [$9c48: bcs	$9c50]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x0089                     	| [$9c4a: inc	$0089, x]
     addq.b	#1,(a0,d1.w)                 	| [$9c4a: inc	$0089, x]
 	GET_ADDRESS	0x001f                     	| [$9c4c: lda	$001f]
@@ -7953,6 +7970,7 @@ l_9c50:
     addq.b	#1,(a0,d1.w)                 	| [$9c56: inc	$0087, x]
 	jbsr	l_9f2a                            	| [$9c58: jsr	$9f2a]
 	bcs	l_9c8c                             	| [$9c5b: bcs	$9c8c]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x0087                     	| [$9c5d: dec	$0087, x]
     subq.b	#1,(a0,d1.w)                 	| [$9c5d: dec	$0087, x]
 	jbsr	l_9ee8                            	| [$9c5f: jsr	$9ee8]
@@ -9441,10 +9459,10 @@ l_a2b9:
     move.b	d2,(a0,d1.w)                 	| [$a2cc: sty	$001c, x]
 	POP_SR
 	GET_ADDRESS	0x001c                     	| [$a2ce: cpy	$001c]
-	move.b	(a0),d4                         	| [$a2ce: cpy	$001c]
-	cmp.b	d2,d4                            	| [$a2ce: cpy	$001c]
+	cmp.b	(a0),d2                          	| [$a2ce: cpy	$001c]
 l_a2d0:
 	PUSH_SR
+          ^^^^^^ TODO: review stray cmp (insert SET_X_FROM_CLEARED_C)
 	GET_ADDRESS	0x001d                     	| [$a2d0: stx	$001d]
 	move.b	d1,(a0)                         	| [$a2d0: stx	$001d]
 	POP_SR
@@ -13060,6 +13078,7 @@ l_b2a4:
 	POP_SR
 	bcc	l_b299                             	| [$b2aa: bcc	$b299]
 	bcs	l_b2b2                             	| [$b2ac: bcs	$b2b2]
+         ^^^^^^ TODO: warning: review stray bcs test
 l_b2ae:
 	cmp.b	#0xfa,d2                         	| [$b2ae: cpy #$fa]
 	* bcc=>bcs
@@ -15935,6 +15954,7 @@ l_c1fd:
 	beq	l_c213                             	| [$c20b: beq	$c213]
 	move.b	#0x04,d2                        	| [$c20d: ldy #$04]
 	bcs	l_c213                             	| [$c20f: bcs	$c213]
+         ^^^^^^ TODO: warning: review stray bcs test
 	move.b	#0x08,d2                        	| [$c211: ldy #$08]
 l_c213:
 	GET_ADDRESS	0x000f                     	| [$c213: lda	$000f]
@@ -16416,6 +16436,7 @@ l_c4ef:
 	addq.b	#1,(a0)                         	| [$c4f3: inc	$0089]
 	jbsr	l_9f2a                            	| [$c4f5: jsr	$9f2a]
 	bcs	l_c4fc                             	| [$c4f8: bcs	$c4fc]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x0089                     	| [$c4fa: dec	$0089]
 	subq.b	#1,(a0)                         	| [$c4fa: dec	$0089]
 l_c4fc:
@@ -16425,6 +16446,7 @@ l_c4fc:
 	addq.b	#1,(a0)                         	| [$c500: inc	$0087]
 	jbsr	l_9f2a                            	| [$c502: jsr	$9f2a]
 	bcs	l_c509                             	| [$c505: bcs	$c509]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x0087                     	| [$c507: dec	$0087]
 	subq.b	#1,(a0)                         	| [$c507: dec	$0087]
 l_c509:
@@ -16445,6 +16467,7 @@ l_c509:
 	POP_SR
 	jbsr	l_9f2a                            	| [$c518: jsr	$9f2a]
 	bcs	l_c521                             	| [$c51b: bcs	$c521]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x001b                     	| [$c51d: lda	$001b]
 	move.b	(a0),d0                         	| [$c51d: lda	$001b]
 	PUSH_SR
@@ -17332,6 +17355,7 @@ l_c8f5:
 	move.b	(a0),d0                         	| [$c8f5: lda	$06de]
 	GET_ADDRESS	0x06e0                     	| [$c8f8: cmp	$06e0]
 	cmp.b	(a0),d0                          	| [$c8f8: cmp	$06e0]
+          ^^^^^^ TODO: review stray cmp (insert SET_X_FROM_CLEARED_C)
 	
 	move.w	#0xC8F8,d0
 	illegal
@@ -19765,6 +19789,7 @@ l_e368:
 	addq.b	#1,d1                           	| [$e368: inx]
 	cmp.b	#0x08,d1                         	| [$e369: cpx #$08]
 	rts                                    	| [$e36b: rts]
+          ^^^^^^ TODO: review stray cmp (check caller)
 l_e36c:
 	move.b	d1,d0                           	| [$e36c: txa]
 	move.w	d0,-(sp)                        	| [$e36d: pha]
@@ -21151,6 +21176,7 @@ l_e9f1:
 	cmp.b	(a0,d1.w),d0                     	| [$ea01: cmp	$0663, x]
 	beq	l_ea08                             	| [$ea04: beq	$ea08]
 	bcs	l_ea14                             	| [$ea06: bcs	$ea14]
+         ^^^^^^ TODO: warning: review stray bcs test
 l_ea08:
 	                           	| [$ea08: sec]
 	sub.b	#0x03,d0                        	| [$ea09: sbc #$03]
@@ -21210,7 +21236,7 @@ l_ea40:
 	move.b	(a0,d2.w),d0                    	| [$ea40: lda	$0605, y]
 	GET_ADDRESS	0x097e                     	| [$ea43: cmp	$097e, x]
 	cmp.b	(a0,d1.w),d0                     	| [$ea43: cmp	$097e, x]
- 
+          ^^^^^^ TODO: review stray cmp (insert SET_X_FROM_CLEARED_C)
 	move.w	#0xea43,d0
 	illegal
 
@@ -21245,6 +21271,7 @@ l_ea40:
 	subx.b	d4,d0                        	| [$ea67: sbc #$06]
 	move.b	d0,d1                           	| [$ea69: tax]
 	bcs	l_ea40                             	| [$ea6a: bcs	$ea40]
+         ^^^^^^ TODO: warning: review stray bcs test
 l_ea6c:
 	move.b	d1,d0                           	| [$ea6c: txa]
 	                           	| [$ea6d: clc]
@@ -21365,7 +21392,7 @@ l_eada:
 	move.b	(a0,d2.w),d0                    	| [$eada: lda	$0605, y]
 	GET_ADDRESS	0x097e                     	| [$eadd: cmp	$097e, x]
 	cmp.b	(a0,d1.w),d0                     	| [$eadd: cmp	$097e, x]
-
+          ^^^^^^ TODO: review stray cmp (insert SET_X_FROM_CLEARED_C)
 	move.w	#0xeadd,d0
 	illegal
 
@@ -21401,6 +21428,7 @@ l_eada:
 	subx.b	d4,d0                        	| [$eb01: sbc #$06]
 	move.b	d0,d1                           	| [$eb03: tax]
 	bcs	l_eada                             	| [$eb04: bcs	$eada]
+         ^^^^^^ TODO: warning: review stray bcs test
 l_eb06:
 	move.b	d1,d0                           	| [$eb06: txa]
 	                           	| [$eb07: clc]
@@ -21525,6 +21553,7 @@ l_eb8c:
 l_eb96:
 	jbsr	l_ebc0                            	| [$eb96: jsr	$ebc0]
 	bcs	l_ebba                             	| [$eb99: bcs	$ebba]
+         ^^^^^^ TODO: warning: review stray bcs test
 	GET_ADDRESS	0x0055                     	| [$eb9b: ldx	$0055]
 	move.b	(a0),d1                         	| [$eb9b: ldx	$0055]
 	GET_ADDRESS	0x0054                     	| [$eb9d: cpx	$0054]
@@ -22609,6 +22638,7 @@ l_f010:
 	cmp.b	(a0,d1.w),d0                     	| [$f027: cmp	$0848, x]
 l_f02a:
 	rts                                    	| [$f02a: rts]
+          ^^^^^^ TODO: review stray cmp (check caller)
 l_f02b:
 	GET_ADDRESS	0x0800                     	| [$f02b: lda	$0800]
 	move.b	(a0),d0                         	| [$f02b: lda	$0800]
@@ -22628,6 +22658,7 @@ l_f02b:
 	cmp.b	(a0,d1.w),d0                     	| [$f040: cmp	$0848, x]
 l_f043:
 	rts                                    	| [$f043: rts]
+          ^^^^^^ TODO: review stray cmp (check caller)
 
 l_f044:
 	move.b	#0x1e,d2                        	| [$f044: ldy #$1e]
@@ -22895,6 +22926,7 @@ l_f168:
 	cmp.b	(a0),d0                          	| [$f168: cmp	$0065]
 	beq	l_f16e                             	| [$f16a: beq	$f16e]
 	bcs	l_f176                             	| [$f16c: bcs	$f176]
+         ^^^^^^ TODO: warning: review stray bcs test
 l_f16e:
 	                           	| [$f16e: clc]
 	add.b	#0x0a,d0                        	| [$f16f: adc #$0a]
@@ -23324,6 +23356,7 @@ l_f3b5:
     move.b	d0,(a0,d1.w)                 	| [$f3b7: sta	$00c5, x]
 	POP_SR
 	bcs	l_f3e1                             	| [$f3b9: bcs	$f3e1]
+         ^^^^^^ TODO: warning: review stray bcs test
 	addq.b	#1,d2                           	| [$f3bb: iny]
 	move.b	d1,d0                           	| [$f3bc: txa]
 	beq	l_f3cb                             	| [$f3bd: beq	$f3cb]

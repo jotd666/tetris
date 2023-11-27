@@ -5,3 +5,4 @@
 - stray bcc/bcs/bvs/bvc not before cmp (label, bsr...)
 - switch to demo screen working! playfield is trashed, and palette write error
 - figure out palette stuff
+- credits inserted input received (wrong)
