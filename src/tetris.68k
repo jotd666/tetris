@@ -77,14 +77,32 @@
 
 * offsets (aka known variables)
 
-first_byte_of_bank_0d = 0x000D
+* game state: known values:
+gs_title_FB = 0xFB  | title screen
+gs_highscores_F8 = 0xF8  | highscores
+gs_credits_EE = 0xEE  | game credits/team
+gs_start_level_FE = 0xFE  | select start level
+gs_instructions_F0 = 0xF0  | game instructions (during game demo loop)
+gs_instructions_game_EC = 0xEC  | game instructions (before a real game starts)
+gs_title_EF = 0xEF  | ???
+gs_get_ready_F7 = 0xF7  | get ready
+gs_in_play_00 = 0x00  | in-play
+gs_game_demo_FC = 0xFC  | demo game
+
+game_state_0008 = 0x0008
+first_byte_of_bank_000d = 0x000D
+fadeout_in_progress_timer_0014 = 0x0014
 palette_pointer_0047 = 0x0047
 screen_address_00aa = 0x00AA
 number_of_credits_00c1 = 0x00C1
 number_of_coins_inserted_00c2 = 0x00C2
 pokey_pointer_00ce = 0x00CE
+screen_fade_counter_0645 = 0x0645
 context_name_06a1 = 0x06a1
 sync_variable_06a3 = 0x06a3
+zero_to_seven_palette_index_counter_0641 = 0x0641
+zero_to_seven_palette_index_counter_0642 = 0x0642
+
 pokey1_state_copy_0700 = 0x0700
 
 * pokey 0
@@ -5639,10 +5657,12 @@ l_8796:
 	rts                                    	| [$8796: rts]
 
 
-* < A: screen/context index?
+* < A: screen/context index
 * 8: title
 * 0: demo/game
 * 6: difficulty select
+* 0xA: highscores
+
 display_screen_and_other_stuff_8818:
 	* save D0 in context name
 	GET_ADDRESS	context_name_06a1          	| [$8818: sta context_name_06a1]
@@ -7558,25 +7578,23 @@ game_mainloop_9A48:
 	move.b	(a0),d0                         	| [$9a4d: lda	$0009]
 	beq	game_mainloop_9A48                 	| [$9a4f: beq game_mainloop_9A48]
 	clr.b	d0                               	| [$9a51: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x0009                     	| [$9a53: sta	$0009]
 	move.b	d0,(a0)                         	| [$9a53: sta	$0009]
-	POP_SR
 	GET_ADDRESS	0x08bc                     	| [$9a55: lda	$08bc]
 	move.b	(a0),d0                         	| [$9a55: lda	$08bc]
 	and.b	#0xe0,d0                         	| [$9a58: and #$e0]
 	cmp.b	#0xe0,d0                         	| [$9a5a: cmp #$e0]
 	bne	l_9a63                             	| [$9a5c: bne	$9a63]
-* free play ?
+* free play ? doesn't seem to have a dip-switch for that...
 	move.b	#0x02,d0                        	| [$9a5e: lda #$02]
-	PUSH_SR
 	GET_ADDRESS	number_of_credits_00c1     	| [$9a60: sta number_of_credits_00c1]
+	* sets 2 credits
 	move.b	d0,(a0)                         	| [$9a60: sta number_of_credits_00c1]
-	POP_SR
 l_9a63:
-	GET_ADDRESS	0x0008                     	| [$9a63: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$9a63: lda	$0008]
 	move.b	(a0),d0                         	| [$9a63: lda	$0008]
 	beq	l_9a80                             	| [$9a65: beq	$9a80]
+	* not in-play
 	GET_ADDRESS	0x0055                     	| [$9a67: lda	$0055]
 	move.b	(a0),d0                         	| [$9a67: lda	$0055]
 	GET_ADDRESS	0x0054                     	| [$9a69: cmp	$0054]
@@ -7654,10 +7672,10 @@ l_9aaa:
 	jbsr	l_a49b                            	| [$9ac1: jsr	$a49b]
 	jbsr	l_c15c                            	| [$9ac4: jsr	$c15c]
 	jbsr	l_c564                            	| [$9ac7: jsr	$c564]
-	GET_ADDRESS	0x0008                     	| [$9aca: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$9aca: lda	$0008]
 	move.b	(a0),d0                         	| [$9aca: lda	$0008]
-	cmp.b	#0xfe,d0                         	| [$9acc: cmp #$fe]
-	beq	l_9b1b                             	| [$9ace: beq	$9b1b]
+	cmp.b	#gs_start_level_FE,d0                         	| [$9acc: cmp #$fe]
+	beq	select_start_level_9b1b                             	| [$9ace: beq	$9b1b]
 	clr.b	d1                               	| [$9ad0: ldx #$00]
 	jbsr	l_bf41                            	| [$9ad2: jsr	$bf41]
 	move.b	#0x01,d1                        	| [$9ad5: ldx #$01]
@@ -7693,10 +7711,10 @@ l_9b09:
 l_9b12:
 	GET_ADDRESS	0x0036                     	| [$9b12: lda	$0036]
 	move.b	(a0),d0                         	| [$9b12: lda	$0036]
-	bne	l_9b1b                             	| [$9b14: bne	$9b1b]
+	bne	select_start_level_9b1b                             	| [$9b14: bne	$9b1b]
 	move.b	#0x01,d1                        	| [$9b16: ldx #$01]
 	jbsr	l_9bd0                            	| [$9b18: jsr	$9bd0]
-l_9b1b:
+select_start_level_9b1b:
 * clv+bvc => jra
 	jra	l_9b21                             	| [$9b1c: jra	$9b21]
 l_9b1e:
@@ -7723,10 +7741,11 @@ l_9b2d:
 	* bcs=>bcc
 	bcc	l_9b40                             	| [$9b3a: bcs	$9b40]
 l_9b3c:
-	GET_ADDRESS	0x0008                     	| [$9b3c: ldy	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$9b3c: ldy	$0008]
 	move.b	(a0),d2                         	| [$9b3c: ldy	$0008]
 	beq	l_9b41                             	| [$9b3e: beq	$9b41]
 l_9b40:
+	* not in-play, return
 	rts                                    	| [$9b40: rts]
 l_9b41:
 	move.b	d0,d2                           	| [$9b41: tay]
@@ -7860,14 +7879,15 @@ l_9bc9:
 	POP_SR
 	bne	l_9bc2                             	| [$9bce: bne	$9bc2]
 l_9bd0:
-	GET_ADDRESS	0x0008                     	| [$9bd0: ldy	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$9bd0: ldy	$0008]
 	move.b	(a0),d2                         	| [$9bd0: ldy	$0008]
 	beq	l_9bd9                             	| [$9bd2: beq	$9bd9]
-	cmp.b	#0xfc,d2                         	| [$9bd4: cpy #$fc]
+	cmp.b	#gs_game_demo_FC,d2                         	| [$9bd4: cpy #$fc]
 	beq	l_9bd9                             	| [$9bd6: beq	$9bd9]
 l_9bd8:
 	rts                                    	| [$9bd8: rts]
 l_9bd9:
+	* in-play or game demo
 	GET_ADDRESS	0x0095                     	| [$9bd9: lda	$0095, x]
 	move.b	(a0,d1.w),d0                    	| [$9bd9: lda	$0095, x]
 	bne	l_9bd8                             	| [$9bdb: bne	$9bd8]
@@ -8215,13 +8235,14 @@ l_9d42:
 l_9d45:
 	GET_ADDRESS	0x0618                     	| [$9d45: lda	$0618]
 	move.b	(a0),d0                         	| [$9d45: lda	$0618]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0050                     	| [$9d48: sta	$0050]
 	move.b	d0,(a0)                         	| [$9d48: sta	$0050]
-	POP_SR
-	GET_ADDRESS	0x0008                     	| [$9d4a: lda	$0008]
+	
+	GET_ADDRESS	game_state_0008                     	| [$9d4a: lda	$0008]
 	move.b	(a0),d0                         	| [$9d4a: lda	$0008]
 	bne	l_9d51                             	| [$9d4c: bne	$9d51]
+	* in-play
 	jbsr	l_f105                            	| [$9d4e: jsr	$f105]
 l_9d51:
 	GET_ADDRESS	0x0077                     	| [$9d51: lda	$0077]
@@ -8972,9 +8993,10 @@ l_a0d6:
 	rts                                    	| [$a0dd: rts]
 l_a0de:
 	jbsr	l_a347                            	| [$a0de: jsr	$a347]
-	GET_ADDRESS	0x0008                     	| [$a0e1: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$a0e1: lda	$0008]
 	move.b	(a0),d0                         	| [$a0e1: lda	$0008]
 	bne	l_a0ec                             	| [$a0e3: bne	$a0ec]
+	* in-play
 	PUSH_SR
 	GET_ADDRESS	0x0021                     	| [$a0e5: sty	$0021]
 	move.b	d2,(a0)                         	| [$a0e5: sty	$0021]
@@ -9034,9 +9056,9 @@ l_a11f:
 	GET_ADDRESS	0x0097                     	| [$a123: sta	$0097, x]
     move.b	d0,(a0,d1.w)                 	| [$a123: sta	$0097, x]
 	POP_SR
-	GET_ADDRESS	0x0008                     	| [$a125: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$a125: lda	$0008]
 	move.b	(a0),d0                         	| [$a125: lda	$0008]
-	cmp.b	#0xfc,d0                         	| [$a127: cmp #$fc]
+	cmp.b	#gs_game_demo_FC,d0                         	| [$a127: cmp #$fc]
 	bne	l_a12e                             	| [$a129: bne	$a12e]
 	jbsr	l_c916                            	| [$a12b: jsr	$c916]
 l_a12e:
@@ -9357,9 +9379,10 @@ l_a234:
     move.b	d0,(a0,d1.w)                 	| [$a249: sta	$067b, x]
 	POP_SR
 l_a24c:
-	GET_ADDRESS	0x0008                     	| [$a24c: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$a24c: lda	$0008]
 	move.b	(a0),d0                         	| [$a24c: lda	$0008]
 	bne	l_a26a                             	| [$a24e: bne	$a26a]
+	* in-play
 	GET_ADDRESS	0x001e                     	| [$a250: lda	$001e]
 	move.b	(a0),d0                         	| [$a250: lda	$001e]
 	                           	| [$a252: sec]
@@ -9980,9 +10003,9 @@ l_a491:
 	bcs	l_a456                             	| [$a498: bcc	$a456]
 	rts                                    	| [$a49a: rts]
 l_a49b:
-	GET_ADDRESS	0x0008                     	| [$a49b: ldy	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$a49b: ldy	$0008]
 	move.b	(a0),d2                         	| [$a49b: ldy	$0008]
-	cmp.b	#0xf8,d2                         	| [$a49d: cpy #$f8]
+	cmp.b	#gs_highscores_F8,d2                         	| [$a49d: cpy #$f8]
 	bne	l_a4bf                             	| [$a49f: bne	$a4bf]
 	jbsr	l_d552                            	| [$a4a1: jsr	$d552]
 	jbsr	l_c228                            	| [$a4a4: jsr	$c228]
@@ -10245,17 +10268,13 @@ l_a5da:
 	move.b	d0,(a0)                         	| [$a5e2: sta	$066d]
 	POP_SR
 	move.b	#0x07,d0                        	| [$a5e5: lda #$07]
-	PUSH_SR
 	GET_ADDRESS	0x0007                     	| [$a5e7: sta	$0007]
 	move.b	d0,(a0)                         	| [$a5e7: sta	$0007]
-	POP_SR
 	move.b	#0x0a,d0                        	| [$a5e9: lda #$0a]
 	jbsr	display_screen_and_other_stuff_8818	| [$a5eb: jsr display_screen_and_other_stuff_8818]
-	move.b	#0xf8,d0                        	| [$a5ee: lda #$f8]
-	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$a5f0: sta	$0008]
+	move.b	#gs_highscores_F8,d0                        	| [$a5ee: lda #$f8]
+	GET_ADDRESS	game_state_0008                     	| [$a5f0: sta	$0008]
 	move.b	d0,(a0)                         	| [$a5f0: sta	$0008]
-	POP_SR
 	move.b	#0x9c,d0                        	| [$a5f2: lda #$9c]
 	PUSH_SR
 	GET_ADDRESS	0x0002                     	| [$a5f4: sta	$0002]
@@ -10800,7 +10819,7 @@ l_a863:
 l_a864:
 	move.b	#0xfc,d0                        	| [$a864: lda #$fc]
 	
-	GET_ADDRESS	0x0008                     	| [$a866: sta	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$a866: sta	$0008]
 	move.b	d0,(a0)                         	| [$a866: sta	$0008]
 	
 	clr.b	d0                               	| [$a868: lda #$00]
@@ -10842,7 +10861,7 @@ l_a864:
 l_a88f:
 	move.b	#0xf0,d0                        	| [$a88f: lda #$f0]
 	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$a891: sta	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$a891: sta	$0008]
 	move.b	d0,(a0)                         	| [$a891: sta	$0008]
 	POP_SR
 	clr.b	d0                               	| [$a893: lda #$00]
@@ -10869,46 +10888,46 @@ l_a88f:
 	move.b	d0,(a0)                         	| [$a8ab: sta	$0077]
 	POP_SR
 	move.b	#0x1e,d0                        	| [$a8ad: lda #$1e]
-	PUSH_SR
+	
 	GET_ADDRESS	0x002f                     	| [$a8af: sta	$002f]
 	move.b	d0,(a0)                         	| [$a8af: sta	$002f]
-	POP_SR
-	jbsr	l_adad                            	| [$a8b1: jsr	$adad]
+	
+	jbsr	fill_game_grid_adad                            	| [$a8b1: jsr	$adad]
 	move.b	#0x03,d0                        	| [$a8b4: lda #$03]
-	PUSH_SR
+	
 	GET_ADDRESS	0x008f                     	| [$a8b6: sta	$008f]
 	move.b	d0,(a0)                         	| [$a8b6: sta	$008f]
-	POP_SR
+	
 	clr.b	d0                               	| [$a8b8: lda #$00]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0077                     	| [$a8ba: sta	$0077]
 	move.b	d0,(a0)                         	| [$a8ba: sta	$0077]
 	GET_ADDRESS	0x067f                     	| [$a8bc: sta	$067f]
 	move.b	d0,(a0)                         	| [$a8bc: sta	$067f]
-	POP_SR
+	
 	move.b	#0x08,d0                        	| [$a8bf: lda #$08]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0087                     	| [$a8c1: sta	$0087]
 	move.b	d0,(a0)                         	| [$a8c1: sta	$0087]
-	POP_SR
+	
 	move.b	#0x07,d0                        	| [$a8c3: lda #$07]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0089                     	| [$a8c5: sta	$0089]
 	move.b	d0,(a0)                         	| [$a8c5: sta	$0089]
-	POP_SR
+	
 	move.b	#0x02,d0                        	| [$a8c7: lda #$02]
-	PUSH_SR
+	
 	GET_ADDRESS	0x008b                     	| [$a8c9: sta	$008b]
 	move.b	d0,(a0)                         	| [$a8c9: sta	$008b]
 	GET_ADDRESS	0x067e                     	| [$a8cb: sta	$067e]
 	move.b	d0,(a0)                         	| [$a8cb: sta	$067e]
-	POP_SR
+	
 	move.b	#0x37,d0                        	| [$a8ce: lda #$37]
 	jbsr	l_d670                            	| [$a8d0: jsr	$d670]
 	move.b	#0x09,d0                        	| [$a8d3: lda #$09]
 	jbsr	l_d670                            	| [$a8d5: jsr	$d670]
 	move.b	#0x01,d0                        	| [$a8d8: lda #$01]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0079                     	| [$a8da: sta	$0079]
 	move.b	d0,(a0)                         	| [$a8da: sta	$0079]
 	GET_ADDRESS	0x007b                     	| [$a8dc: sta	$007b]
@@ -10917,7 +10936,7 @@ l_a88f:
 	move.b	d0,(a0)                         	| [$a8de: sta	$0080]
 	GET_ADDRESS	0x0078                     	| [$a8e0: sta	$0078]
 	move.b	d0,(a0)                         	| [$a8e0: sta	$0078]
-	POP_SR
+	
 	jbsr	l_b605                            	| [$a8e2: jsr	$b605]
 	jbsr	l_bc16                            	| [$a8e5: jsr	$bc16]
 	rts                                    	| [$a8e8: rts]
@@ -10933,11 +10952,9 @@ l_a8f0:
 	GET_ADDRESS	0x064f                     	| [$a8f2: sta	$064f]
 	move.b	d0,(a0)                         	| [$a8f2: sta	$064f]
 	POP_SR
-	move.b	#0xec,d0                        	| [$a8f5: lda #$ec]
-	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$a8f7: sta	$0008]
+	move.b	#gs_instructions_game_EC,d0                        	| [$a8f5: lda #$ec]
+	GET_ADDRESS	game_state_0008                     	| [$a8f7: sta	$0008]
 	move.b	d0,(a0)                         	| [$a8f7: sta	$0008]
-	POP_SR
 	clr.b	d0                               	| [$a8f9: lda #$00]
 	PUSH_SR
 	GET_ADDRESS	0x0650                     	| [$a8fb: sta	$0650]
@@ -10970,7 +10987,7 @@ l_a8f0:
 	GET_ADDRESS	0x002f                     	| [$a919: sta	$002f]
 	move.b	d0,(a0)                         	| [$a919: sta	$002f]
 	POP_SR
-	jbsr	l_adad                            	| [$a91b: jsr	$adad]
+	jbsr	fill_game_grid_adad                            	| [$a91b: jsr	$adad]
 	clr.b	d0                               	| [$a91e: lda #$00]
 	PUSH_SR
 	GET_ADDRESS	0x0077                     	| [$a920: sta	$0077]
@@ -11010,15 +11027,14 @@ l_a8f0:
 	jbsr	l_bc16                            	| [$a941: jsr	$bc16]
 	rts                                    	| [$a944: rts]
 l_a945:
-	clr.b	d0                               	| [$a945: lda #$00]
-	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$a947: sta	$0008]
+	move.b	#gs_in_play_00,d0                               	| [$a945: lda #$00]
+	GET_ADDRESS	game_state_0008                     	| [$a947: sta	$0008]
 	move.b	d0,(a0)                         	| [$a947: sta	$0008]
 	GET_ADDRESS	0x0044                     	| [$a949: sta	$0044]
 	move.b	d0,(a0)                         	| [$a949: sta	$0044]
 	GET_ADDRESS	0x064b                     	| [$a94b: sta	$064b]
 	move.b	d0,(a0)                         	| [$a94b: sta	$064b]
-	POP_SR
+	
 	GET_ADDRESS	0x0046                     	| [$a94e: ldy	$0046]
 	move.b	(a0),d2                         	| [$a94e: ldy	$0046]
 	PUSH_SR
@@ -11092,11 +11108,9 @@ l_a99d:
 	move.b	#0x01,d1                        	| [$a9a1: ldx #$01]
 	jbsr	l_a9ab                            	| [$a9a3: jsr	$a9ab]
 l_a9a6:
-	move.b	#0xf7,d0                        	| [$a9a6: lda #$f7]
-	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$a9a8: sta	$0008]
+	move.b	#gs_get_ready_F7,d0                        	| [$a9a6: lda #$f7]
+	GET_ADDRESS	game_state_0008                     	| [$a9a8: sta	$0008]
 	move.b	d0,(a0)                         	| [$a9a8: sta	$0008]
-	POP_SR
 	rts                                    	| [$a9aa: rts]
 l_a9ab:
 	GET_ADDRESS	0x002f                     	| [$a9ab: lda	$002f]
@@ -11313,27 +11327,24 @@ l_aa8b:
 l_aa8e:
 	GET_ADDRESS	0x0017                     	| [$aa8e: lda	$0017]
 	move.b	(a0),d0                         	| [$aa8e: lda	$0017]
-	PUSH_SR
 	GET_ADDRESS	0x0083                     	| [$aa90: sta	$0083]
 	move.b	d0,(a0)                         	| [$aa90: sta	$0083]
 	GET_ADDRESS	0x0085                     	| [$aa92: sta	$0085]
 	move.b	d0,(a0)                         	| [$aa92: sta	$0085]
 	GET_ADDRESS	0x0081                     	| [$aa94: sta	$0081]
 	move.b	d0,(a0)                         	| [$aa94: sta	$0081]
-	POP_SR
 	GET_ADDRESS	0x0018                     	| [$aa96: lda	$0018]
 	move.b	(a0),d0                         	| [$aa96: lda	$0018]
-	PUSH_SR
 	GET_ADDRESS	0x0084                     	| [$aa98: sta	$0084]
 	move.b	d0,(a0)                         	| [$aa98: sta	$0084]
 	GET_ADDRESS	0x0086                     	| [$aa9a: sta	$0086]
 	move.b	d0,(a0)                         	| [$aa9a: sta	$0086]
 	GET_ADDRESS	0x0082                     	| [$aa9c: sta	$0082]
 	move.b	d0,(a0)                         	| [$aa9c: sta	$0082]
-	POP_SR
+	
 	jbsr	l_adc6                            	| [$aa9e: jsr	$adc6]
 	clr.b	d0                               	| [$aaa1: lda #$00]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0035                     	| [$aaa3: sta	$0035]
 	move.b	d0,(a0)                         	| [$aaa3: sta	$0035]
 	GET_ADDRESS	0x0095                     	| [$aaa5: sta	$0095]
@@ -11352,10 +11363,10 @@ l_aa8e:
 	move.b	d0,(a0)                         	| [$aab3: sta	$063f]
 	GET_ADDRESS	0x0640                     	| [$aab6: sta	$0640]
 	move.b	d0,(a0)                         	| [$aab6: sta	$0640]
-	POP_SR
-	GET_ADDRESS	0x0008                     	| [$aab9: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$aab9: lda	$0008]
 	move.b	(a0),d0                         	| [$aab9: lda	$0008]
 	bne	l_aaca                             	| [$aabb: bne	$aaca]
+	* in-play
 	GET_ADDRESS	0x000b                     	| [$aabd: lda	$000b]
 	move.b	(a0),d0                         	| [$aabd: lda	$000b]
 	cmp.b	#0x01,d0                         	| [$aabf: cmp #$01]
@@ -11374,19 +11385,18 @@ l_aaca:
 	GET_ADDRESS	0x002a                     	| [$aace: stx	$002a]
 	move.b	d1,(a0)                         	| [$aace: stx	$002a]
 	POP_SR
-	GET_ADDRESS	0x0008                     	| [$aad0: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$aad0: lda	$0008]
 	move.b	(a0),d0                         	| [$aad0: lda	$0008]
 	bne	l_aad8                             	| [$aad2: bne	$aad8]
-	move.b	#0xf7,d0                        	| [$aad4: lda #$f7]
-	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$aad6: sta	$0008]
+	* in-play: switch to get ready
+	move.b	#gs_get_ready_F7,d0                        	| [$aad4: lda #$f7]
+	GET_ADDRESS	game_state_0008                     	| [$aad6: sta	$0008]
 	move.b	d0,(a0)                         	| [$aad6: sta	$0008]
-	POP_SR
 l_aad8:
 	clr.b	d1                               	| [$aad8: ldx #$00]
-	jbsr	l_adad                            	| [$aada: jsr	$adad]
+	jbsr	fill_game_grid_adad                            	| [$aada: jsr	$adad]
 	move.b	#0x01,d1                        	| [$aadd: ldx #$01]
-	jbsr	l_adad                            	| [$aadf: jsr	$adad]
+	jbsr	fill_game_grid_adad                            	| [$aadf: jsr	$adad]
 	GET_ADDRESS	0x000b                     	| [$aae2: lda	$000b]
 	move.b	(a0),d0                         	| [$aae2: lda	$000b]
 	beq	l_ab00                             	| [$aae4: beq	$ab00]
@@ -11743,7 +11753,7 @@ l_ac7c:
 	move.b	d0,(a0)                         	| [$ac7e: sta	$0619]
 	POP_SR
 	jbsr	l_a9ab                            	| [$ac81: jsr	$a9ab]
-	jbsr	l_adad                            	| [$ac84: jsr	$adad]
+	jbsr	fill_game_grid_adad                            	| [$ac84: jsr	$adad]
 	rts                                    	| [$ac87: rts]
 	or.b	#0x0a,d0                          	| [$ac88: ora #$0a]
 l_ac8a:
@@ -11932,35 +11942,31 @@ l_ad4e:
 	addx.b	d4,d0                        	| [$ad57: adc #$4a]
 	jbsr	l_d670                            	| [$ad59: jsr	$d670]
 	jbsr	l_ac8a                            	| [$ad5c: jsr	$ac8a]
-	jra	l_adad                             	| [$ad5f: jmp	$adad]
+	jra	fill_game_grid_adad                             	| [$ad5f: jmp	$adad]
+	
 l_ad62:
-	PUSH_SR
 	GET_ADDRESS	0x001b                     	| [$ad62: stx	$001b]
 	move.b	d1,(a0)                         	| [$ad62: stx	$001b]
-	POP_SR
-	CLR_XC_FLAGS                           	| [$ad64: clc]
+	                           	| [$ad64: clc]
 	move.b	d1,d0                           	| [$ad65: txa]
-	move.b	#0x4a,d4	| [$ad66: adc #$4a]
-	addx.b	d4,d0                        	| [$ad66: adc #$4a]
+	add.b	#0x4a,d0	| [$ad66: adc #$4a]
 	jbsr	l_d670                            	| [$ad68: jsr	$d670]
 	clr.b	d0                               	| [$ad6b: lda #$00]
-	PUSH_SR
+	
 	GET_ADDRESS	0x06b5                     	| [$ad6d: sta	$06b5, x]
     move.b	d0,(a0,d1.w)                 	| [$ad6d: sta	$06b5, x]
 	GET_ADDRESS	0x06b7                     	| [$ad70: sta	$06b7, x]
     move.b	d0,(a0,d1.w)                 	| [$ad70: sta	$06b7, x]
 	GET_ADDRESS	0x06a4                     	| [$ad73: stx	$06a4]
 	move.b	d1,(a0)                         	| [$ad73: stx	$06a4]
-	POP_SR
+	
 	clr.b	d2                               	| [$ad76: ldy #$00]
 	jbsr	l_89b7                            	| [$ad78: jsr	$89b7]
 	jbsr	l_ac8a                            	| [$ad7b: jsr	$ac8a]
 	jbsr	l_aa01                            	| [$ad7e: jsr	$aa01]
 	clr.b	d0                               	| [$ad81: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x064e                     	| [$ad83: sta	$064e]
 	move.b	d0,(a0)                         	| [$ad83: sta	$064e]
-	POP_SR
 	move.b	d1,d0                           	| [$ad86: txa]
 	move.b	d0,d2                           	| [$ad87: tay]
 	GET_ADDRESS	0xba76                     	| [$ad88: ldx	$ba76, y]
@@ -11969,10 +11975,8 @@ l_ad62:
 	move.b	(a0,d1.w),d0                    	| [$ad8b: lda	$0077, x]
 	beq	l_ad94                             	| [$ad8d: beq	$ad94]
 	move.b	#0x01,d0                        	| [$ad8f: lda #$01]
-	PUSH_SR
 	GET_ADDRESS	0x064e                     	| [$ad91: sta	$064e]
 	move.b	d0,(a0)                         	| [$ad91: sta	$064e]
-	POP_SR
 l_ad94:
 	GET_ADDRESS	0x064e                     	| [$ad94: lda	$064e]
 	move.b	(a0),d0                         	| [$ad94: lda	$064e]
@@ -11987,28 +11991,61 @@ l_ad94:
 	move.b	#0x07,d0                        	| [$ad9e: lda #$07]
 	tst.b	d1                               	| [$ada0: cpx #$00]
 	bne	l_adaa                             	| [$ada2: bne	$adaa]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0670                     	| [$ada4: sta	$0670]
 	move.b	d0,(a0)                         	| [$ada4: sta	$0670]
-	POP_SR
+	
 * clv+bvc => jra
-	jra	l_adad                             	| [$ada8: jra	$adad]
+	jra	fill_game_grid_adad                             	| [$ada8: jra	$adad]
 l_adaa:
-	PUSH_SR
+	
 	GET_ADDRESS	0x0672                     	| [$adaa: sta	$0672]
 	move.b	d0,(a0)                         	| [$adaa: sta	$0672]
-	POP_SR
-l_adad:
+	
+* fills grid in video memory and also at address 0x200 (logical grid)
+* logical grid is structured as follows 28x16 with 10 possible free slots
+*
+* 0x0200:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0210:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0220:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0230:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0240:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0250:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0260:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0270:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0280:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0290:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x02A0:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x02B0:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x02C0:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x02D0:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x02E0:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x02F0:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0300:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0310:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0320:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0330:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0340:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0350:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0360:  F0 F0 F0 00 00 00 00 00 00 00 00 00 00 F0 F0 F0   ððð..........ððð
+* 0x0370:  F0 F0 F0 00 00 00 00 00 00 00 23 00 00 F0 F0 F0   ððð.......#..ððð
+* 0x0380:  F0 F0 F0 3A 3D 43 00 70 7D 20 29 00 00 F0 F0 F0   ððð:=C.p} )..ððð
+* 0x0390:  F0 F0 F0 3C 3B 4C 41 42 7C 72 25 1E 00 F0 F0 F0   ððð<;LAB|r%..ððð
+* 0x03A0:  F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0   ðððððððððððððððð
+* 0x03B0:  F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0 F0   ðððððððððððððððð
+
+
+fill_game_grid_adad:
 	jbsr	l_afe8                            	| [$adad: jsr	$afe8]
 	clr.b	d0                               	| [$adb0: lda #$00]
-	PUSH_SR
+	
 	GET_ADDRESS	0x008d                     	| [$adb2: sta	$008d, x]
     move.b	d0,(a0,d1.w)                 	| [$adb2: sta	$008d, x]
 	GET_ADDRESS	0x008b                     	| [$adb4: sta	$008b, x]
     move.b	d0,(a0,d1.w)                 	| [$adb4: sta	$008b, x]
 	GET_ADDRESS	0x0029                     	| [$adb6: sta	$0029, x]
     move.b	d0,(a0,d1.w)                 	| [$adb6: sta	$0029, x]
-	POP_SR
+
 	GET_ADDRESS	0x0077                     	| [$adb8: lda	$0077, x]
 	move.b	(a0,d1.w),d0                    	| [$adb8: lda	$0077, x]
 	beq	l_adc2                             	| [$adba: beq	$adc2]
@@ -12020,20 +12057,15 @@ l_adc2:
 	bne	l_ae06                             	| [$adc4: bne	$ae06]
 l_adc6:
 	clr.b	d0                               	| [$adc6: lda #$00]
-	PUSH_SR
+
 	GET_ADDRESS	0x001f                     	| [$adc8: sta	$001f]
 	move.b	d0,(a0)                         	| [$adc8: sta	$001f]
-	POP_SR
 	move.b	#0x02,d0                        	| [$adca: lda #$02]
-	PUSH_SR
 	GET_ADDRESS	0x0020                     	| [$adcc: sta	$0020]
 	move.b	d0,(a0)                         	| [$adcc: sta	$0020]
-	POP_SR
 	move.b	#0x1c,d0                        	| [$adce: lda #$1c]
-	PUSH_SR
 	GET_ADDRESS	0x001d                     	| [$add0: sta	$001d]
 	move.b	d0,(a0)                         	| [$add0: sta	$001d]
-	POP_SR
 l_add2:
 	GET_ADDRESS	0x001d                     	| [$add2: lda	$001d]
 	move.b	(a0),d0                         	| [$add2: lda	$001d]
@@ -12055,11 +12087,10 @@ l_ade6:
 l_ade8:
 	GET_ADDRESS	0xaec3                     	| [$ade8: lda	$aec3, x]
 	move.b	(a0,d1.w),d0                    	| [$ade8: lda	$aec3, x]
-	PUSH_SR
+	
 	GET_ADDRESS_Y	0x1f                     	| [$adeb: sta ($1f), y]
 	move.b	d0,(a0,d2.w)                    	| [$adeb: sta ($1f), y]
 
-	POP_SR
 	addq.b	#1,d1                           	| [$aded: inx]
 	addq.b	#1,d2                           	| [$adee: iny]
 	cmp.b	#0x10,d2                         	| [$adef: cpy #$10]
@@ -12084,20 +12115,14 @@ l_adfe:
 	beq	l_ae44                             	| [$ae04: beq	$ae44]
 l_ae06:
 	clr.b	d0                               	| [$ae06: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x001f                     	| [$ae08: sta	$001f]
 	move.b	d0,(a0)                         	| [$ae08: sta	$001f]
-	POP_SR
 	move.b	#0x04,d0                        	| [$ae0a: lda #$04]
-	PUSH_SR
 	GET_ADDRESS	0x0020                     	| [$ae0c: sta	$0020]
 	move.b	d0,(a0)                         	| [$ae0c: sta	$0020]
-	POP_SR
 	move.b	#0x1c,d0                        	| [$ae0e: lda #$1c]
-	PUSH_SR
 	GET_ADDRESS	0x001d                     	| [$ae10: sta	$001d]
 	move.b	d0,(a0)                         	| [$ae10: sta	$001d]
-	POP_SR
 l_ae12:
 	GET_ADDRESS	0x001d                     	| [$ae12: lda	$001d]
 	move.b	(a0),d0                         	| [$ae12: lda	$001d]
@@ -12119,11 +12144,9 @@ l_ae26:
 l_ae28:
 	GET_ADDRESS	0xaec3                     	| [$ae28: lda	$aec3, x]
 	move.b	(a0,d1.w),d0                    	| [$ae28: lda	$aec3, x]
-	PUSH_SR
 	GET_ADDRESS_Y	0x1f                     	| [$ae2b: sta ($1f), y]
 	move.b	d0,(a0,d2.w)                    	| [$ae2b: sta ($1f), y]
 
-	POP_SR
 	addq.b	#1,d1                           	| [$ae2d: inx]
 	addq.b	#1,d2                           	| [$ae2e: iny]
 	cmp.b	#0x10,d2                         	| [$ae2f: cpy #$10]
@@ -12167,10 +12190,8 @@ l_ae4f:
 	beq	l_ae5b                             	| [$ae57: beq	$ae5b]
 	move.b	#0x01,d0                        	| [$ae59: lda #$01]
 l_ae5b:
-	PUSH_SR
 	GET_ADDRESS	0x063c                     	| [$ae5b: sta	$063c, x]
     move.b	d0,(a0,d1.w)                 	| [$ae5b: sta	$063c, x]
-	POP_SR
 	GET_ADDRESS	0xb100                     	| [$ae5e: lda	$b100, y]
 	move.b	(a0,d2.w),d0                    	| [$ae5e: lda	$b100, y]
 	PUSH_SR
@@ -13342,9 +13363,9 @@ l_b39f:
 	GET_ADDRESS	0x008b                     	| [$b3b4: lda	$008b, x]
 	move.b	(a0,d1.w),d0                    	| [$b3b4: lda	$008b, x]
 	beq	l_b3c9                             	| [$b3b6: beq	$b3c9]
-	GET_ADDRESS	0x0008                     	| [$b3b8: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$b3b8: lda	$0008]
 	move.b	(a0),d0                         	| [$b3b8: lda	$0008]
-	cmp.b	#0xfc,d0                         	| [$b3ba: cmp #$fc]
+	cmp.b	#gs_game_demo_FC,d0                         	| [$b3ba: cmp #$fc]
 	bne	l_b3c4                             	| [$b3bc: bne	$b3c4]
 	jbsr	l_c916                            	| [$b3be: jsr	$c916]
 	jra	l_b3ca                             	| [$b3c1: jmp	$b3ca]
@@ -13720,9 +13741,10 @@ l_b510:
 	GET_ADDRESS	0x0693                     	| [$b52c: sta	$0693, x]
     move.b	d0,(a0,d1.w)                 	| [$b52c: sta	$0693, x]
 	POP_SR
-	GET_ADDRESS	0x0008                     	| [$b52f: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$b52f: lda	$0008]
 	move.b	(a0),d0                         	| [$b52f: lda	$0008]
 	bne	l_b536                             	| [$b531: bne	$b536]
+	* in-play
 	jbsr	l_b53f                            	| [$b533: jsr	$b53f]
 l_b536:
 	jbsr	l_a2d0                            	| [$b536: jsr	$a2d0]
@@ -13908,9 +13930,10 @@ l_b607:
 	GET_ADDRESS	0x000b                     	| [$b622: bit	$000b]
 	tst.b	(a0)                             	| [$b622: bit	$000b]
 	bpl	l_b634                             	| [$b624: bpl	$b634]
-	GET_ADDRESS	0x0008                     	| [$b626: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$b626: lda	$0008]
 	move.b	(a0),d0                         	| [$b626: lda	$0008]
 	bmi	l_b634                             	| [$b628: bmi	$b634]
+	* in-play is the only known positive state!
 	cmp.b	#0x08,d2                         	| [$b62a: cpy #$08]
 	* bcc=>bcs
 	bcs	l_b634                             	| [$b62c: bcc	$b634]
@@ -14105,12 +14128,12 @@ l_b73c:
 	move.b	#0x0e,d0                        	| [$b74b: lda #$0e]
 	jbsr	l_d670                            	| [$b74d: jsr	$d670]
 	clr.b	d0                               	| [$b750: lda #$00]
-	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$b752: sta	$0008]
-	move.b	d0,(a0)                         	| [$b752: sta	$0008]
+	
+	GET_ADDRESS	game_state_0008                     	| [$b752: sta	$0008]
+	move.b	#gs_in_play_00,(a0)                         	| [$b752: sta	$0008]
 	GET_ADDRESS	0x002b                     	| [$b754: sta	$002b]
 	move.b	d0,(a0)                         	| [$b754: sta	$002b]
-	POP_SR
+	
 	GET_ADDRESS	0x002f                     	| [$b756: ldx	$002f]
 	move.b	(a0),d1                         	| [$b756: ldx	$002f]
 	GET_ADDRESS	0xb7aa                     	| [$b758: lda	$b7aa, x]
@@ -15656,9 +15679,10 @@ l_bf41:
 	beq	l_bf47                             	| [$bf44: beq	$bf47]
 	rts                                    	| [$bf46: rts]
 l_bf47:
-	GET_ADDRESS	0x0008                     	| [$bf47: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$bf47: lda	$0008]
 	move.b	(a0),d0                         	| [$bf47: lda	$0008]
 	bne	l_bf87                             	| [$bf49: bne	$bf87]
+	* in-game
 	GET_ADDRESS	0x0077                     	| [$bf4b: lda	$0077, x]
 	move.b	(a0,d1.w),d0                    	| [$bf4b: lda	$0077, x]
 	beq	l_bf87                             	| [$bf4d: beq	$bf87]
@@ -15838,20 +15862,22 @@ l_c017:
 l_c027:
 	rts                                    	| [$c027: rts]
 
+* this call allows to display "press start" and to start game
+* without this call, game never quits the fireworks title screen
 l_c15c:
 	clr.b	d1                               	| [$c15c: ldx #$00]
-	GET_ADDRESS	0x0008                     	| [$c15e: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$c15e: lda	$0008]
 	move.b	(a0),d0                         	| [$c15e: lda	$0008]
-	beq	l_c1c9                             	| [$c160: beq	$c1c9]
-	cmp.b	#0xfc,d0                         	| [$c162: cmp #$fc]
-	beq	l_c1d5                             	| [$c164: beq	$c1d5]
-	cmp.b	#0xfb,d0                         	| [$c166: cmp #$fb]
+	beq	ingame_c1c9                             	| [$c160: beq	$c1c9]
+	cmp.b	#gs_game_demo_FC,d0                         	| [$c162: cmp #$fc]
+	beq	demo_game_c1d5                             	| [$c164: beq	$c1d5]
+	cmp.b	#gs_title_FB,d0                         	| [$c166: cmp #$fb]
 	beq	l_c17a                             	| [$c168: beq	$c17a]
-	cmp.b	#0xef,d0                         	| [$c16a: cmp #$ef]
+	cmp.b	#gs_title_EF,d0                         	| [$c16a: cmp #$ef]
 	beq	l_c17a                             	| [$c16c: beq	$c17a]
-	cmp.b	#0xee,d0                         	| [$c16e: cmp #$ee]
+	cmp.b	#gs_credits_EE,d0                         	| [$c16e: cmp #$ee]
 	beq	l_c17a                             	| [$c170: beq	$c17a]
-	cmp.b	#0xf0,d0                         	| [$c172: cmp #$f0]
+	cmp.b	#gs_instructions_F0,d0                         	| [$c172: cmp #$f0]
 	bne	l_c179                             	| [$c174: bne	$c179]
 	jra	l_c3e5                             	| [$c176: jmp	$c3e5]
 l_c179:
@@ -15873,7 +15899,7 @@ l_c193:
 * clv+bvc => jra
 	jra	l_c1ab                             	| [$c194: jmp	$c1ab]
 l_c196:
-	GET_ADDRESS	0x0014                     	| [$c196: lda	$0014]
+	GET_ADDRESS	fadeout_in_progress_timer_0014                     	| [$c196: lda	$0014]
 	move.b	(a0),d0                         	| [$c196: lda	$0014]
 	cmp.b	#0x04,d0                         	| [$c198: cmp #$04]
 	bne	l_c1ab                             	| [$c19a: bne	$c1ab]
@@ -15899,16 +15925,16 @@ l_c1ab:
 l_c1b9:
 	rts                                    	| [$c1b9: rts]
 l_c1ba:
-	GET_ADDRESS	0x0008                     	| [$c1ba: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$c1ba: lda	$0008]
 	move.b	(a0),d0                         	| [$c1ba: lda	$0008]
-	cmp.b	#0xfb,d0                         	| [$c1bc: cmp #$fb]
+	cmp.b	#gs_title_FB,d0                         	| [$c1bc: cmp #$fb]
 	bne	l_c1c6                             	| [$c1be: bne	$c1c6]
 	jra	l_a88f                             	| [$c1c0: jmp	$a88f]
 * clv+bvc => jra
-	jra	l_c1c9                             	| [$c1c4: jmp	$c1c9]
+	jra	ingame_c1c9                             	| [$c1c4: jmp	$c1c9]
 l_c1c6:
 	jra	l_a864                             	| [$c1c6: jmp	$a864]
-l_c1c9:
+ingame_c1c9:
 	GET_ADDRESS	0x0619                     	| [$c1c9: lda	$0619]
 	move.b	(a0),d0                         	| [$c1c9: lda	$0619]
 	cmp.b	#0x03,d0                         	| [$c1cc: cmp #$03]
@@ -15918,7 +15944,7 @@ l_c1c9:
 	GET_ADDRESS	0x0077                     	| [$c1d1: lda	$0077, x]
 	move.b	(a0,d1.w),d0                    	| [$c1d1: lda	$0077, x]
 	beq	l_c227                             	| [$c1d3: beq	$c227]
-l_c1d5:
+demo_game_c1d5:
 	jbsr	l_d552                            	| [$c1d5: jsr	$d552]
 	jbsr	l_c228                            	| [$c1d8: jsr	$c228]
 	tst.b	d0                               	| [$c1db: cmp #$00]
@@ -16008,17 +16034,19 @@ l_c235:
 	POP_SR
 l_c246:
 	rts                                    	| [$c246: rts]
+	
 l_c247:
 	clr.b	d1                               	| [$c247: ldx #$00]
-	GET_ADDRESS	0x0008                     	| [$c249: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$c249: lda	$0008]
 	move.b	(a0),d0                         	| [$c249: lda	$0008]
-	tst.b	d0                               	| [$c24b: cmp #$00]
+												| [$c24b: cmp #$00]
 	bne	l_c251                             	| [$c24d: bne	$c251]
+	* in-play
 	move.b	#0x01,d1                        	| [$c24f: ldx #$01]
 l_c251:
-	GET_ADDRESS	0x0008                     	| [$c251: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$c251: lda	$0008]
 	move.b	(a0),d0                         	| [$c251: lda	$0008]
-	cmp.b	#0xf7,d0                         	| [$c253: cmp #$f7]
+	cmp.b	#gs_get_ready_F7,d0                         	| [$c253: cmp #$f7]
 	bne	l_c259                             	| [$c255: bne	$c259]
 	move.b	#0x01,d1                        	| [$c257: ldx #$01]
 l_c259:
@@ -16249,40 +16277,41 @@ l_c36d:
 l_c375:
 	clr.b	d0                               	| [$c375: lda #$00]
 l_c377:
-	PUSH_SR
 	GET_ADDRESS	0x0075                     	| [$c377: sta	$0075, x]
     move.b	d0,(a0,d1.w)                 	| [$c377: sta	$0075, x]
-	POP_SR
+	
 	jbsr	l_ac1b                            	| [$c379: jsr	$ac1b]
 	jbsr	l_aff4                            	| [$c37c: jsr	$aff4]
 * clv+bvc => jra
 	jra	l_c390                             	| [$c380: jmp	$c390]
 l_c382:
 	move.b	#0x03,d0                        	| [$c382: lda #$03]
-	PUSH_SR
 	GET_ADDRESS	0x0075                     	| [$c384: sta	$0075, x]
     move.b	d0,(a0,d1.w)                 	| [$c384: sta	$0075, x]
-	POP_SR
 	clr.b	d0                               	| [$c386: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x004e                     	| [$c388: sta	$004e, x]
     move.b	d0,(a0,d1.w)                 	| [$c388: sta	$004e, x]
-	POP_SR
+	
 	jbsr	l_ad62                            	| [$c38a: jsr	$ad62]
 	jbsr	l_aff4                            	| [$c38d: jsr	$aff4]
 l_c390:
 	rts                                    	| [$c390: rts]
 
-fade_out_C391:
-	GET_ADDRESS	0x0014                     	| [$c391: lda	$0014]
+* responsible for blue=>blank screen then fireworks
+* just by changing palette (no tiles draw)
+
+animate_title_screen_colors_C391:
+	GET_ADDRESS	fadeout_in_progress_timer_0014                     	| [$c391: lda	$0014]
 	move.b	(a0),d0                         	| [$c391: lda	$0014]
 	cmp.b	#0x01,d0                         	| [$c393: cmp #$01]
 	* bcc=>bcs
 	bcs	l_c3e4                             	| [$c395: bcc	$c3e4]
-	GET_ADDRESS	0x0645                     	| [$c397: lda	$0645]
+	* >1: possible fireworks
+	GET_ADDRESS	screen_fade_counter_0645                     	| [$c397: lda	$0645]
 	move.b	(a0),d0                         	| [$c397: lda	$0645]
 	cmp.b	#0x14,d0                         	| [$c39a: cmp #$14]
 	bne	l_c3a4                             	| [$c39c: bne	$c3a4]
+	* fireworks
 	jbsr	l_cc7c                            	| [$c39e: jsr	$cc7c]
 	jbsr	l_cd50                            	| [$c3a1: jsr	$cd50]
 l_c3a4:
@@ -16298,11 +16327,11 @@ l_c3a4:
 	GET_ADDRESS	0x0644                     	| [$c3b0: sta	$0644]
 	move.b	d0,(a0)                         	| [$c3b0: sta	$0644]
 	POP_SR
-	GET_ADDRESS	0x0645                     	| [$c3b3: lda	$0645]
+	GET_ADDRESS	screen_fade_counter_0645                     	| [$c3b3: lda	$0645]
 	move.b	(a0),d0                         	| [$c3b3: lda	$0645]
 	cmp.b	#0x14,d0                         	| [$c3b6: cmp #$14]
 	beq	l_c3e4                             	| [$c3b8: beq	$c3e4]
-	GET_ADDRESS	0x0645                     	| [$c3ba: lda	$0645]
+	GET_ADDRESS	screen_fade_counter_0645                     	| [$c3ba: lda	$0645]
 	move.b	(a0),d0                         	| [$c3ba: lda	$0645]
 	asl.b	#1,d0                            	| [$c3bd: asl a]
 	move.b	d0,d2                           	| [$c3be: tay]
@@ -16325,20 +16354,20 @@ l_c3cb:
 	cmp.b	#0x8f,d2                         	| [$c3d1: cpy #$8f]
 	* bcc=>bcs
 	bcs	l_c3cb                             	| [$c3d3: bcc	$c3cb]
-	GET_ADDRESS	0x0645                     	| [$c3d5: inc	$0645]
+	GET_ADDRESS	screen_fade_counter_0645                     	| [$c3d5: inc	$0645]
 	addq.b	#2,(a0)                         	| [$c3d5: inc	$0645] * 2
 	cmp.b	#0x0a,d0                         	| [$c3db: cmp #$0a]
 	bne	l_c3e4                             	| [$c3dd: bne	$c3e4]
 	move.b	#0x14,d0                        	| [$c3df: lda #$14]
-	GET_ADDRESS	0x0645                     	| [$c3e1: sta	$0645]
+	GET_ADDRESS	screen_fade_counter_0645                     	| [$c3e1: sta	$0645]
 	move.b	d0,(a0)                         	| [$c3e1: sta	$0645]
 l_c3e4:
 	rts                                    	| [$c3e4: rts]
 l_c3e5:
 	jbsr	l_d552                            	| [$c3e5: jsr	$d552]
-	GET_ADDRESS	0x0008                     	| [$c3e8: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$c3e8: lda	$0008]
 	move.b	(a0),d0                         	| [$c3e8: lda	$0008]
-	cmp.b	#0xf0,d0                         	| [$c3ea: cmp #$f0]
+	cmp.b	#gs_instructions_F0,d0                         	| [$c3ea: cmp #$f0]
 	beq	l_c3ef                             	| [$c3ec: beq	$c3ef]
 	rts                                    	| [$c3ee: rts]
 l_c3ef:
@@ -16538,9 +16567,9 @@ l_c560:
 	jbsr	l_c66b                            	| [$c560: jsr	$c66b]
 	rts                                    	| [$c563: rts]
 l_c564:
-	GET_ADDRESS	0x0008                     	| [$c564: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$c564: lda	$0008]
 	move.b	(a0),d0                         	| [$c564: lda	$0008]
-	cmp.b	#0xec,d0                         	| [$c566: cmp #$ec]
+	cmp.b	#gs_instructions_game_EC,d0                         	| [$c566: cmp #$ec]
 	beq	l_c56b                             	| [$c568: beq	$c56b]
 	rts                                    	| [$c56a: rts]
 l_c56b:
@@ -17709,21 +17738,20 @@ l_ca62:
 	move.b	(a0),d0                         	| [$ca62: lda	$06a8]
 	and.b	#0x01,d0                         	| [$ca65: and #$01]
 	bne	l_ca75                             	| [$ca67: bne	$ca75]
-	move.b	#0xef,d0                        	| [$ca69: lda #$ef]
-	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$ca6b: sta	$0008]
+	move.b	#gs_title_EF,d0                        	| [$ca69: lda #$ef]
+	
+	GET_ADDRESS	game_state_0008                     	| [$ca6b: sta	$0008]
 	move.b	d0,(a0)                         	| [$ca6b: sta	$0008]
-	POP_SR
+	
 	move.b	#0xfb,d0                        	| [$ca6d: lda #$fb]
 	jra	l_caa9                             	| [$ca6f: jmp	$caa9]
 * clv+bvc => jra
 	jra	l_ca8c                             	| [$ca73: jmp	$ca8c]
 l_ca75:
-	move.b	#0xee,d0                        	| [$ca75: lda #$ee]
-	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$ca77: sta	$0008]
+	move.b	#gs_credits_EE,d0                        	| [$ca75: lda #$ee]
+	GET_ADDRESS	game_state_0008                     	| [$ca77: sta	$0008]
 	move.b	d0,(a0)                         	| [$ca77: sta	$0008]
-	POP_SR
+
 	move.b	#0x0f,d0                        	| [$ca79: lda #$0f]
 	PUSH_SR
 	GET_ADDRESS	0x067d                     	| [$ca7b: sta	$067d]
@@ -17754,9 +17782,9 @@ l_ca8c:
 	move.b	#0x0a,d0                        	| [$caa0: lda #$0a]
 	jbsr	l_e659                            	| [$caa2: jsr	$e659]
 l_caa5:
-	move.b	#0xfb,d0                        	| [$caa5: lda #$fb]
+	move.b	#gs_title_FB,d0                        	| [$caa5: lda #$fb]
 	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$caa7: sta	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$caa7: sta	$0008]
 	move.b	d0,(a0)                         	| [$caa7: sta	$0008]
 	POP_SR
 l_caa9:
@@ -17784,7 +17812,7 @@ l_caa9:
 	move.b	d0,(a0)                         	| [$cac0: sta	$067d]
 	GET_ADDRESS	0x0644                     	| [$cac3: sta	$0644]
 	move.b	d0,(a0)                         	| [$cac3: sta	$0644]
-	GET_ADDRESS	0x0645                     	| [$cac6: sta	$0645]
+	GET_ADDRESS	screen_fade_counter_0645                     	| [$cac6: sta	$0645]
 	move.b	d0,(a0)                         	| [$cac6: sta	$0645]
 	GET_ADDRESS	0x0646                     	| [$cac9: sta	$0646]
 	move.b	d0,(a0)                         	| [$cac9: sta	$0646]
@@ -17800,7 +17828,7 @@ l_caa9:
 	move.b	d0,(a0)                         	| [$cad8: sta	$0637]
 	GET_ADDRESS	0x0013                     	| [$cadb: sta	$0013]
 	move.b	d0,(a0)                         	| [$cadb: sta	$0013]
-	GET_ADDRESS	0x0014                     	| [$cadd: sta	$0014]
+	GET_ADDRESS	fadeout_in_progress_timer_0014                     	| [$cadd: sta	$0014]
 	move.b	d0,(a0)                         	| [$cadd: sta	$0014]
 	GET_ADDRESS	0x0009                     	| [$cadf: sta	$0009]
 	move.b	d0,(a0)                         	| [$cadf: sta	$0009]
@@ -17835,11 +17863,9 @@ l_cb01:
 	jbsr	l_d670                            	| [$cb01: jsr	$d670]
 	rts                                    	| [$cb04: rts]
 l_cb05:
-	move.b	#0xfe,d0                        	| [$cb05: lda #$fe]
-	PUSH_SR
-	GET_ADDRESS	0x0008                     	| [$cb07: sta	$0008]
+	move.b	#gs_start_level_FE,d0                        	| [$cb05: lda #$fe]
+	GET_ADDRESS	game_state_0008                     	| [$cb07: sta	$0008]
 	move.b	d0,(a0)                         	| [$cb07: sta	$0008]
-	POP_SR
 	clr.b	d0                               	| [$cb09: lda #$00]
 	PUSH_SR
 	GET_ADDRESS	0x0046                     	| [$cb0b: sta	$0046]
@@ -18302,10 +18328,8 @@ l_cda8:
 	bcs	l_cdc0                             	| [$cdbc: bcc	$cdc0]
 	clr.b	d0                               	| [$cdbe: lda #$00]
 l_cdc0:
-	PUSH_SR
 	GET_ADDRESS	0x0659                     	| [$cdc0: sta	$0659]
 	move.b	d0,(a0)                         	| [$cdc0: sta	$0659]
-	POP_SR
 l_cdc3:
 	GET_ADDRESS	0x06ab                     	| [$cdc3: inc	$06ab]
 	addq.b	#1,(a0)                         	| [$cdc3: inc	$06ab]
@@ -18325,9 +18349,9 @@ l_cdc3:
 	POP_SR
 	GET_ADDRESS	0x06ac                     	| [$cdd9: inc	$06ac]
 	addq.b	#1,(a0)                         	| [$cdd9: inc	$06ac]
-	GET_ADDRESS	0x0008                     	| [$cddc: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$cddc: lda	$0008]
 	move.b	(a0),d0                         	| [$cddc: lda	$0008]
-	cmp.b	#0xf8,d0                         	| [$cdde: cmp #$f8]
+	cmp.b	#gs_highscores_F8,d0                         	| [$cdde: cmp #$f8]
 	beq	l_cdf1                             	| [$cde0: beq	$cdf1]
 	GET_ADDRESS	0x06ac                     	| [$cde2: lda	$06ac]
 	move.b	(a0),d0                         	| [$cde2: lda	$06ac]
@@ -18379,9 +18403,9 @@ l_ce0d:
 	POP_SR
 	GET_ADDRESS	0x06ac                     	| [$ce1c: inc	$06ac]
 	addq.b	#1,(a0)                         	| [$ce1c: inc	$06ac]
-	GET_ADDRESS	0x0008                     	| [$ce1f: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$ce1f: lda	$0008]
 	move.b	(a0),d0                         	| [$ce1f: lda	$0008]
-	cmp.b	#0xf8,d0                         	| [$ce21: cmp #$f8]
+	cmp.b	#gs_highscores_F8,d0                         	| [$ce21: cmp #$f8]
 	beq	l_ce34                             	| [$ce23: beq	$ce34]
 	GET_ADDRESS	0x06ac                     	| [$ce25: lda	$06ac]
 	move.b	(a0),d0                         	| [$ce25: lda	$06ac]
@@ -18874,12 +18898,12 @@ periodic_interrupt_D70E:
 	move.w	d1,-(sp)                        	| [$d710: pha]
 	                           	| [$d711: tya]
 	move.w	d2,-(sp)                        	| [$d712: pha]
-* copy first byte of rom bank in first_byte_of_bank_0d
+* copy first byte of rom bank in first_byte_of_bank_000d
 	GET_ADDRESS	0x4000                     	| [$d713: lda	$4000]
 	move.b	(a0),d0                         	| [$d713: lda	$4000]
 	PUSH_SR
-	GET_ADDRESS	first_byte_of_bank_0d      	| [$d716: sta first_byte_of_bank_0d]
-	move.b	d0,(a0)                         	| [$d716: sta first_byte_of_bank_0d]
+	GET_ADDRESS	first_byte_of_bank_000d      	| [$d716: sta first_byte_of_bank_000d]
+	move.b	d0,(a0)                         	| [$d716: sta first_byte_of_bank_000d]
 	POP_SR
 	
 	jbsr	osd_read_pokey1						| [$d718: cld]
@@ -18906,7 +18930,7 @@ periodic_interrupt_D70E:
 	GET_ADDRESS	0x0013                     	| [$d72c: inc	$0013]
 	addq.b	#1,(a0)                         	| [$d72c: inc	$0013]
 	bne	l_d732                             	| [$d72e: bne	$d732]
-	GET_ADDRESS	0x0014                     	| [$d730: inc	$0014]
+	GET_ADDRESS	fadeout_in_progress_timer_0014                     	| [$d730: inc	$0014]
 	addq.b	#1,(a0)                         	| [$d730: inc	$0014]
 l_d732:
 	GET_ADDRESS	0x000f                     	| [$d732: inc	$000f]
@@ -18955,7 +18979,7 @@ l_d750:
 	GET_ADDRESS	0x000f                     	| [$d75a: inc	$000f]
 	addq.b	#1,(a0)                         	| [$d75a: inc	$000f]
 	bne	l_d762                             	| [$d75c: bne	$d762]
-	GET_ADDRESS	0x0014                     	| [$d75e: inc	$0014]
+	GET_ADDRESS	fadeout_in_progress_timer_0014                     	| [$d75e: inc	$0014]
 	addq.b	#1,(a0)                         	| [$d75e: inc	$0014]
 	GET_ADDRESS	0x0010                     	| [$d760: inc	$0010]
 	addq.b	#1,(a0)                         	| [$d760: inc	$0010]
@@ -19039,30 +19063,30 @@ l_d7b1:
 l_d7c2:
 	GET_ADDRESS	0x00c7                     	| [$d7c2: lda	$00c7]
 	move.b	(a0),d0                         	| [$d7c2: lda	$00c7]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0052                     	| [$d7c5: sta	$0052]
 	move.b	d0,(a0)                         	| [$d7c5: sta	$0052]
-	POP_SR
+	
 	asl.b	#1,d0                            	| [$d7c7: asl a]
+	PUSH_SR
 	GET_ADDRESS	0x00c8                     	| [$d7c8: lda	$00c8]
 	move.b	(a0),d0                         	| [$d7c8: lda	$00c8]
-	PUSH_SR
 	GET_ADDRESS	0x0053                     	| [$d7cb: sta	$0053]
 	move.b	d0,(a0)                         	| [$d7cb: sta	$0053]
 	POP_SR
 	ror.b	#1,d0                            	| [$d7cd: ror a]
 	lsr.b	#2,d0                            	| [$d7ce: lsr a] * 2
 	and.b	#0x30,d0                         	| [$d7d0: and #$30]
-	PUSH_SR
+	
 	GET_ADDRESS	0x000e                     	| [$d7d2: sta	$000e]
 	move.b	d0,(a0)                         	| [$d7d2: sta	$000e]
-	POP_SR
+	
 l_d7d4:
 	jbsr	l_e651                            	| [$d7d4: jsr	$e651]
 	jbsr	l_eb1d                            	| [$d7d7: jsr	$eb1d]
-* first_byte_of_bank_0d tells if we need to switch bank
-	GET_ADDRESS	first_byte_of_bank_0d      	| [$d7da: lda first_byte_of_bank_0d]
-	move.b	(a0),d0                         	| [$d7da: lda first_byte_of_bank_0d]
+* first_byte_of_bank_000d tells if we need to switch bank
+	GET_ADDRESS	first_byte_of_bank_000d      	| [$d7da: lda first_byte_of_bank_000d]
+	move.b	(a0),d0                         	| [$d7da: lda first_byte_of_bank_000d]
 	bne	l_d7f6                             	| [$d7dc: bne	$d7f6]
     jbsr	switch_to_bank_00 	| [$d7df: sei]
 
@@ -19105,10 +19129,10 @@ l_d7fb:
 	        	| [$d807: sta	$3800]
 	
 * restore registers, end of interrupt
-	move.w	(sp)+,d0                        	| [$d80a: pla]
-	move.b	d0,d2                           	| [$d80b: tay]
-	move.w	(sp)+,d0                        	| [$d80c: pla]
-	move.b	d0,d1                           	| [$d80d: tax]
+	move.w	(sp)+,d2                        	| [$d80a: pla]
+                          	| [$d80b: tay]
+	move.w	(sp)+,d1                        	| [$d80c: pla]
+                           	| [$d80d: tax]
 	move.w	(sp)+,d0                        	| [$d80e: pla]
 	rts
 
@@ -19140,7 +19164,8 @@ l_d81e:
 							| [$d82e: lda	$7552]
 						| [$d831: lda	$6090]
 							| [$d831: lda	$6090]
-	jbsr	l_d8ca                            	| [$d834: jsr	$d8ca]
+	* sets title screen palette
+	jbsr	set_palette_d8ca                            	| [$d834: jsr	$d8ca]
 	clr.b	d0                               	| [$d837: lda #$00]
 	
 	GET_ADDRESS	0x06a2                     	| [$d839: sta	$06a2]
@@ -19212,14 +19237,17 @@ l_d85d:
 											| [$d879: sta	$00bd]
 	* 0xBA... is as follows after reading slapstic shit
 	* 0x01 0x13 0x29 0x00
-	jbsr	l_e0f9                            	| [$d87b: jsr	$e0f9]
-	jbsr	l_d8ca                            	| [$d87e: jsr	$d8ca]
-	GET_ADDRESS	0x0008                     	| [$d881: lda	$0008]
+	* without this call, the title sky remains blue, nothing changes
+	jbsr	animate_title_screen_colors_e0f9                            	| [$d87b: jsr	$e0f9]
+	* won't do anything as 0x7 contains 0
+	jbsr	set_palette_d8ca                            	| [$d87e: jsr	$d8ca]
+	GET_ADDRESS	game_state_0008                     	| [$d881: lda	$0008]
 	move.b	(a0),d0                         	| [$d881: lda	$0008]
-	cmp.b	#0xfb,d0                         	| [$d883: cmp #$fb]
+	cmp.b	#gs_title_FB,d0                         	| [$d883: cmp #$fb]
 	beq	l_d8bd                             	| [$d885: beq	$d8bd]
-	cmp.b	#0xef,d0                         	| [$d887: cmp #$ef]
+	cmp.b	#gs_title_EF,d0                         	| [$d887: cmp #$ef]
 	beq	l_d8bd                             	| [$d889: beq	$d8bd]
+	* enters here after title had ended, playfield already displayed
 	jbsr	l_e145                            	| [$d88b: jsr	$e145]
 	jbsr	l_e396                            	| [$d88e: jsr	$e396]
 	jbsr	l_e21b                            	| [$d891: jsr	$e21b]
@@ -19246,17 +19274,20 @@ l_d8b4:
 	jbsr	l_e57a                            	| [$d8b4: jsr	$e57a]
 l_d8b7:
 	jbsr	l_e4ee                            	| [$d8b7: jsr	$e4ee]
-	jbsr	l_e10c                            	| [$d8ba: jsr	$e10c]
+	jbsr	cycle_some_colors_e10c                            	| [$d8ba: jsr	$e10c]
 l_d8bd:
-	GET_ADDRESS	0x0008                     	| [$d8bd: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$d8bd: lda	$0008]
 	move.b	(a0),d0                         	| [$d8bd: lda	$0008]
-	cmp.b	#0xf8,d0                         	| [$d8bf: cmp #$f8]
+	cmp.b	#gs_highscores_F8,d0                         	| [$d8bf: cmp #$f8]
 	bne	l_d8c9                             	| [$d8c1: bne	$d8c9]
 	jbsr	l_cc7c                            	| [$d8c3: jsr	$cc7c]
 	jbsr	l_cd50                            	| [$d8c6: jsr	$cd50]
 l_d8c9:
 	rts                                    	| [$d8c9: rts]
-l_d8ca:
+	
+* if 0x7 contains nonzero then copy contents of indexed table in D8E7
+* to be set as a new palette
+set_palette_d8ca:
 	GET_ADDRESS	0x0007                     	| [$d8ca: lda	$0007]
 	move.b	(a0),d0                         	| [$d8ca: lda	$0007]
 	beq	l_d8e8                             	| [$d8cc: beq	$d8e8]
@@ -19286,6 +19317,7 @@ l_d8dc:
 	bne	l_d8dc                             	| [$d8e2: bne	$d8dc]
 	clr.b	d0                               	| [$d8e4: lda #$00]
 	
+	* ack palette change
 	GET_ADDRESS	0x0007                     	| [$d8e6: sta	$0007]
 	move.b	d0,(a0)                         	| [$d8e6: sta	$0007]
 	
@@ -19293,29 +19325,29 @@ l_d8e8:
 	rts                                    	| [$d8e8: rts]
 
 
-l_e0f9:
-	GET_ADDRESS	0x0008                     	| [$e0f9: lda	$0008]
+animate_title_screen_colors_e0f9:
+	GET_ADDRESS	game_state_0008                     	| [$e0f9: lda	$0008]
 	move.b	(a0),d0                         	| [$e0f9: lda	$0008]
-	cmp.b	#0xfb,d0                         	| [$e0fb: cmp #$fb]
+	cmp.b	#gs_title_FB,d0                         	| [$e0fb: cmp #$fb]
 	bne	l_e102                             	| [$e0fd: bne	$e102]
-	jbsr	fade_out_C391                     	| [$e0ff: jsr fade_out_C391]
+	jbsr	animate_title_screen_colors_C391                     	| [$e0ff: jsr animate_title_screen_colors_C391]
 l_e102:
-	GET_ADDRESS	0x0008                     	| [$e102: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$e102: lda	$0008]
 	move.b	(a0),d0                         	| [$e102: lda	$0008]
-	cmp.b	#0xef,d0                         	| [$e104: cmp #$ef]
+	cmp.b	#gs_title_EF,d0                         	| [$e104: cmp #$ef]
 	bne	l_e10b                             	| [$e106: bne	$e10b]
-	jbsr	fade_out_C391                     	| [$e108: jsr fade_out_C391]
+	jbsr	animate_title_screen_colors_C391                     	| [$e108: jsr animate_title_screen_colors_C391]
 l_e10b:
 	rts                                    	| [$e10b: rts]
 
-l_e10c:
-	GET_ADDRESS	0x0641                     	| [$e10c: lda	$0641]
+cycle_some_colors_e10c:
+	GET_ADDRESS	zero_to_seven_palette_index_counter_0641                     	| [$e10c: lda	$0641]
 	move.b	(a0),d0                         	| [$e10c: lda	$0641]
 	                           	| [$e10f: clc]
 	add.b	#0x01,d0                        	| [$e110: adc #$01]
 	and.b	#0x07,d0                         	| [$e112: and #$07]
 	
-	GET_ADDRESS	0x0641                     	| [$e114: sta	$0641]
+	*GET_ADDRESS	zero_to_seven_palette_index_counter_0641                     	| [$e114: sta	$0641]
 	move.b	d0,(a0)                         	| [$e114: sta	$0641]
 	
 	move.b	d0,d1                           	| [$e117: tax]
@@ -19331,24 +19363,23 @@ l_e10c:
 	GET_ADDRESS	0x0011                     	| [$e11e: lda	$0011]
 	move.b	(a0),d0                         	| [$e11e: lda	$0011]
 	bne	l_e134                             	| [$e120: bne	$e134]
-	GET_ADDRESS	0x0642                     	| [$e122: lda	$0642]
+	GET_ADDRESS	zero_to_seven_palette_index_counter_0642                     	| [$e122: lda	$0642]
 	move.b	(a0),d0                         	| [$e122: lda	$0642]
 	                           	| [$e125: clc]
 	add.b	#0x01,d0                        	| [$e126: adc #$01]
 	and.b	#0x07,d0                         	| [$e128: and #$07]
-	PUSH_SR
-	GET_ADDRESS	0x0642                     	| [$e12a: sta	$0642]
+	
+	*GET_ADDRESS	zero_to_seven_palette_index_counter_0642                     	| [$e12a: sta	$0642]
 	move.b	d0,(a0)                         	| [$e12a: sta	$0642]
-	POP_SR
+	
 	move.b	d0,d1                           	| [$e12d: tax]
 	GET_ADDRESS	0xe13d                     	| [$e12e: lda	$e13d, x]
 	move.b	(a0,d1.w),d0                    	| [$e12e: lda	$e13d, x]
-	PUSH_SR
+	
 	
 	STORE_D0_TO_PALETTE	0x20f6
 *	GET_ADDRESS	0x20f6                     	| [$e131: sta	$20f6]
 *	move.b	d0,(a0)                         	| [$e131: sta	$20f6]
-	POP_SR
 l_e134:
 	rts                                    	| [$e134: rts]
 
@@ -19523,9 +19554,10 @@ l_e21b:
 	move.b	d0,(a0)                         	| [$e225: sta	$06c6]
 	POP_SR
 l_e228:
-	GET_ADDRESS	0x0008                     	| [$e228: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$e228: lda	$0008]
 	move.b	(a0),d0                         	| [$e228: lda	$0008]
 	beq	l_e22d                             	| [$e22a: beq	$e22d]
+	* not in-play: return
 	rts                                    	| [$e22c: rts]
 l_e22d:
 	GET_ADDRESS	0x002d                     	| [$e22d: lda	$002d]
@@ -20074,9 +20106,9 @@ l_e48b:
 	rts                                    	| [$e48b: rts]
 
 l_e4ee:
-	GET_ADDRESS	0x0008                     	| [$e4ee: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$e4ee: lda	$0008]
 	move.b	(a0),d0                         	| [$e4ee: lda	$0008]
-	cmp.b	#0xfe,d0                         	| [$e4f0: cmp #$fe]
+	cmp.b	#gs_start_level_FE,d0                         	| [$e4f0: cmp #$fe]
 	bne	l_e569                             	| [$e4f2: bne	$e569]
 	GET_ADDRESS	0x000f                     	| [$e4f4: lda	$000f]
 	move.b	(a0),d0                         	| [$e4f4: lda	$000f]
@@ -20441,7 +20473,7 @@ continue_startup_e661:
 	              	| [$e679: lda	$6090]
 	move.b	#0x18,d2                        	| [$e67c: ldy #$18]
 	move.b	#0x30,d0                        	| [$e67e: lda #$30]
-* put	$0030 in	$0600-$617
+* put	$0030 ('0' ?) in	$0600-$617
 l_e680:
 	PUSH_SR
 	GET_ADDRESS	0x0600                     	| [$e680: sta	$0600, y]
@@ -21469,9 +21501,10 @@ l_eb28:
 	GET_ADDRESS	0x0060                     	| [$eb2e: sta	$0060]
 	move.b	d0,(a0)                         	| [$eb2e: sta	$0060]
 	POP_SR
-	GET_ADDRESS	0x0008                     	| [$eb30: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$eb30: lda	$0008]
 	move.b	(a0),d0                         	| [$eb30: lda	$0008]
 	bne	l_eb42                             	| [$eb32: bne	$eb42]
+	* in-play!
 	clr.b	d1                               	| [$eb34: ldx #$00]
 l_eb36:
 	GET_ADDRESS	0x0077                     	| [$eb36: lda	$0077, x]
@@ -21484,9 +21517,10 @@ l_eb3d:
 	bne	l_eb36                             	| [$eb40: bne	$eb36]
 l_eb42:
 	clr.b	d1                               	| [$eb42: ldx #$00]
-	GET_ADDRESS	0x0008                     	| [$eb44: lda	$0008]
+	GET_ADDRESS	game_state_0008                     	| [$eb44: lda	$0008]
 	move.b	(a0),d0                         	| [$eb44: lda	$0008]
 	bne	l_eb58                             	| [$eb46: bne	$eb58]
+	* in-play!
 	GET_ADDRESS	0x0077                     	| [$eb48: lda	$0077]
 	move.b	(a0),d0                         	| [$eb48: lda	$0077]
 	GET_ADDRESS	0x0078                     	| [$eb4a: ora	$0078]

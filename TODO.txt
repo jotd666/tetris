@@ -4,7 +4,11 @@
 - figure out palette stuff
 - credits inserted input received (wrong)
 - d74b: reached in demo 0x09 contains 0x80 => error, see on real machine
+- check pokey VBLANK flag
 
+- debug pokey write in MAME (music) or maybe convert from MAME ripped format
+  https://vgmrips.net/packs/pack/tetris-atari-arcade
+- MP3 here: https://downloads.khinsider.com/game-soundtracks/album/tetris-atari-arcade
 - cmp + bmi??
 - sec/clc + dex/dec + adc/sbc sandwich
 - php+sei => review
