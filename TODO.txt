@@ -5,7 +5,7 @@
 - credits inserted input received (wrong)
 - d74b: reached in demo 0x09 contains 0x80 => error, see on real machine
 - check pokey VBLANK flag
-- debug from ae44
+- debug from ae44, l_a43a copies video memory wrong bank???
 
 - debug pokey write in MAME (music) or maybe convert from MAME ripped format
   spec: https://vgmrips.net/wiki/VGM_Specification

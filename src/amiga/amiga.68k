@@ -17,6 +17,7 @@ AFB_68020 = 1
 
 
 SCREEN_ADDRESS = 0x1000
+PALETTE_ADDRESS = 0x2000
 
 
 SCORE_FILE_SIZE = 0x50
@@ -1133,14 +1134,13 @@ osd_disable_vblank_interrupt:
 osd_w_videoram:
 	movem.l	d0-d3/d6/a0-a2,-(a7)
 	
-	sub.w	#SCREEN_ADDRESS,a0
+	cmp.w	#SCREEN_ADDRESS,a0
 	bcs.b	0f
-	cmp.w	#0x1000,a0
+	cmp.w	#PALETTE_ADDRESS,a0
 	bcs.b	1f
 0:
 	* should not happen
 	.ifndef	RELEASE
-	movem.l	(a7),d0-d3/d6/a0-a2
 	move.l	a0,a1
 	lea		write_videoram_out_of_range_error(pc),a0
 	jbsr	osd_break
@@ -1149,6 +1149,7 @@ osd_w_videoram:
 	bra.b	0f
 	
 1:
+	sub.w	#SCREEN_ADDRESS,a0
 	lea		bg_videoram,a1
 	add.w	a0,a1
 	
