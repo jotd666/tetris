@@ -1431,7 +1431,67 @@
 4BAE: AD 56 0E lda	$0e56
 4BB1: 60       rts
 
-* seems unreached, but who knows?
+jump_table_4bb2:
+	.word	$4cb8
+	.word	$4ca4
+	.word	$4cda
+	.word	$4cc3
+	.word	$4cec
+	.word	$4ce8
+	.word	$4c99
+	.word	$4c8e
+	.word	$4c28
+	.word	$4c85
+	.word	$4cf1
+	.word	$4cf5
+	.word	$4d20
+	.word	$4d24
+	.word	$4d52
+	.word	$4d7d
+	.word	$4fb2
+	.word	$4fce
+	.word	$454d
+	.word	$454d
+	.word	$454d
+	.word	$454d
+	.word	$454d
+	.word	$4fdd
+	.word	$454d
+	.word	$4ff9
+	.word	$454d
+	.word	$4d09
+	.word	$4f94
+	.word	$454d
+	.word	$454d
+	.word	$454d
+	.word	$454d
+	.word	$454d
+	.word	$454d
+	.word	$454d
+	.word	$4daf
+	.word	$454d
+	.word	$454d
+	.word	$454d
+	.word	$454d
+	.word	$4ddc
+	.word	$4de8
+	.word	$4df2
+	.word	$4df8
+	.word	$4dfe
+	.word	$4e5e
+	.word	$4e85
+	.word	$4eb3
+	.word	$4ee7
+	.word	$4f04
+	.word	$4e04
+	.word	$4e31
+	.word	$4f19
+	.word	$4f20
+	.word	$4f27
+	.word	$4f2e
+	.word	$4f0a
+	.word	$4f0d
+	
 4C28: A9 00    lda #$00
 4C2A: 9D 57 0C sta	$0c57, x
 4C2D: 9D 61 0C sta	$0c61, x

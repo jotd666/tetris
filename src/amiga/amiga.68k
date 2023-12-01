@@ -132,6 +132,7 @@ start:
 		.global	osd_is_vblank_interrupt_enabled
 		.global osd_break		| for debug	
 		*.global osd_calibrate_display		| for debug
+		.global osd_r_videoram
 		.global osd_w_videoram
 
 		.global osd_update_sprites
@@ -1125,6 +1126,39 @@ osd_disable_vblank_interrupt:
 
 	
 
+	
+* < A0=screen address (preserved)
+* (A0 starts at 0x1000 and ends at 0x1FFF)
+* > D0: code
+* should preserve all registers
+
+osd_r_videoram:
+	movem.l	a0-a1,-(a7)
+	
+	cmp.w	#SCREEN_ADDRESS,a0
+	bcs.b	0f
+	cmp.w	#PALETTE_ADDRESS,a0
+	bcs.b	1f
+0:
+	* should not happen
+	.ifndef	RELEASE
+	move.l	a0,a1
+	lea		read_videoram_out_of_range_error(pc),a0
+	jbsr	osd_break
+	.endif
+	
+	bra.b	0f
+	
+1:
+	sub.w	#SCREEN_ADDRESS,a0
+	lea		bg_videoram,a1
+	add.w	a0,a1
+	
+	move.b	(a1),d0
+0:
+	movem.l	(a7)+,a0-a1
+	tst.b	d0
+	rts
 	
 * < A0=screen address (preserved)
 * (A0 starts at 0x1000 and ends at 0x1FFF)

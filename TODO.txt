@@ -1,5 +1,7 @@
 - deduce score, round, line numbers... from screen writes
 
+- almost all text is black
+
 - switch to demo screen working! playfield is trashed
 - figure out palette stuff
 - credits inserted input received (wrong)
