@@ -1171,7 +1171,7 @@ osd_r_videoram:
 	move.b	(a1),d0
 0:
 	movem.l	(a7)+,a0-a1
-	tst.b	d0
+	tst.b	d0	| very important as it replaces a lda
 	rts
 	
 * < A0=screen address (preserved)

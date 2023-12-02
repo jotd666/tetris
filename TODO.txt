@@ -1,19 +1,24 @@
-- deduce score, round, line numbers... from screen writes
+- deduce score, round, line numbers, current block X,Y,type... from screen writes
 
 - almost all text is black
 
-- switch to demo screen working! playfield is trashed
+- display not wide enough
 - figure out palette stuff
 - credits inserted input received (wrong)
-- d74b: reached in demo 0x09 contains 0x80 => error, see on real machine
-- check pokey VBLANK flag
-- debug from ae44, l_a43a copies video memory wrong bank???
+- graphics trashed on top left
+  debug here a226 seems that 0x1F contains 0x1000!!!
 
-- debug pokey write in MAME (music) or maybe convert from MAME ripped format
+- convert tunes from MAME ripped format
   spec: https://vgmrips.net/wiki/VGM_Specification
   https://vgmrips.net/packs/pack/tetris-atari-arcade
 - MP3 here: https://downloads.khinsider.com/game-soundtracks/album/tetris-atari-arcade
+- write midi file: https://stackoverflow.com/questions/11059801/how-can-i-write-a-midi-file-with-python
 - mp3 to midi works great! https://anyconv.com/wav-to-midi-converter/
+
+
+converter:
+
 - cmp + bmi??
 - sec/clc + dex/dec + adc/sbc sandwich
 - php+sei => review
+- grouping of simple shifts from 68k code
