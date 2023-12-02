@@ -145,7 +145,8 @@ start:
 		.global	osd_wait
 		.global	osd_set_palette_entry
 		.global	osd_read_pokey1
-	
+		.global	osd_dump_file
+		
 	.include	"ReadJoypad.i"
 	.include	"whdload_funcs.i"
 		.text
@@ -482,11 +483,6 @@ call_bcpl:
 	movem.l (sp)+,d2-d7/a2-a6
 	rts
 
-* change return address from vblank
-* D0: return address (0: no change)
-osd_set_vblank_return_address:
-	move.l	d0,return_address
-	rts
 	
 get_hiscore_name:
     lea normal_hiscorename,a0
@@ -1096,6 +1092,24 @@ load_palette_in_copperlist:
 		
 	movem.l	(a7)+,d0-d1/a0-a1
 	rts
+	
+* dump file to disk, debug only
+* < A0: filename
+* < A1: memory
+* < D0: length
+
+osd_dump_file:
+	tst.l	_resload
+	bne.b	0f
+	* not available under amigaOS
+	rts
+0:
+	movem.l	d0-d1/a0-a2,-(a7)
+	move.l	_resload(pc),a2
+	jbsr	(resload_SaveFile,a2)
+	movem.l	(a7)+,d0-d1/a0-a2
+	rts
+	
 	
 * < D0: nonzero interrupts enabled
 osd_is_vblank_interrupt_enabled:

@@ -13,6 +13,7 @@
   spec: https://vgmrips.net/wiki/VGM_Specification
   https://vgmrips.net/packs/pack/tetris-atari-arcade
 - MP3 here: https://downloads.khinsider.com/game-soundtracks/album/tetris-atari-arcade
+- mp3 to midi works great! https://anyconv.com/wav-to-midi-converter/
 - cmp + bmi??
 - sec/clc + dex/dec + adc/sbc sandwich
 - php+sei => review

@@ -5,6 +5,9 @@
 	.global		bg_videoram
 	.global		palette_entries
 	.global		vb_ticks_count
+	.ifndef		RELEASE
+	.global		memory_dump
+	.endif
 game_ram:
 	ds.b	0x1000
 bg_videoram:
@@ -12,6 +15,13 @@ bg_videoram:
 palette_entries:
 	ds.b	0x100
 
+	.ifndef	RELEASE
+	* debug purposes: 32k chunk of memory to be dumped
+	* and compared to MAME 0-0x8000 memory area
+memory_dump:
+	ds.b	0x8000
+	.endif
+	
 	* a lot of room for stack just in case...
 	ds.b	0x1000
 stack_top:
