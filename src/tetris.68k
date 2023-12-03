@@ -217,10 +217,13 @@ coin_counters_3C00 = 0x3C00
 
 	.macro READ_LE_WORD	srcreg
 	PUSH_SR
+	moveq	#0,d4
 	move.b	(1,\srcreg),d4
 	lsl.w	#8,d4
 	move.b	(\srcreg),d4
-	move.w	d4,\srcreg
+	* we have to use long else it will
+	* extend sign for > 0x7FFF and will compute wrong offset
+	move.l	d4,\srcreg
 	POP_SR
 	.endm
 
@@ -4186,9 +4189,10 @@ l_8000:
 	.ifndef		RELEASE
 	* debug: store important addresses here
 	move.l	#game_ram,0x100
-	move.l	#bank0_4000,0x104
-	move.l	#bank1_4000,0x108
-	move.l	#rom_8000,0x10C
+	move.l	#bg_videoram,0x104
+	move.l	#bank0_4000,0x108
+	move.l	#bank1_4000,0x10C
+	move.l	#rom_8000,0x110
 	.endif
 	bsr		cpu_init
 	
@@ -4305,7 +4309,10 @@ l_8032:
 *    move.b	d0,(a0,d1.w)                 	| [$8091: sta	$2000, x]
                                          | [$8094: sta watchdog_3000] kick watchdog
                                          | [$8094: sta watchdog_3000] kick watchdog
-
+	sub.l	a0,a0
+	add.w	d1,a0
+	jbsr	osd_set_palette_entry
+	
 	addq.b	#1,d1                           	| [$8097: inx]
 	bne	l_8032                             	| [$8098: bne	$8032]
 * read pokey to see if service mode is on
@@ -7507,7 +7514,6 @@ l_9742:
 	GET_ADDRESS	screen_address_00aa                     	| [$9750: sta	$00aa]
 	move.b	d0,(a0)                         	| [$9750: sta	$00aa]
 
-	WPSET	0x204
 l_9752:
 	clr.b	d2                               	| [$9752: ldy #$00]
 	clr.b	d1                               	| [$9754: ldx #$00]
@@ -9188,27 +9194,18 @@ l_a186:
 	GET_ADDRESS_Y	logical_grid_address_lsb_001f                     	| [$a1f4: lda ($1f), y]
 	move.b	(a0,d2.w),d0                    	| [$a1f4: lda ($1f), y]
 l_a1f6:
-	PUSH_SR
 	GET_ADDRESS_Y	0x21                     	| [$a1f6: sta ($21), y]
 	move.b	d0,(a0,d2.w)                    	| [$a1f6: sta ($21), y]
-
-	POP_SR
 	addq.b	#1,d2                           	| [$a1f8: iny]
 	GET_ADDRESS_Y	logical_grid_address_lsb_001f                     	| [$a1f9: lda ($1f), y]
 	move.b	(a0,d2.w),d0                    	| [$a1f9: lda ($1f), y]
-	PUSH_SR
 	GET_ADDRESS_Y	0x21                     	| [$a1fb: sta ($21), y]
 	move.b	d0,(a0,d2.w)                    	| [$a1fb: sta ($21), y]
-
-	POP_SR
 	addq.b	#1,d2                           	| [$a1fd: iny]
 	GET_ADDRESS_Y	logical_grid_address_lsb_001f                     	| [$a1fe: lda ($1f), y]
 	move.b	(a0,d2.w),d0                    	| [$a1fe: lda ($1f), y]
-	PUSH_SR
 	GET_ADDRESS_Y	0x21                     	| [$a200: sta ($21), y]
 	move.b	d0,(a0,d2.w)                    	| [$a200: sta ($21), y]
-
-	POP_SR
 	move.b	#0x02,d2                        	| [$a202: ldy #$02]
 	jbsr	l_a347                            	| [$a204: jsr	$a347]
 	GET_ADDRESS	0x0021                     	| [$a207: lda	$0021]
@@ -9226,10 +9223,8 @@ l_a212:
 	rts                                    	| [$a212: rts]
 l_a213:
 	move.b	#0x01,d0                        	| [$a213: lda #$01]
-	PUSH_SR
 	GET_ADDRESS	0x001e                     	| [$a215: sta	$001e]
 	move.b	d0,(a0)                         	| [$a215: sta	$001e]
-	POP_SR
 l_a217:
 	GET_ADDRESS	0x0022                     	| [$a217: dec	$0022]
 	subq.b	#1,(a0)                         	| [$a217: dec	$0022]
@@ -10652,12 +10647,6 @@ l_a88f:
 	move.b	d0,(a0)                         	| [$a8af: sta	$002f]
 	
 	jbsr	fill_game_grid_adad                            	| [$a8b1: jsr	$adad]
-	jbsr	osd_break
-	nop
-	nop
-	nop
-	nop
-	nop
 	move.b	#0x03,d0                        	| [$a8b4: lda #$03]
 	
 	GET_ADDRESS	0x008f                     	| [$a8b6: sta	$008f]
@@ -13324,7 +13313,6 @@ l_b4be:
 	move.b	d4,(a0,d1.w)	| [$b4c0: rol	$0001, x]
 	GET_ADDRESS	0x0000                     	| [$b4c2: lda	$0000, x]
 	move.b	(a0,d1.w),d0                    	| [$b4c2: lda	$0000, x]
-	WPSET	0x208
 	rts                                    	| [$b4c4: rts]
 l_b4c5:
 	GET_ADDRESS	0x062c                     	| [$b4c5: lda	$062c, x]

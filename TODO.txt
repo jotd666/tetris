@@ -2,6 +2,8 @@
 
 - almost all text is black
 
+- remove bank switching see what happens
+
 - display not wide enough
 - figure out palette stuff
 - credits inserted input received (wrong)

@@ -672,6 +672,10 @@ osd_set_palette_entry:
 	jbsr	osd_break
 	.endif
 0:
+	move.l	a1,-(sp)
+	lea		palette_entries,a1
+	move.b	d0,(a1,a0.w)
+	move.l	(sp)+,a1
 	rts
 	
 osd_read_pokey1:
