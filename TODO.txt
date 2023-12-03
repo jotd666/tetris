@@ -1,13 +1,10 @@
 - deduce score, round, line numbers, current block X,Y,type... from screen writes
 
-- almost all text is black
-
 - remove bank switching see what happens
-
+- skip title?
 - display not wide enough
-- figure out palette stuff
+- fix colors (wait for dump from Mark)
 - credits inserted input received (wrong)
-- graphics trashed on top left
   debug here a226 seems that 0x1F contains 0x1000!!!
 
 - convert tunes from MAME ripped format
