@@ -14,7 +14,8 @@
 - write midi file: https://stackoverflow.com/questions/11059801/how-can-i-write-a-midi-file-with-python
 - mp3 to midi works great! https://anyconv.com/wav-to-midi-converter/
 
-
+1 tile: 8*8 bytes * 16 possible plane arrangements (some empty planes)
+=> 8*8*4 + 8*2 (short pointers) = 272
 converter:
 
 - cmp + bmi??
