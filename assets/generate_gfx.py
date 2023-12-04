@@ -25,7 +25,7 @@ def write_tiles(blocks,size,f):
         offset = 0
         for k in range(size[1]):
             for j in range(size[0]):
-                f.write("0x{:02d},".format(data[offset+j]))
+                f.write("0x{:02x},".format(data[offset+j]))
             f.write("    // ")
             for j in range(size[0]):
                 f.write(text_bitmap[data[offset+j]])

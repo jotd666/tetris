@@ -1,276 +1,117 @@
-# temporary stand-in tiles with wrong palette
+import os,re,bitplanelib,ast,json,glob
+from PIL import Image,ImageOps
 
-from PIL import Image
-import os
 
-import bitplanelib
+import collections
 
-this_dir = os.path.abspath(os.path.dirname(__file__))
+def ensure_empty(d):
+    if os.path.exists(d):
+        for f in glob.glob(os.path.join(d,"*")):
+            os.remove(f)
+    else:
+        os.mkdir(d)
+
+gamename = "tetris"
+
+this_dir = os.path.dirname(__file__)
 src_dir = os.path.join(this_dir,"../../src/amiga")
+tiles_dump_dir = os.path.join(this_dir,"dumps")
 
-default_palette = """0,0,0,255
-0,0,0,255
-182,0,0,255
-0,0,85,255
-255,109,0,255
-0,0,170,255
-0,0,255,255
-73,73,170,255
-146,109,170,255
-73,0,85,255
-0,36,255,255
-146,0,0,255
-109,0,0,255
-0,73,255,255
-219,146,170,255
-0,109,255,255
-255,255,255,255
-0,146,255,255
-182,0,0,255
-255,0,0,255
-255,109,0,255
-0,36,0,255
-0,0,170,255
-73,73,170,255
-146,109,170,255
-73,0,85,255
-219,219,255,255
-146,0,0,255
-109,0,0,255
-73,0,0,255
-219,146,170,255
-146,182,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,0,0,255
-0,36,0,255
-73,0,85,255
-0,0,85,255
-0,0,170,255
-0,0,255,255
-0,36,255,255
-0,73,255,255
-0,109,255,255
-0,146,255,255
-146,182,255,255
-219,219,255,255
-255,255,255,255
-219,146,170,255
-255,109,0,255
-73,73,170,255
-0,0,0,255
-0,146,255,255
-182,0,0,255
-255,0,0,255
-255,109,0,255
-0,36,0,255
-0,0,170,255
-73,73,170,255
-146,109,170,255
-73,0,85,255
-255,219,170,255
-146,0,0,255
-109,0,0,255
-73,0,0,255
-219,146,170,255
-255,146,0,255
-0,0,0,255
-0,146,0,255
-255,0,0,255
-146,146,170,255
-255,146,255,255
-255,146,255,255
-255,146,255,255
-255,146,255,255
-255,146,255,255
-255,146,255,255
-255,146,255,255
-73,73,85,255
-36,36,85,255
-0,0,85,255
-0,146,0,255
-0,146,0,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,146,255,255
-0,0,0,255
-255,0,0,255
-0,0,0,255
-0,0,0,255
-0,73,85,255
-0,109,0,255
-73,182,0,255
-146,219,85,255
-182,255,170,255
-219,219,255,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,255,0,255
-0,0,0,255
-73,73,255,255
-0,0,0,255
-0,0,0,255
-0,0,85,255
-0,36,170,255
-0,73,255,255
-73,146,255,255
-182,182,255,255
-219,219,255,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,255,255
-0,0,0,255
-255,255,255,255
-0,0,255,255
-255,0,0,255
-109,109,85,255
-146,146,0,255
-219,182,0,255
-219,219,85,255
-255,255,170,255
-219,219,255,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-255,255,0,255
-0,0,0,255
-219,0,0,255
-0,0,0,255
-0,0,0,255
-73,0,170,255
-146,0,170,255
-219,0,255,255
-255,73,255,255
-219,146,255,255
-219,219,255,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-255,0,255,255
-0,0,0,255
-73,73,255,255
-0,0,0,255
-0,0,0,255
-0,73,170,255
-0,146,170,255
-0,182,170,255
-73,219,255,255
-182,219,255,255
-219,219,255,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,182,255,255
-0,0,0,255
-182,0,0,255
-0,0,0,255
-0,0,0,255
-73,36,85,255
-182,109,0,255
-255,146,0,255
-255,182,85,255
-255,219,170,255
-255,255,255,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-146,109,0,255
-0,0,0,255
-0,0,170,255
-0,0,0,255
-0,0,0,255
-36,36,85,255
-73,73,85,255
-146,146,170,255
-182,182,170,255
-182,182,255,255
-219,219,255,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-0,0,0,255
-""".splitlines()
 
-# 63 unique colors for default
-tiles_palette = [tuple(int(y) for y in x.split(",")[:3]) for x in default_palette]
 
-with open(os.path.join(src_dir,"palette.68k"),"w") as f:
-    bitplanelib.palette_dump(tiles_palette,f,bitplanelib.PALETTE_FORMAT_ASMGNU)
 
-tiles = Image.open(os.path.join(this_dir,"..","tiles.png"))
+block_dict = {}
 
-tile_list = []
-for y in range(0,tiles.size[1],8):
-    for x in range(0,tiles.size[0],8):
-        tile = Image.new("RGB",(8,8))
-        tile.paste(tiles,(-x,-y))
-        tile_list.append(tile)
+# hackish convert of c gfx table to dict of lists
+# (reusing Mark Mc Dougall ripped gfx as C tables format, now I'm producing it
+# with MAME ROM + custom python scripts)
 
-character_codes_list = []
-for k,img in enumerate(tile_list):
-    local_palette = tiles_palette
+with open(os.path.join(this_dir,"..",f"{gamename}_gfx.c")) as f:
+    block = []
+    block_name = ""
+    start_block = False
 
-    character_codes = bitplanelib.palette_image2raw(img,None,local_palette)
+    for line in f:
+        if "uint8" in line:
+            # start group
+            start_block = True
+            if block:
+                txt = "".join(block).strip().strip(";")
+
+                block_dict[block_name] = {"size":size,"data":ast.literal_eval(txt)}
+                block = []
+            block_name = line.split()[1].split("[")[0]
+            size = int(line.split("[")[2].split("]")[0])
+        elif start_block:
+            line = re.sub("//.*","",line)
+            line = line.replace("{","[").replace("}","]")
+            block.append(line)
+
+    if block:
+        txt = "".join(block).strip().strip(";")
+        block_dict[block_name] = {"size":size,"data":ast.literal_eval(txt)}
+
+
+
+blocks = block_dict['tile']['data']
+
+# it doesn't matter the palette as long as colors are different from each other, but it's
+# better to have differentiated colors for dumps
+base_palette = [0x0,0x1,0x010,0x001,0x101,0x110,0x011,0x100]
+palette = [x*15 for x in base_palette] + [x*8 for x in base_palette]
+
+
+for k,chardat in enumerate(blocks):
+    img = Image.new('RGB',(8,8))
+
+
+    character_codes = list()
+
+    for cidx,colors in enumerate(rgb_cluts):
+        if not used_cluts or (k in used_cluts and cidx in used_cluts[k]):
+            d = iter(chardat)
+            for i in range(8):
+                for j in range(8):
+                    v = next(d)
+                    c = colors[v]
+                    tiles_used_colors.add(c)
+                    img.putpixel((j,i),c)
+            picname = f"char_{k:03x}_{cidx:02x}.png"
+            character_codes.append(bitplanelib.palette_image2raw(img,None,palette))
+
+
+            if dump_tiles:
+                scaled = ImageOps.scale(img,5,0)
+                scaled.save(os.path.join(tiles_dump_dir,picname))
+        else:
+            character_codes.append(None)
     character_codes_list.append(character_codes)
 
-with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
-    f.write("\t.global\tcharacter_table\n")
+
+if False:
+    with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
+        f.write("\t.global\tcharacter_table\n")
 
 
-    f.write("character_table:\n")
-    for i,c in enumerate(character_codes_list):
-        f.write(f"\t.long\tchar_{i}\n")
 
-    for i,c in enumerate(character_codes_list):
-        f.write(f"char_{i}:\n")
-        # this is a table
-        for j in range(16):
-            j = 0 # TEMP
-            f.write(f"\t.word\tchar_{i}_{j}-char_{i}\n")
+        f.write("character_table:\n")
+        for i,c in enumerate(character_codes_list):
+            # c is the list of the same character with 31 different cluts
+            if any(c):
+                f.write(f"\t.long\tchar_{i}\n")
+            else:
+                f.write("\t.long\t0\n")
+        for i,c in enumerate(character_codes_list):
+            if any(c):
+                f.write(f"char_{i}:\n")
+                # this is a table
+                for j,cc in enumerate(c):
+                    if cc is None:
+                        f.write(f"\t.word\t0\n")
+                    else:
+                        f.write(f"\t.word\tchar_{i}_{j}-char_{i}\n")
 
-        f.write(f"char_{i}_{j}:")
-        bitplanelib.dump_asm_bytes(c,f,mit_format=True)
-
+                for j,cc in enumerate(c):
+                    if cc is not None:
+                        f.write(f"char_{i}_{j}:")
+                        bitplanelib.dump_asm_bytes(cc,f,mit_format=True)
