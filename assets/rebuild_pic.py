@@ -40,6 +40,15 @@ screen = Image.new("RGB",(336,240))
 
 tile_list = block_dict["tile"]["data"]
 
+def encode(c):
+    r = 15
+    # adjust so max is 15 for each component
+    red = ((c&0xE0)*r)//14
+    green = (((c<<3)&0xE0)*r)//14
+    blue = (((c<<6)&0xE0)*r)//12
+    return red,green,blue
+
+
 for s in glob.glob(os.path.join(this_dir,"screens/*.bin")):
     with open(s,"rb") as f:
         contents = f.read()
@@ -49,7 +58,7 @@ for s in glob.glob(os.path.join(this_dir,"screens/*.bin")):
     cluts = [palettes[i:i+16] for i in range(0,256,16)]
     # we need to convert to RGB
 
-    cluts = [[((c&0xE0),(c<<3)&0xE0,(c<<6)&0xE0) for c in clut] for clut in cluts]
+    cluts = [[encode(c) for c in clut] for clut in cluts]
 
     f = io.BytesIO(contents)
     x = 0

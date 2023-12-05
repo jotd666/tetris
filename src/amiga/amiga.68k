@@ -22,6 +22,7 @@ PALETTE_ADDRESS = 0x2000
 
 SCORE_FILE_SIZE = 0x50
 
+BASE_BPLCON3_VALUE = (1<<12)|(1<<10)
 
 	.ifdef	RELEASE
 OPT_ENABLE_PROFILING = 0         | DO NOT CHANGE THIS
@@ -42,8 +43,8 @@ OPT_ENABLE_DOUBLE_BUFFERING_BG = 0
 _custom = 0xDFF000
 
 
-NB_PLAYFIELD_PLANES = 4
-TOTAL_NB_COLORS = 32
+NB_PLAYFIELD_PLANES = 8
+
 NB_BYTES_PER_ROW = 42
 NB_LINES = 240
 NB_PLAYFIELD_LINES = NB_LINES
@@ -53,14 +54,7 @@ BG_SCREEN_SIZE =  BG_SCREEN_PLANE_SIZE*NB_PLAYFIELD_PLANES
 FG_SCREEN_PLANE_SIZE = BG_SCREEN_PLANE_SIZE
 FG_SCREEN_SIZE =  FG_SCREEN_PLANE_SIZE*NB_PLAYFIELD_PLANES
 
-NB_HOST_SPRITES = 8
-NB_TARGET_SPRITES = 8
 
-SPRITE_X = 0
-SPRITE_Y = 1
-SPRITE_CODE = 2
-SPRITE_CLUT = 3
-SPRITE_SIZEOF = 4
 
 
 | write current PC value to some address
@@ -73,13 +67,6 @@ SPRITE_SIZEOF = 4
 	.endif
 .endm
 
-.macro	WAIT_BLIT
-	move.w	#0x8400,(dmacon,a5)		| blitter high priority
-wait\@:
-	BTST	#6,(dmaconr,a5)
-	BNE.S	wait\@
-	move.w	#0x0400,(dmacon,a5)		| blitter normal priority
-.endm
 
 .macro MUL_TABLE value,len
 mul\value\()_table:
@@ -672,10 +659,25 @@ osd_set_palette_entry:
 	jbsr	osd_break
 	.endif
 0:
-	move.l	a1,-(sp)
+	move.w	d0,-(sp)
+	movem.l	a0/a1,-(sp)
+	* store raw palette color value (maybe re-read later?)
 	lea		palette_entries,a1
 	move.b	d0,(a1,a0.w)
-	move.l	(sp)+,a1
+	
+	* get pointer on copperlist color entry
+	lea		color_copper_pointers,a1
+	add.w	a0,a0
+	add.w	a0,a0
+	move.l	(a1,a0.w),a0
+	* a0 points on the RGB4 color in copperlist
+	lea		color_table(pc),a1
+	* decode color 8 bit => RGB4 using pre-computed table
+	and.w	#0xFF,d0
+	add.w	d0,d0
+	move.w	(a1,d0.w),(a0)
+	movem.l	(sp)+,a0/a1
+	move.w	(sp)+,d0
 	rts
 	
 osd_read_pokey1:
@@ -686,7 +688,6 @@ osd_read_pokey2:
 	rts
 	
 
-	
 
 * < D0: number of 1/60Hz ticks
 * can work with interrupts enabled or disabled
@@ -726,20 +727,6 @@ osd_wait:
 3:
 	rts
 	
-*osd_calibrate_display:
-*	movem.l	a0/d0-d1,-(a7)
-*	move.l	bg_drawed_screen_ptr,a0
-*	move.w	#NB_LINES-1,d1
-*	clr		d0
-*0:
-*	st.b	(8,a0,d0.W)
-*	st.b	(9,a0,d0.W)
-*	st.b	(10,a0,d0.W)
-*	
-*	add.w	#NB_BYTES_PER_ROW,d0
-*	dbf		D1,0b
-*	movem.l	(a7)+,a0/d0-d1
-*	rts
 
 	
 osd_sound_start:
@@ -992,11 +979,10 @@ platform_init:
     move.w #0x1cf9,diwstop(a5)
     move.w #0x0038,ddfstrt(a5)
     move.w #0x00D0,ddfstop(a5)
-    move.w #0x200+(NB_PLAYFIELD_PLANES<<12),bplcon0(a5) | 5 bitplanes
+    move.w #0x0210,bplcon0(a5) | 8 bitplanes
     move.w #0x0024,bplcon2(a5)
 	* AGA-compatible ECS default values
     move.w #0x0C00,bplcon3(a5)     | no AGA specificities, default ECS
-    move.w #0x0011,bplcon4(a5)     | ECS default for sprite colors
     move.w #0,fmode(a5)			
 	
 
@@ -1005,6 +991,21 @@ platform_init:
     move.w d0,bpl1mod(a5)
     move.w d0,bpl2mod(a5)
 
+	* init color table
+	lea		copperlist_colors+2,a0
+	lea		color_copper_pointers,a1
+	moveq	#NB_PLAYFIELD_PLANES-1,d0
+0:
+	addq.w	#4,a0
+	move.w	#31,d1
+1:
+	move.l	a0,(a1)+
+	addq.w	#4,a0
+	dbf		d1,1b
+	dbf		d0,0b
+	
+
+	
 	* set other sprites to blank
 	move.l		#blank_sprite,d0
 
@@ -1020,7 +1021,6 @@ platform_init:
 	
 	bsr		set_bg_bitplanes
 	
-	bsr		load_palette_in_copperlist
 	
 	* set copperlist
 	move.l	#copperlist,cop1lc(a5)
@@ -1057,45 +1057,9 @@ platform_init:
 	move.l	system_vbr(pc),a0
 	moveq	#1,d0	| PAL
 	jsr		_mt_install_cia
-
-	.ifne	OPT_ENABLE_PROFILING
-	* init profiling if enabled
-	lea		0x180000,a0
-	move.l	#0x20000,d0
-	lea		0x100,a1
-	bsr		init_fixed_address
-	bsr		install_profiler_vbl_hook
-	.endif
-
 	
     rts
 
-set_black_palette:
-	movem.l	d0-d1/a1,-(a7)
-
-	move.w	#TOTAL_NB_COLORS-1,d0
-	lea		copperlist_colors+2,a1
-1:
-	clr.w	(a1)+
-	addq.w	#2,a1
-	dbf		d0,1b
-		
-	movem.l	(a7)+,d0-d1/a1
-	rts
-	
-load_palette_in_copperlist:
-	movem.l	d0-d1/a0-a1,-(a7)
-	lea		palette,a0
-
-	move.w	#TOTAL_NB_COLORS-1,d0
-	lea		copperlist_colors+2,a1
-1:
-	move.w	(a0)+,(a1)+
-	addq.w	#2,a1
-	dbf		d0,1b
-		
-	movem.l	(a7)+,d0-d1/a0-a1
-	rts
 	
 * dump file to disk, debug only
 * < A0: filename
@@ -1667,18 +1631,8 @@ write_palette_out_of_range_error:
 	
 	.endif
 	.align	2
+	.include	"color_lut.68k"
 
-
-* 8 slots (indexed with the target sprite index, not
-* the amiga sprite index) with
-* - 4 bytes for the sprite actual address
-* - 2 bytes amiga sprite index
-* - 2 bytes??
-hw_sprite_slots:
-	ds.b	8*8
-* 8 slots (indexed with the amiga sprite index)
-amiga_sprite_slots:
-	ds.b	8
 
 old_intena:
 	.long	0
@@ -1812,9 +1766,8 @@ temp_filename_buffer:
 _end_of_ng_code:
 		
 	.align 2
-palette:
-	.include "palette.68k"
-	
+color_copper_pointers:
+	ds.l	256
 
 	.ascii	"CODE_END"
 
@@ -1830,14 +1783,17 @@ palette:
 	.endr
 	.endm
 
-.macro	DECL_16_COLORS	offset
-	.set	colidx,\offset
-	.rept	16
+
+.macro	DECL_32_COLORS
+	.set	colidx,0
+	.rept	32
 	dc.w	color+(colidx*2),0
 	.set	colidx,colidx+1
 	.endr
 	.endm
-
+	
+	
+	
 blank_sound:
 	ds.l	4
 	
@@ -1855,14 +1811,18 @@ blank_sprite:
 	
 	* main copperlist
 copperlist:
-    *.word   0x1801,0xFFFE	
 
+	.set	bpl_count,0
+	
 bg_bitplanes:
 	DECL_BITPLANES	0
 copperlist_colors:
-	DECL_16_COLORS	0
-sprite_cols:
-	DECL_16_COLORS	16
+	.rept	8
+	.word	bplcon3,BASE_BPLCON3_VALUE+(bpl_count<<13)
+	.set	bpl_count,bpl_count+1
+	DECL_32_COLORS
+	.endr
+
 sprites:
     * #0
     .word    sprpt+0,0

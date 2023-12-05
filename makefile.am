@@ -6,8 +6,8 @@ ifdef RELEASE_BUILD
 OPT_RELEASE = --defsym RELEASE=1
 OPT_RELEASE_LINK = -s
 else
-OPT_RELEASE = -g
-OPT_RELEASE_LINK = -g
+OPT_RELEASE = 
+OPT_RELEASE_LINK = 
 endif
 
 # Bebbo's package usually installs itself there
