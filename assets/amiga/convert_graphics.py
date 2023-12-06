@@ -124,14 +124,14 @@ if True:
 
 
         f.write("character_table:\n")
-        for i,c in enumerate(character_codes_list):
+        for i in range(len(character_codes_list)):
             # c is the list of the same character with 16 different cluts
             f.write(f"\t.long\tchar_{i}\n")
 
         for i,c in enumerate(character_codes_list):
             f.write(f"char_{i}:\n")
             # this is a table
-            for j,cc in enumerate(c):
+            for j in range(len(c)):
                 f.write(f"\t.word\tchar_{i}_{j}-char_{i}\n")
 
             for j,cc in enumerate(c):
@@ -139,14 +139,15 @@ if True:
                 f.write(f"{charname}:\n")
                 for k in range(8):
 
-                    # only 4 of 8 bitplanes aren't all zeroes at most
                     ccc = cc[k*8:(k+1)*8]
+                    print(ccc)
                     if any(ccc):
                         key = plane_cache.get(ccc)
                         if not key:
                             key_index += 1
                             plane_cache[ccc] = key_index
-                        f.write(f"\t.word\t0x{key_index:04x}\n")
+                            key = key_index
+                        f.write(f"\t.word\t0x{key:04x}\n")
 
 
                     else:
