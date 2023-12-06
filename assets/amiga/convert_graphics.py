@@ -60,8 +60,8 @@ blocks = block_dict['tile']['data']
 
 # it doesn't matter the palette as long as colors are different from each other, but it's
 # better to have differentiated colors for dumps
-base_palette = [0x0,0x1,0x010,0x001,0x101,0x110,0x011,0x100]
-some_16_colors = [bitplanelib.rgb4_to_rgb_triplet(c) for c in [x*15 for x in base_palette] + [x*8 for x in base_palette]]
+base_palette = [0x200,0x1,0x010,0x011,0x101,0x110,0x111,0x100]
+some_16_colors = [bitplanelib.rgb4_to_rgb_triplet(c) for c in [x*4 for x in base_palette] + [x*7 for x in base_palette]]
 
 fillin = (10,56,23)  # random, but different from colors of some_16_colors
 
@@ -119,7 +119,7 @@ if True:
     key_index = 0
 
     with open(os.path.join(src_dir,"graphics.68k"),"w") as f:
-        f.write("\t.global\tcharacter_table\n")
+        f.write("\t.global\tcharacter_table\n\t.global\tplanes_table\n")
 
 
 
@@ -144,16 +144,17 @@ if True:
                     if any(ccc):
                         key = plane_cache.get(ccc)
                         if not key:
-                            key = f"plane_{key_index:04d}"
                             key_index += 1
-                            plane_cache[ccc] = key
-                        f.write(f"\tdc.w\t{key}-{charname}\n")
+                            plane_cache[ccc] = key_index
+                        f.write(f"\t.word\t0x{key_index:04x}\n")
 
 
                     else:
-                        f.write(f"\tdc.w\t0\n")
+                        f.write(f"\t.word\t-1\n")
 
         # now dump plane data
+        f.write("planes_table:\n\t.long\t0xdeadbeef,0xc0dedbad\n")
+
         for k,v in sorted(plane_cache.items(),key = lambda t:t[1]):
-            f.write(f"{v}:")
+            f.write(f"* 0x{v:04x}")
             bitplanelib.dump_asm_bytes(k,f,mit_format=True)

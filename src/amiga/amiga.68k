@@ -22,7 +22,7 @@ PALETTE_ADDRESS = 0x2000
 
 SCORE_FILE_SIZE = 0x50
 
-BASE_BPLCON3_VALUE = (1<<12)|(1<<10)
+
 
 	.ifdef	RELEASE
 OPT_ENABLE_PROFILING = 0         | DO NOT CHANGE THIS
@@ -1233,7 +1233,6 @@ update_tile:
 	add.w	d3,a1
 	add.w	d1,a1
 
-	moveq	#NB_PLAYFIELD_PLANES-1,d3
 
 *	* optimization when a well-known
 *	* empty character is passed (standard charset)
@@ -1253,26 +1252,43 @@ update_tile:
 	move.l	(a0,d0.w),d0
 	jeq	2f				| isn't declared as used
 	move.l	d0,a0		| pointer on clut table
-	* now we use d2 (attribute)
-	moveq	#0,d2   | TEMP TEMP
+	* now we use d2 (attribute) to get relative pointer on list of bitplanes
+	add.w	d2,d2
 	add.w	(a0,d2.w),a0
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
-4:
+	moveq	#NB_PLAYFIELD_PLANES-1,d3
+	move.l	a0,a2
+	lea		planes_table,a3
+3:
+	moveq	#0,d0
+	move.w	(a2)+,d0    | plane data index
+	bmi.b	6f
+	lsl.l	#3,d0		| times 8
+	lea		(a3,d0.l),a0	| AT LEAST!! get address of plane data
+
 	.set	offset,0
 	.rept	8
 	move.b	(a0)+,(offset,a1)	
 	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
+5:
 	add.w	#BG_SCREEN_PLANE_SIZE,a1
-	dbf		d3,4b
+	dbf		d3,3b
 	rts
 0:
 	rts
 
+6:
 	* clear tile
-
+	.set	offset,0
+	.rept	8
+	clr.b	(offset,a1)
+	.set	offset,offset+NB_BYTES_PER_ROW
+	.endr
+	bra.b	5b
+	
 11:
 	.set	offset,0
 	.rept	8
@@ -1818,7 +1834,7 @@ bg_bitplanes:
 	DECL_BITPLANES	0
 copperlist_colors:
 	.rept	8
-	.word	bplcon3,BASE_BPLCON3_VALUE+(bpl_count<<13)
+	.word	bplcon3,bpl_count<<13
 	.set	bpl_count,bpl_count+1
 	DECL_32_COLORS
 	.endr
