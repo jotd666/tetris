@@ -971,9 +971,10 @@ platform_init:
     move.l  #-1,bltafwm(a5)
 	.endif
 
-	.ifdef	AGA_FMODE
     move.w #0x2e77,diwstrt(a5)
-    move.w #0x26c7,diwstop(a5)
+    move.w #0x1ec7,diwstop(a5)
+	
+	.ifdef	AGA_FMODE
     move.w #0x0030,ddfstrt(a5)
     move.w #0x00C0,ddfstop(a5)
 	* AGA-compatible ECS default values
@@ -983,14 +984,12 @@ platform_init:
     move.w d0,bpl1mod(a5)
     move.w d0,bpl2mod(a5)
 	.else
-    move.w #0x2C81,diwstrt(a5)
-    move.w #0x1cf9,diwstop(a5)
-    move.w #0x0038,ddfstrt(a5)
+    move.w #0x0030,ddfstrt(a5)
     move.w #0x00D0,ddfstop(a5)
 	* AGA-compatible ECS default values
     move.w #0,fmode(a5)			
-    move.w #0,bplcon1(a5)    | foreground tiles
-	move.w	#2,d0
+    move.w #0x0066,bplcon1(a5)    | foreground tiles
+	move.w	#0,d0
     move.w d0,bpl1mod(a5)
     move.w d0,bpl2mod(a5)
 	.endif
