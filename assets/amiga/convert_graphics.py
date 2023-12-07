@@ -140,7 +140,7 @@ if True:
                 for k in range(8):
 
                     ccc = cc[k*8:(k+1)*8]
-                    print(ccc)
+
                     if any(ccc):
                         key = plane_cache.get(ccc)
                         if not key:
