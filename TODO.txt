@@ -1,20 +1,25 @@
-- re-code tile draw
-- log used tiles to reduce memory size
+- credits inserted input received (wrong)??
+- controls: try to insert coin / start game / play
 
+- bug in demo when filling grid with "TET" => all blocks go to the left and overlap
 - deduce score, round, line numbers, current block X,Y,type... from screen writes
-
 - remove bank switching see what happens
-- skip title?
-- display not wide enough
-- credits inserted input received (wrong)
-  debug here a226 seems that 0x1F contains 0x1000!!!
 
+
+- save highscores
+- patch "LICENSED BY MIRRORSOFT" => 
 - convert tunes from MAME ripped format
   spec: https://vgmrips.net/wiki/VGM_Specification
   https://vgmrips.net/packs/pack/tetris-atari-arcade
 - MP3 here: https://downloads.khinsider.com/game-soundtracks/album/tetris-atari-arcade
 - write midi file: https://stackoverflow.com/questions/11059801/how-can-i-write-a-midi-file-with-python
 - mp3 to midi works great! https://anyconv.com/wav-to-midi-converter/
+
+low pri:
+
+- fmode=3
+- log used tiles to reduce memory size
+
 
 converter:
 

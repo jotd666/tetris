@@ -117,6 +117,7 @@ start:
 		*.global osd_calibrate_display		| for debug
 		.global osd_r_videoram
 		.global osd_w_videoram
+		.global osd_w_videoram_nc
 
 		.global osd_update_sprites
 		.global osd_read_inputs
@@ -981,8 +982,6 @@ platform_init:
     move.w #3,fmode(a5)			
     move.w #0xcc66,bplcon1(a5)    | foreground tiles
 	move.w	#0,d0
-    move.w d0,bpl1mod(a5)
-    move.w d0,bpl2mod(a5)
 	.else
     move.w #0x0030,ddfstrt(a5)
     move.w #0x00D0,ddfstop(a5)
@@ -990,9 +989,9 @@ platform_init:
     move.w #0,fmode(a5)			
     move.w #0x0066,bplcon1(a5)    | foreground tiles
 	move.w	#0,d0
+	.endif
     move.w d0,bpl1mod(a5)
     move.w d0,bpl2mod(a5)
-	.endif
 	
 	
     move.w #0x0210,bplcon0(a5) | 8 bitplanes
@@ -1156,6 +1155,7 @@ osd_r_videoram:
 * < D0: code
 * should preserve all registers
 
+osd_w_videoram_nc:
 osd_w_videoram:
 	movem.l	d0-d3/d6/a0-a2,-(a7)
 	
@@ -1193,6 +1193,33 @@ osd_w_videoram:
 	lsr.w	#1,d1
 	jbsr		update_tile
 0:
+	movem.l	(a7)+,d0-d3/d6/a0-a2
+	rts
+	
+* < A0=screen address (preserved)
+* (A0 starts at 0x1000 and ends at 0x1FFF)
+* < D0: code
+* should preserve all registers
+
+osd_w_videoram_nc_todo:
+	movem.l	d0-d3/d6/a0-a2,-(a7)
+	
+	cmp.w	#SCREEN_ADDRESS,a0
+	bcs.b	0f
+	cmp.w	#PALETTE_ADDRESS,a0
+	bcs.b	1f
+0:
+	* should not happen
+	.ifndef	RELEASE
+	move.l	a0,a1
+	lea		write_videoram_out_of_range_error(pc),a0
+	jbsr	osd_break
+	.endif
+	bra.b	2f
+1:
+	lea		bg_videoram-SCREEN_ADDRESS,a1
+	move.b	d0,(a1,a0.w)	| update logical grid
+2:
 	movem.l	(a7)+,d0-d3/d6/a0-a2
 	rts
 
