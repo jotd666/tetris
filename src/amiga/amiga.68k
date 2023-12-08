@@ -129,6 +129,7 @@ start:
 		.global	osd_wait
 		.global	osd_set_palette_entry
 		.global	osd_read_pokey1
+		.global	osd_read_pokey2
 		.global	osd_dump_file
 		
 	.include	"ReadJoypad.i"
@@ -679,9 +680,58 @@ osd_set_palette_entry:
 	
 osd_read_pokey1:
 	moveq	#0,d0
+	move.l	a0,-(a7)
+	lea		keyboard_table(pc),a0
+	tst.b	(5,a0)
+	beq.b	0f
+	clr.b	(5,a0)
+	bset	#2,d0		| insert coin
+0:
+	move.l	(a7)+,a0
 	rts
+	
 osd_read_pokey2:
 	moveq	#0,d0
+	movem.l	d1/a0,-(a7)
+	lea		keyboard_table(pc),a0
+
+	tst.b	(0x4F,a0)		| "<-" key
+	beq.b	0f
+	bset	#3,d0
+0:
+	tst.b	(0x4E,a0)		| "->" key
+	beq.b	0f
+	bset	#4,d0
+0:
+	tst.b	(0x4D,a0)		| "down" key
+	beq.b	0f
+	bset	#1,d0
+0:
+	tst.b	(0x63,a0)		| "ctrl" key
+	beq.b	0f
+	bset	#0,d0
+0:
+	* directions + fire
+	move.l	_joypad_state(pc),d1
+
+	btst	#JPB_BTN_DOWN,d1
+	beq.b	0f
+	bset	#1,d0
+0:
+	btst	#JPB_BTN_LEFT,d1
+	beq.b	0f
+	bset	#3,d0
+0:
+	btst	#JPB_BTN_RIGHT,d1
+	beq.b	0f
+	bset	#4,d0
+0:
+	btst	#JPB_BTN_RED,d1
+	beq.b	0f
+	bset	#0,d0
+0:
+
+	movem.l	(a7)+,d1/a0
 	rts
 	
 

@@ -1,5 +1,7 @@
-- credits inserted input received (wrong)??
-- controls: try to insert coin / start game / play
+- controls: some up/down/left/right is actually 2P start: to fix
+- in-play: shapes are drawn wrong/overlap, end up crashing
+- controls: insert coin not working
+- 2 credits inserted at start: debug around f3a8
 
 - bug in demo when filling grid with "TET" => all blocks go to the left and overlap
 - deduce score, round, line numbers, current block X,Y,type... from screen writes
@@ -18,6 +20,7 @@
 low pri:
 
 - fmode=3
+- fix osd_w_videoram_nc (optim)
 - log used tiles to reduce memory size
 
 
