@@ -1,5 +1,6 @@
 - controls: some up/down/left/right is actually 2P start: to fix
 - in-play: shapes are drawn wrong/overlap, end up crashing
+  debug at d5e4 check inputs compare / game
 - controls: insert coin not working
 - 2 credits inserted at start: debug around f3a8
 

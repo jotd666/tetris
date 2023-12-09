@@ -695,13 +695,15 @@ osd_read_pokey2:
 	movem.l	d1/a0,-(a7)
 	lea		keyboard_table(pc),a0
 
+	* 2P start: bit 4
+	
 	tst.b	(0x4F,a0)		| "<-" key
 	beq.b	0f
 	bset	#3,d0
 0:
 	tst.b	(0x4E,a0)		| "->" key
 	beq.b	0f
-	bset	#4,d0
+	bset	#2,d0
 0:
 	tst.b	(0x4D,a0)		| "down" key
 	beq.b	0f
@@ -724,7 +726,7 @@ osd_read_pokey2:
 0:
 	btst	#JPB_BTN_RIGHT,d1
 	beq.b	0f
-	bset	#4,d0
+	bset	#2,d0
 0:
 	btst	#JPB_BTN_RED,d1
 	beq.b	0f
