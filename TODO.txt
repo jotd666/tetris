@@ -27,6 +27,7 @@ low pri:
 
 converter:
 
+- cmp: add a FIX_CMP_CARRY after each one: INVERT_C + SET_X_FROM_C
 - cmp + bmi??
 - sec/clc + dex/dec + adc/sbc sandwich
 - php+sei => review

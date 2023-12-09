@@ -128,6 +128,13 @@ number_of_credits_00c1 = 0x00C1
 * for logging only, never decreases
 number_of_inserted_coins_00c2 = 0x00C2
 pokey_pointer_00ce = 0x00CE
+score_digit_1_0600 = 0x0600
+score_digit_2_0601 = 0x0601
+score_digit_3_0602 = 0x0602
+score_digit_4_0603 = 0x0603
+score_digit_5_0604 = 0x0604
+score_digit_6_0605 = 0x0605
+
 move_to_left_timer_0622 = 0x0622
 move_to_right_timer_0624 = 0x0624
 rotate_shape_timer_0626 = 0x0626
@@ -410,10 +417,8 @@ l_4004:
 	bcs	l_4015                             	| [$4011: bcc	$4015]
 	clr.b	d1                               	| [$4013: ldx #$00]
 l_4015:
-	PUSH_SR
 	GET_ADDRESS	0x0c10                     	| [$4015: stx	$0c10]
 	move.b	d1,(a0)                         	| [$4015: stx	$0c10]
-	POP_SR
 	GET_ADDRESS	0x0c00                     	| [$4018: ldy	$0c00, x]
 	move.b	(a0,d1.w),d2                    	| [$4018: ldy	$0c00, x]
 	jbsr	l_4160                            	| [$401b: jsr	$4160]
@@ -603,17 +608,12 @@ l_40cb:
 	GET_ADDRESS	0x00dd                     	| [$40cd: lda	$00dd]
 	move.b	(a0),d0                         	| [$40cd: lda	$00dd]
 	                           	| [$40cf: sec]
-	sub.b	#0x04,d0                        	| [$40d0: sbc #$04]
-	PUSH_SR
+	subq.b	#0x04,d0                        	| [$40d0: sbc #$04]
 	GET_ADDRESS	0x00dd                     	| [$40d2: sta	$00dd]
 	move.b	d0,(a0)                         	| [$40d2: sta	$00dd]
-	POP_SR
 	clr.b	d0                               	| [$40d4: lda #$00]
-	PUSH_SR
 	GET_ADDRESS_Y	0xdd                     	| [$40d6: sta ($dd), y]
 	move.b	d0,(a0,d2.w)                    	| [$40d6: sta ($dd), y]
-
-	POP_SR
 	rts                                    	| [$40d8: rts]
 l_40d9:
 	GET_ADDRESS	0x00dc                     	| [$40d9: lda	$00dc]
@@ -623,10 +623,8 @@ l_40d9:
 	GET_ADDRESS_Y	0xdd                     	| [$40df: lda ($dd), y]
 	move.b	(a0,d2.w),d0                    	| [$40df: lda ($dd), y]
 	beq	l_40e7                             	| [$40e1: beq	$40e7]
-	PUSH_SR
 	GET_ADDRESS	0x00dc                     	| [$40e3: sta	$00dc]
 	move.b	d0,(a0)                         	| [$40e3: sta	$00dc]
-	POP_SR
 	move.w	(sp)+,d0                        	| [$40e5: pla]
 	rts                                    	| [$40e6: rts]
 l_40e7:
@@ -636,17 +634,13 @@ l_40ea:
 	move.w	d0,-(sp)                        	| [$40ea: pha]
 	move.b	d0,d2                           	| [$40eb: tay]
 	subq.b	#1,d2                           	| [$40ec: dey]
-	PUSH_SR
 	GET_ADDRESS	0x00dd                     	| [$40ed: sty	$00dd]
 	move.b	d2,(a0)                         	| [$40ed: sty	$00dd]
 	GET_ADDRESS	0x00d6                     	| [$40ef: sty	$00d6]
 	move.b	d2,(a0)                         	| [$40ef: sty	$00d6]
-	POP_SR
 	clr.b	d2                               	| [$40f1: ldy #$00]
-	PUSH_SR
 	GET_ADDRESS	0x00de                     	| [$40f3: sty	$00de]
 	move.b	d2,(a0)                         	| [$40f3: sty	$00de]
-	POP_SR
 	GET_ADDRESS	0x00dd                     	| [$40f5: asl	$00dd]
 	move.b	(a0),d4	| [$40f5: asl	$00dd]
 	asl.b	#1,d4                          	| [$40f5: asl	$00dd]
@@ -664,7 +658,7 @@ l_40ea:
 	roxl.b	#1,d4                          	| [$40fb: rol	$00de]
 	move.b	d4,(a0)	| [$40fb: rol	$00de]
 	move.b	#0x57,d0                        	| [$40fd: lda #$57]
-	CLR_XC_FLAGS                           	| [$40ff: clc]
+	                           	| [$40ff: clc]
 	GET_ADDRESS	0x00dd                     	| [$4100: adc	$00dd]
 	add.b	(a0),d0	| [$4100: adc	$00dd]
 	GET_ADDRESS	0x00dd                     	| [$4102: sta	$00dd]
@@ -673,10 +667,8 @@ l_40ea:
 	GET_ADDRESS	0x00de                     	| [$4106: adc	$00de]
 	move.b	(a0),d4	| [$4106: adc	$00de]
 	addx.b	d4,d0                         	| [$4106: adc	$00de]
-	PUSH_SR
 	GET_ADDRESS	0x00de                     	| [$4108: sta	$00de]
 	move.b	d0,(a0)                         	| [$4108: sta	$00de]
-	POP_SR
 	move.w	(sp)+,d0                        	| [$410a: pla]
 	rts                                    	| [$410b: rts]
 l_410c:
@@ -1110,17 +1102,13 @@ l_4296:
 	GET_ADDRESS	0x0c22                     	| [$4296: cpy	$0c22]
 	cmp.b	(a0),d2                          	| [$4296: cpy	$0c22]
 	beq	l_429f                             	| [$4299: beq	$429f]
-	PUSH_SR
 	GET_ADDRESS	0x0c23                     	| [$429b: sty	$0c23]
 	move.b	d2,(a0)                         	| [$429b: sty	$0c23]
-	POP_SR
 	rts                                    	| [$429e: rts]
 l_429f:
 	move.b	#0x80,d0                        	| [$429f: lda #$80]
-	PUSH_SR
 	GET_ADDRESS	0x0c24                     	| [$42a1: sta	$0c24]
 	move.b	d0,(a0)                         	| [$42a1: sta	$0c24]
-	POP_SR
 	rts                                    	| [$42a4: rts]
 	
 l_42a5:
@@ -1158,10 +1146,8 @@ l_42c5:
 	move.w	d0,-(sp)                        	| [$42cd: pha]
 	GET_ADDRESS	0x545c                     	| [$42ce: lda	$545c, x]
 	move.b	(a0,d1.w),d0                    	| [$42ce: lda	$545c, x]
-	PUSH_SR
 	GET_ADDRESS	0x0e56                     	| [$42d1: sta	$0e56]
 	move.b	d0,(a0)                         	| [$42d1: sta	$0e56]
-	POP_SR
 	GET_ADDRESS	0x545d                     	| [$42d4: lda	$545d, x]
 	move.b	(a0,d1.w),d0                    	| [$42d4: lda	$545d, x]
 	move.b	d0,d1                           	| [$42d7: tax]
@@ -1423,10 +1409,8 @@ l_436e:
 	PUSH_SR                                	| [$43c2: php] 
 	SET_I_FLAG                             	| [$43c3: sei] handled
 l_43c4:
-	PUSH_SR
 	GET_ADDRESS	0x00d4                     	| [$43c4: sty	$00d4]
 	move.b	d2,(a0)                         	| [$43c4: sty	$00d4]
-	POP_SR
 	GET_ADDRESS	0x0e2d                     	| [$43c6: lda	$0e2d, y]
 	move.b	(a0,d2.w),d0                    	| [$43c6: lda	$0e2d, y]
 	beq	l_43f3                             	| [$43c9: beq	$43f3]
@@ -1442,8 +1426,7 @@ l_43c4:
 	beq	l_43dd                             	| [$43d7: beq	$43dd]
 	addq.b	#1,d2                           	| [$43d9: iny]
 	move.b	d2,d0                           	| [$43da: tya]
-	SET_C_FROM_X
-	bcs	l_43ee                             	| [$43db: bcs	$43ee]
+	bra	l_43ee                             	| [$43db: bcs	$43ee]
 l_43dd:
 	move.b	d1,d0                           	| [$43dd: txa]
 	move.w	d0,-(sp)                        	| [$43de: pha]
@@ -1453,17 +1436,13 @@ l_43dd:
 	move.w	(sp)+,d0                        	| [$43e4: pla]
 	move.b	d0,d1                           	| [$43e5: tax]
 	clr.b	d0                               	| [$43e6: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x0cb1                     	| [$43e8: sta	$0cb1, y]
     move.b	d0,(a0,d2.w)                 	| [$43e8: sta	$0cb1, y]
-	POP_SR
 	GET_ADDRESS	0x0e2d                     	| [$43eb: lda	$0e2d, y]
 	move.b	(a0,d2.w),d0                    	| [$43eb: lda	$0e2d, y]
 l_43ee:
-	
 	GET_ADDRESS	0x0e2d                     	| [$43ee: sta	$0e2d, x]
     move.b	d0,(a0,d1.w)                 	| [$43ee: sta	$0e2d, x]
-	
 	GET_ADDRESS	0x00d4                     	| [$43f1: ldy	$00d4]
 	move.b	(a0),d2                         	| [$43f1: ldy	$00d4]
 l_43f3:
@@ -1674,14 +1653,11 @@ l_44ee:
 	POP_SR
 	GET_ADDRESS	0x0c57                     	| [$4506: lda	$0c57, x]
 	move.b	(a0,d1.w),d0                    	| [$4506: lda	$0c57, x]
-	SET_XC_FLAGS                           	| [$4509: sec]
+	                           	| [$4509: sec]
 	GET_ADDRESS	0x0d6f                     	| [$450a: sbc	$0d6f, x]
-	move.b	(a0,d1.w),d4	| [$450a: sbc	$0d6f, x]
-	subx.b	d4,d0                    	| [$450a: sbc	$0d6f, x]
-	PUSH_SR
+	sub.b	(a0,d1.w),d0	| [$450a: sbc	$0d6f, x]
 	GET_ADDRESS	0x0c57                     	| [$450d: sta	$0c57, x]
     move.b	d0,(a0,d1.w)                 	| [$450d: sta	$0c57, x]
-	POP_SR
 	GET_ADDRESS	0x0c61                     	| [$4510: lda	$0c61, x]
 	move.b	(a0,d1.w),d0                    	| [$4510: lda	$0c61, x]
 	GET_ADDRESS	0x0d79                     	| [$4513: sbc	$0d79, x]
@@ -1702,14 +1678,11 @@ l_4523:
 	bmi	l_4542                             	| [$4526: bmi	$4542]
 	GET_ADDRESS	0x0c75                     	| [$4528: lda	$0c75, x]
 	move.b	(a0,d1.w),d0                    	| [$4528: lda	$0c75, x]
-	SET_XC_FLAGS                           	| [$452b: sec]
+	                           	| [$452b: sec]
 	GET_ADDRESS	0x0d6f                     	| [$452c: sbc	$0d6f, x]
-	move.b	(a0,d1.w),d4	| [$452c: sbc	$0d6f, x]
-	subx.b	d4,d0                    	| [$452c: sbc	$0d6f, x]
-	PUSH_SR
+	sub.b	(a0,d1.w),d0	| [$452c: sbc	$0d6f, x]
 	GET_ADDRESS	0x0c75                     	| [$452f: sta	$0c75, x]
     move.b	d0,(a0,d1.w)                 	| [$452f: sta	$0c75, x]
-	POP_SR
 	GET_ADDRESS	0x0c7f                     	| [$4532: lda	$0c7f, x]
 	move.b	(a0,d1.w),d0                    	| [$4532: lda	$0c7f, x]
 	GET_ADDRESS	0x0d79                     	| [$4535: sbc	$0d79, x]
@@ -1818,44 +1791,33 @@ l_45a5:
 l_45b4:
 	asl.b	#1,d0                            	| [$45b4: asl a]
 	move.b	d0,d2                           	| [$45b5: tay]
-	SET_XC_FLAGS                           	| [$45b6: sec]
+	                           	| [$45b6: sec]
 	GET_ADDRESS	0x0c43                     	| [$45b7: lda	$0c43, x]
 	move.b	(a0,d1.w),d0                    	| [$45b7: lda	$0c43, x]
 	GET_ADDRESS	0x50de                     	| [$45ba: sbc	$50de, y]
-	move.b	(a0,d2.w),d4	| [$45ba: sbc	$50de, y]
-	subx.b	d4,d0                    	| [$45ba: sbc	$50de, y]
-	PUSH_SR
+	sub.b	(a0,d2.w),d0	| [$45ba: sbc	$50de, y]
 	GET_ADDRESS	0x0db5                     	| [$45bd: sta	$0db5, x]
     move.b	d0,(a0,d1.w)                 	| [$45bd: sta	$0db5, x]
-	POP_SR
 	GET_ADDRESS	0x0c4d                     	| [$45c0: lda	$0c4d, x]
 	move.b	(a0,d1.w),d0                    	| [$45c0: lda	$0c4d, x]
 	GET_ADDRESS	0x50df                     	| [$45c3: sbc	$50df, y]
 	move.b	(a0,d2.w),d4	| [$45c3: sbc	$50df, y]
 	subx.b	d4,d0                    	| [$45c3: sbc	$50df, y]
-	PUSH_SR
 	GET_ADDRESS	0x0dbf                     	| [$45c6: sta	$0dbf, x]
     move.b	d0,(a0,d1.w)                 	| [$45c6: sta	$0dbf, x]
-	POP_SR
 	GET_ADDRESS	0x50de                     	| [$45c9: lda	$50de, y]
 	move.b	(a0,d2.w),d0                    	| [$45c9: lda	$50de, y]
-	PUSH_SR
 	GET_ADDRESS	0x0c43                     	| [$45cc: sta	$0c43, x]
     move.b	d0,(a0,d1.w)                 	| [$45cc: sta	$0c43, x]
-	POP_SR
 	GET_ADDRESS	0x50df                     	| [$45cf: lda	$50df, y]
 	move.b	(a0,d2.w),d0                    	| [$45cf: lda	$50df, y]
-	PUSH_SR
 	GET_ADDRESS	0x0c4d                     	| [$45d2: sta	$0c4d, x]
     move.b	d0,(a0,d1.w)                 	| [$45d2: sta	$0c4d, x]
-	POP_SR
 l_45d5:
 	move.b	#0x01,d2                        	| [$45d5: ldy #$01]
 	clr.b	d0                               	| [$45d7: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x00d9                     	| [$45d9: sta	$00d9]
 	move.b	d0,(a0)                         	| [$45d9: sta	$00d9]
-	POP_SR
 	GET_ADDRESS_Y	0xcc                     	| [$45db: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$45db: lda ($cc), y]
 	beq	l_45e2                             	| [$45dd: beq	$45e2]
@@ -1868,43 +1830,31 @@ l_45e2:
 	jbsr	l_40ea                            	| [$45e8: jsr	$40ea]
 	GET_ADDRESS_Y	0xdd                     	| [$45eb: lda ($dd), y]
 	move.b	(a0,d2.w),d0                    	| [$45eb: lda ($dd), y]
-	PUSH_SR
 	GET_ADDRESS	0x0dc9                     	| [$45ed: sta	$0dc9, x]
     move.b	d0,(a0,d1.w)                 	| [$45ed: sta	$0dc9, x]
-	POP_SR
 	GET_ADDRESS	0x00dc                     	| [$45f0: lda	$00dc]
 	move.b	(a0),d0                         	| [$45f0: lda	$00dc]
-	PUSH_SR
 	GET_ADDRESS_Y	0xdd                     	| [$45f2: sta ($dd), y]
 	move.b	d0,(a0,d2.w)                    	| [$45f2: sta ($dd), y]
-
-	POP_SR
 	move.w	(sp)+,d0                        	| [$45f4: pla]
-	PUSH_SR
 	GET_ADDRESS	0x00dc                     	| [$45f5: sta	$00dc]
 	move.b	d0,(a0)                         	| [$45f5: sta	$00dc]
-	POP_SR
 	addq.b	#1,d2                           	| [$45f7: iny]
 	GET_ADDRESS_Y	0xdd                     	| [$45f8: lda ($dd), y]
 	move.b	(a0,d2.w),d0                    	| [$45f8: lda ($dd), y]
-	PUSH_SR
 	GET_ADDRESS	0x0c2f                     	| [$45fa: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$45fa: sta	$0c2f, x]
 	GET_ADDRESS	0x00cc                     	| [$45fd: sta	$00cc]
 	move.b	d0,(a0)                         	| [$45fd: sta	$00cc]
-	POP_SR
 	addq.b	#1,d2                           	| [$45ff: iny]
 	GET_ADDRESS_Y	0xdd                     	| [$4600: lda ($dd), y]
 	move.b	(a0,d2.w),d0                    	| [$4600: lda ($dd), y]
-	PUSH_SR
 	GET_ADDRESS	0x0c39                     	| [$4602: sta	$0c39, x]
     move.b	d0,(a0,d1.w)                 	| [$4602: sta	$0c39, x]
 	GET_ADDRESS	0x00cd                     	| [$4605: sta	$00cd]
 	move.b	d0,(a0)                         	| [$4605: sta	$00cd]
-	POP_SR
 	jra	l_454d                             	| [$4607: jmp	$454d]
 l_460a:
-	PUSH_SR
 	GET_ADDRESS	0x0cb1                     	| [$460a: sta	$0cb1, x]
     move.b	d0,(a0,d1.w)                 	| [$460a: sta	$0cb1, x]
 	GET_ADDRESS	0x0cd9                     	| [$460d: sta	$0cd9, x]
@@ -1917,16 +1867,13 @@ l_460a:
     move.b	d0,(a0,d1.w)                 	| [$4616: sta	$0df1, x]
 	GET_ADDRESS	0x0e48                     	| [$4619: sta	$0e48]
 	move.b	d0,(a0)                         	| [$4619: sta	$0e48]
-	POP_SR
 	jbsr	l_410c                            	| [$461c: jsr	$410c]
 	GET_ADDRESS	0x0e2d                     	| [$461f: lda	$0e2d, x]
 	move.b	(a0,d1.w),d0                    	| [$461f: lda	$0e2d, x]
 	GET_ADDRESS	0x0e4b                     	| [$4622: ldx	$0e4b]
 	move.b	(a0),d1                         	| [$4622: ldx	$0e4b]
-	PUSH_SR
 	GET_ADDRESS	0x0e2d                     	| [$4625: sta	$0e2d, x]
     move.b	d0,(a0,d1.w)                 	| [$4625: sta	$0e2d, x]
-	POP_SR
 	jra	l_4924                             	| [$4628: jmp	$4924]
 l_462b:
 	move.w	d0,-(sp)                        	| [$462b: pha]
@@ -1936,10 +1883,8 @@ l_462b:
 	jra	l_46d6                             	| [$4631: jmp	$46d6]
 l_4634:
 	move.w	(sp)+,d0                        	| [$4634: pla]
-	PUSH_SR
 	GET_ADDRESS	0x00d9                     	| [$4635: sta	$00d9]
 	move.b	d0,(a0)                         	| [$4635: sta	$00d9]
-	POP_SR
 	and.b	#0x0f,d0                         	| [$4637: and #$0f]
 	asl.b	#1,d0                            	| [$4639: asl a]
 	move.b	d0,d2                           	| [$463a: tay]
@@ -1947,21 +1892,16 @@ l_4634:
 	move.b	(a0,d2.w),d0                    	| [$463b: lda	$51a2, y]
 	CLR_XC_FLAGS                           	| [$463e: clc]
 	GET_ADDRESS	0x0c61                     	| [$463f: adc	$0c61, x]
-	move.b	(a0,d1.w),d4	| [$463f: adc	$0c61, x]
-	addx.b	d4,d0                    	| [$463f: adc	$0c61, x]
-	PUSH_SR
+	add.b	(a0,d1.w),d0	| [$463f: adc	$0c61, x]
 	GET_ADDRESS	0x0c61                     	| [$4642: sta	$0c61, x]
     move.b	d0,(a0,d1.w)                 	| [$4642: sta	$0c61, x]
-	POP_SR
 	GET_ADDRESS	0x51a3                     	| [$4645: lda	$51a3, y]
 	move.b	(a0,d2.w),d0                    	| [$4645: lda	$51a3, y]
 	GET_ADDRESS	0x0c6b                     	| [$4648: adc	$0c6b, x]
 	move.b	(a0,d1.w),d4	| [$4648: adc	$0c6b, x]
 	addx.b	d4,d0                    	| [$4648: adc	$0c6b, x]
-	PUSH_SR
 	GET_ADDRESS	0x0c6b                     	| [$464b: sta	$0c6b, x]
     move.b	d0,(a0,d1.w)                 	| [$464b: sta	$0c6b, x]
-	POP_SR
 	GET_ADDRESS	0x00d9                     	| [$464e: lda	$00d9]
 	move.b	(a0),d0                         	| [$464e: lda	$00d9]
 	and.b	#0x40,d0                         	| [$4650: and #$40]
@@ -2318,12 +2258,11 @@ l_47c9:
 	POP_SR
 l_47ce:
 	addq.b	#1,d2                           	| [$47ce: iny]
-	SET_XC_FLAGS                           	| [$47cf: sec]
+	                           	| [$47cf: sec]
 	GET_ADDRESS	0x00cc                     	| [$47d0: lda	$00cc]
 	move.b	(a0),d0                         	| [$47d0: lda	$00cc]
 	GET_ADDRESS_Y	0xcc                     	| [$47d2: sbc ($cc), y]
-	move.b	(a0,d2.w),d4	| [$47d2: sbc ($cc), y]
-	subx.b	d4,d0                    	| [$47d2: sbc ($cc), y]
+	sub.b	(a0,d2.w),d0	| [$47d2: sbc ($cc), y]
 	PUSH_SR
 	GET_ADDRESS	0x00cc                     	| [$47d4: sta	$00cc]
 	move.b	d0,(a0)                         	| [$47d4: sta	$00cc]
@@ -2664,33 +2603,25 @@ l_4926:
 	and.b	#0x01,d0                         	| [$492a: and #$01]
 	move.b	d0,d2                           	| [$492c: tay]
 	move.w	(sp)+,d0                        	| [$492d: pla]
-	PUSH_SR
 	GET_ADDRESS	0x0e46                     	| [$492e: sta	$0e46, y]
     move.b	d0,(a0,d2.w)                 	| [$492e: sta	$0e46, y]
-	POP_SR
 	cmp.b	#0x0a,d1                         	| [$4931: cpx #$0a]
 	* bcs=>bcc
 	bcc	l_4941                             	| [$4933: bcs	$4941]
 	GET_ADDRESS	0x0ccf                     	| [$4935: lda	$0ccf, x]
 	move.b	(a0,d1.w),d0                    	| [$4935: lda	$0ccf, x]
-	PUSH_SR
 	GET_ADDRESS	0x0e4d                     	| [$4938: sta	$0e4d, y]
     move.b	d0,(a0,d2.w)                 	| [$4938: sta	$0e4d, y]
-	POP_SR
 	GET_ADDRESS	0x0cc5                     	| [$493b: lda	$0cc5, x]
 	move.b	(a0,d1.w),d0                    	| [$493b: lda	$0cc5, x]
-	PUSH_SR
 	GET_ADDRESS	0x0e51                     	| [$493e: sta	$0e51, y]
     move.b	d0,(a0,d2.w)                 	| [$493e: sta	$0e51, y]
-	POP_SR
 l_4941:
 	GET_ADDRESS	0x0e2d                     	| [$4941: lda	$0e2d, x]
 	move.b	(a0,d1.w),d0                    	| [$4941: lda	$0e2d, x]
 	beq	l_494e                             	| [$4944: beq	$494e]
-	PUSH_SR
 	GET_ADDRESS	0x0e4b                     	| [$4946: stx	$0e4b]
 	move.b	d1,(a0)                         	| [$4946: stx	$0e4b]
-	POP_SR
 	move.b	d0,d1                           	| [$4949: tax]
 	subq.b	#1,d1                           	| [$494a: dex]
 	jra	l_44d6                             	| [$494b: jmp	$44d6]
@@ -2699,16 +2630,12 @@ l_494e:
 l_494f:
 	GET_ADDRESS	0x0dfb                     	| [$494f: lda	$0dfb, x]
 	move.b	(a0,d1.w),d0                    	| [$494f: lda	$0dfb, x]
-	
 	GET_ADDRESS	0x00d6                     	| [$4952: sta	$00d6]
 	move.b	d0,(a0)                         	| [$4952: sta	$00d6]
-	
 	GET_ADDRESS	0x0e05                     	| [$4954: lda	$0e05, x]
 	move.b	(a0,d1.w),d0                    	| [$4954: lda	$0e05, x]
-	
 	GET_ADDRESS	0x00d7                     	| [$4957: sta	$00d7]
 	move.b	d0,(a0)                         	| [$4957: sta	$00d7]
-	
 	GET_ADDRESS	0x00d9                     	| [$4959: lda	$00d9]
 	move.b	(a0),d0                         	| [$4959: lda	$00d9]
 	move.w	d0,-(sp)                        	| [$495b: pha]
@@ -3160,10 +3087,8 @@ l_4b60:
 	* bcc=>bcs
 	bcs	l_4b6b                             	| [$4b62: bcc	$4b6b]
 	st.b	d0                                	| [$4b64: lda #$ff]
-	
 	GET_ADDRESS	0x0c25                     	| [$4b66: sta	$0c25, x]
-    move.b	d0,(a0,d1.w)                 	| [$4b66: sta	$0c25, x]
-	
+    move.b	d0,(a0,d1.w)                 	| [$4b66: sta	$0c25, x]	
 	CLR_XC_FLAGS                           	| [$4b69: clc]
 	rts                                    	| [$4b6a: rts]
 l_4b6b:
@@ -3680,12 +3605,10 @@ l_4ddc:
 	GET_ADDRESS	0x0e19                     	| [$4ddd: adc	$0e19, x]
 	add.b	(a0,d1.w),d0	| [$4ddd: adc	$0e19, x]
 l_4de0:
-	PUSH_SR
 	GET_ADDRESS	0x0e19                     	| [$4de0: sta	$0e19, x]
     move.b	d0,(a0,d1.w)                 	| [$4de0: sta	$0e19, x]
 	GET_ADDRESS	0x0e23                     	| [$4de3: sta	$0e23, x]
     move.b	d0,(a0,d1.w)                 	| [$4de3: sta	$0e23, x]
-	POP_SR
 	SET_XC_FLAGS                           	| [$4de6: sec]
 	rts                                    	| [$4de7: rts]
 l_4de8:
@@ -3868,8 +3791,10 @@ l_4e9f:
 l_4eb3:
 	cmp.b	#0x26,d0                         	| [$4eb3: cmp #$26]
 	* bcs=>bcc
+	SET_X_FROM_CLEARED_C
 	bcc	l_4ee5                             	| [$4eb5: bcs	$4ee5]
 	cmp.b	#0x06,d0                         	| [$4eb7: cmp #$06]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_4ec7                             	| [$4eb9: bcc	$4ec7]
 	move.b	#0x06,d4	| [$4ebb: sbc #$06]
@@ -3877,10 +3802,8 @@ l_4eb3:
 	move.b	d0,d2                           	| [$4ebd: tay]
 	GET_ADDRESS	0x0e19                     	| [$4ebe: lda	$0e19, x]
 	move.b	(a0,d1.w),d0                    	| [$4ebe: lda	$0e19, x]
-	PUSH_SR
 	GET_ADDRESS	0x00e0                     	| [$4ec1: sta	$00e0, y]
     move.b	d0,(a0,d2.w)                 	| [$4ec1: sta	$00e0, y]
-	POP_SR
 	jra	l_4ee5                             	| [$4ec4: jmp	$4ee5]
 l_4ec7:
 	cmp.b	#0x05,d0                         	| [$4ec7: cmp #$05]
@@ -3892,11 +3815,13 @@ l_4ec7:
 	GET_ADDRESS	0x0e19                     	| [$4ed0: lda	$0e19, x]
 	move.b	(a0,d1.w),d0                    	| [$4ed0: lda	$0e19, x]
 	cmp.b	#0x02,d2                         	| [$4ed3: cpy #$02]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_4eda                             	| [$4ed5: bcc	$4eda]
 	jra	l_4cec                             	| [$4ed7: jmp	$4cec]
 l_4eda:
 	cmp.b	#0x01,d2                         	| [$4eda: cpy #$01]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_4ee1                             	| [$4edc: bcc	$4ee1]
 	jra	l_4cbe                             	| [$4ede: jmp	$4cbe]
@@ -3935,19 +3860,15 @@ l_4f04:
 l_4f0a:
 	jbsr	l_4f4d                            	| [$4f0a: jsr	$4f4d]
 l_4f0d:
-	PUSH_SR
 	GET_ADDRESS	0x00d9                     	| [$4f0d: sta	$00d9]
 	move.b	d0,(a0)                         	| [$4f0d: sta	$00d9]
-	POP_SR
 	GET_ADDRESS	0x0e19                     	| [$4f0f: lda	$0e19, x]
 	move.b	(a0,d1.w),d0                    	| [$4f0f: lda	$0e19, x]
 	GET_ADDRESS	0x00d9                     	| [$4f12: sbc	$00d9]
 	move.b	(a0),d4	| [$4f12: sbc	$00d9]
 	subx.b	d4,d0                         	| [$4f12: sbc	$00d9]
-	PUSH_SR
 	GET_ADDRESS	0x0e23                     	| [$4f14: sta	$0e23, x]
     move.b	d0,(a0,d1.w)                 	| [$4f14: sta	$0e23, x]
-	POP_SR
 	SET_XC_FLAGS                           	| [$4f17: sec]
 	rts                                    	| [$4f18: rts]
 l_4f19:
@@ -4016,6 +3937,7 @@ l_4f4d:
 l_4f69:
 	cmp.b	#0x01,d0                         	| [$4f69: cmp #$01]
 	* bcc=>bcs
+	SET_X_FROM_CLEARED_C
 	bcs	l_4f73                             	| [$4f6b: bcc	$4f73]
 	GET_ADDRESS	0x00d9                     	| [$4f6d: ldy	$00d9]
 	move.b	(a0),d2                         	| [$4f6d: ldy	$00d9]
@@ -4286,7 +4208,7 @@ l_8032:
     move.b	d0,(a0,d1.w)                 	| [$803d: sta	$0400, x]
 	GET_ADDRESS	0x0500                     	| [$8040: sta	$0500, x]
     move.b	d0,(a0,d1.w)                 	| [$8040: sta	$0500, x]
-	GET_ADDRESS	0x0600                     	| [$8043: sta	$0600, x]
+	GET_ADDRESS	score_digit_1_0600                     	| [$8043: sta	$0600, x]
     move.b	d0,(a0,d1.w)                 	| [$8043: sta	$0600, x]
 	GET_ADDRESS	pokey1_state_copy_0700                     	| [$8046: sta	$0700, x]
     move.b	d0,(a0,d1.w)                 	| [$8046: sta	$0700, x]
@@ -4507,12 +4429,10 @@ l_8134:
 	bcs	l_80f3                             	| [$813e: bcc	$80f3]
 	jbsr	l_9290                            	| [$8140: jsr	$9290]
 	clr.b	d0                               	| [$8143: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x00b0                     	| [$8145: sta	$00b0]
 	move.b	d0,(a0)                         	| [$8145: sta	$00b0]
 	GET_ADDRESS	0x005e                     	| [$8147: sta	$005e]
 	move.b	d0,(a0)                         	| [$8147: sta	$005e]
-	POP_SR
 	GET_ADDRESS	0x00af                     	| [$8149: lda	$00af]
 	move.b	(a0),d0                         	| [$8149: lda	$00af]
 	and.b	#0x03,d0                         	| [$814b: and #$03]
@@ -4520,10 +4440,8 @@ l_8134:
 	and.b	#0x02,d0                         	| [$814f: and #$02]
 	beq	l_815c                             	| [$8151: beq	$815c]
 	move.b	#0x2f,d0                        	| [$8153: lda #$2f]
-	PUSH_SR
 	GET_ADDRESS	0x005e                     	| [$8155: sta	$005e]
 	move.b	d0,(a0)                         	| [$8155: sta	$005e]
-	POP_SR
 	move.b	#0x03,d0                        	| [$8157: lda #$03]
 * clv+bvc => jra
 	jra	l_815e                             	| [$815a: jra	$815e]
@@ -4752,10 +4670,8 @@ l_8261:
 	move.b	(a0),d0                         	| [$826a: lda	$00b5]
 	GET_ADDRESS	0x82f2                     	| [$826c: ora	$82f2, x]
 	or.b	(a0,d1.w),d0                      	| [$826c: ora	$82f2, x]
-	PUSH_SR
 	GET_ADDRESS	0x00b5                     	| [$826f: sta	$00b5]
 	move.b	d0,(a0)                         	| [$826f: sta	$00b5]
-	POP_SR
 l_8271:
 	GET_ADDRESS	0x00b5                     	| [$8271: lda	$00b5]
 	move.b	(a0),d0                         	| [$8271: lda	$00b5]
@@ -4763,10 +4679,8 @@ l_8271:
 	and.b	(a0,d1.w),d0                     	| [$8273: and	$82f2, x]
 	beq	l_827c                             	| [$8276: beq	$827c]
 	clr.b	d0                               	| [$8278: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x00b8                     	| [$827a: sta	$00b8, x]
     move.b	d0,(a0,d1.w)                 	| [$827a: sta	$00b8, x]
-	POP_SR
 l_827c:
 	subq.b	#1,d1                           	| [$827c: dex]
 	bpl	l_8254                             	| [$827d: bpl	$8254]
@@ -4821,10 +4735,8 @@ l_829f:
 	bcs	l_82b3                             	| [$82af: bcc	$82b3]
 	move.b	#0x03,d0                        	| [$82b1: lda #$03]
 l_82b3:
-	PUSH_SR
 	GET_ADDRESS	0x00b0                     	| [$82b3: sta	$00b0]
 	move.b	d0,(a0)                         	| [$82b3: sta	$00b0]
-	POP_SR
 l_82b5:
 	GET_ADDRESS	0x00b0                     	| [$82b5: lda	$00b0]
 	move.b	(a0),d0                         	| [$82b5: lda	$00b0]
@@ -5462,10 +5374,8 @@ l_85b6:
 	* bcc=>bcs
 	bcs	l_85c8                             	| [$85c2: bcc	$85c8]
 	clr.b	d0                               	| [$85c4: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x009b                     	| [$85c6: sta	$009b]
 	move.b	d0,(a0)                         	| [$85c6: sta	$009b]
-	POP_SR
 l_85c8:
 	GET_ADDRESS	0x00b5                     	| [$85c8: lda	$00b5]
 	move.b	(a0),d0                         	| [$85c8: lda	$00b5]
@@ -5718,12 +5628,12 @@ l_8764:
 	move.b	d0,(a0)                         	| [$8777: sta	$00aa]
 	GET_ADDRESS	screen_address_00aa+1                     	| [$8779: lda	$00ab]
 	move.b	(a0),d0                         	| [$8779: lda	$00ab]
-	move.b	#0x00,d4	| [$877b: adc #$00]
+	clr.b	d4	| [$877b: adc #$00]
 	addx.b	d4,d0                        	| [$877b: adc #$00]
-	PUSH_SR
+
 	GET_ADDRESS	screen_address_00aa+1                     	| [$877d: sta	$00ab]
 	move.b	d0,(a0)                         	| [$877d: sta	$00ab]
-	POP_SR
+
 	cmp.b	#0x1e,d0                         	| [$877f: cmp #$1e]
 	* bcc=>bcs
 	bcs	l_8722                             	| [$8781: bcc	$8722]
@@ -5735,7 +5645,7 @@ l_878b:
 	GET_ADDRESS	screen_address_lsb_00ad                     	| [$878b: lda	$00ad]
 	move.b	(a0),d0                         	| [$878b: lda	$00ad]
 	                           	| [$878d: clc]
-	add.b	#0x01,d0                        	| [$878e: adc #$01]
+	addq.b	#0x01,d0                        	| [$878e: adc #$01]
 	PUSH_SR
 	GET_ADDRESS	screen_address_lsb_00ad                     	| [$8790: sta	$00ad]
 	move.b	d0,(a0)                         	| [$8790: sta	$00ad]
@@ -5858,7 +5768,7 @@ l_886b:
 	
 	GET_ADDRESS	screen_address_00aa+1                     	| [$8885: lda	$00ab]
 	move.b	(a0),d0                         	| [$8885: lda	$00ab]
-	move.b	#0x00,d4	| [$8887: adc #$00]
+	clr.b	d4	| [$8887: adc #$00]
 	addx.b	d4,d0                        	| [$8887: adc #$00]
 	
 	GET_ADDRESS	screen_address_00aa+1                     	| [$8889: sta	$00ab]
@@ -5886,10 +5796,8 @@ l_88aa:
 	subq.b	#1,(a0)                         	| [$88b1: dec	$0684]
 	bne	l_88bb                             	| [$88b4: bne	$88bb]
 	move.b	#0x02,d0                        	| [$88b6: lda #$02]
-	PUSH_SR
 	GET_ADDRESS	0x0682                     	| [$88b8: sta	$0682]
 	move.b	d0,(a0)                         	| [$88b8: sta	$0682]
-	POP_SR
 l_88bb:
 	rts                                    	| [$88bb: rts]
 l_88bc:
@@ -5912,10 +5820,8 @@ l_88ce:
 	subq.b	#1,(a0)                         	| [$88ce: dec	$0683]
 	bne	l_88d8                             	| [$88d1: bne	$88d8]
 	move.b	#0x02,d0                        	| [$88d3: lda #$02]
-	PUSH_SR
 	GET_ADDRESS	0x0682                     	| [$88d5: sta	$0682]
 	move.b	d0,(a0)                         	| [$88d5: sta	$0682]
-	POP_SR
 l_88d8:
 	* bne => bra 
 	bra	l_8945                             	| [$88d8: bne	$8945]
@@ -5932,10 +5838,8 @@ l_88da:
 l_88e5:
 	clr.b	d0                               	| [$88e5: lda #$00]
 l_88e7:
-	PUSH_SR
 	GET_ADDRESS	0x0688                     	| [$88e7: sta	$0688]
 	move.b	d0,(a0)                         	| [$88e7: sta	$0688]
-	POP_SR
 	jbsr	l_8946                            	| [$88ea: jsr	$8946]
 	GET_ADDRESS	0x0687                     	| [$88ed: lda	$0687]
 	move.b	(a0),d0                         	| [$88ed: lda	$0687]
@@ -5943,10 +5847,8 @@ l_88e7:
 	bne	l_8907                             	| [$88f2: bne	$8907]
 	GET_ADDRESS_X	0x5c                     	| [$88f4: lda ($5c, x)]
 	move.b	(a0),d0                         	| [$88f4: lda ($5c, x)]
-	PUSH_SR
 	GET_ADDRESS	0x0685                     	| [$88f6: sta	$0685]
 	move.b	d0,(a0)                         	| [$88f6: sta	$0685]
-	POP_SR
 	jbsr	l_8946                            	| [$88f9: jsr	$8946]
 	GET_ADDRESS_X	0x5c                     	| [$88fc: lda ($5c, x)]
 	move.b	(a0),d0                         	| [$88fc: lda ($5c, x)]
@@ -6177,26 +6079,20 @@ l_89e6:
 	move.b	(a0),d0                         	| [$89f8: lda	$00aa]
 	                           	| [$89fa: clc]
 	add.b	#0x80,d0                        	| [$89fb: adc #$80]
-	PUSH_SR
 	GET_ADDRESS	screen_address_00aa                     	| [$89fd: sta	$00aa]
 	move.b	d0,(a0)                         	| [$89fd: sta	$00aa]
-	POP_SR
 	GET_ADDRESS	screen_address_00aa+1                     	| [$89ff: lda	$00ab]
 	move.b	(a0),d0                         	| [$89ff: lda	$00ab]
-	move.b	#0x00,d4	| [$8a01: adc #$00]
+	clr.b	d4	| [$8a01: adc #$00]
 	addx.b	d4,d0                        	| [$8a01: adc #$00]
-	PUSH_SR
 	GET_ADDRESS	screen_address_00aa+1                     	| [$8a03: sta	$00ab]
 	move.b	d0,(a0)                         	| [$8a03: sta	$00ab]
-	POP_SR
 	GET_ADDRESS	0x005a                     	| [$8a05: lda	$005a]
 	move.b	(a0),d0                         	| [$8a05: lda	$005a]
 	                           	| [$8a07: clc]
 	add.b	#0x08,d0                        	| [$8a08: adc #$08]
-	PUSH_SR
 	GET_ADDRESS	0x005a                     	| [$8a0a: sta	$005a]
 	move.b	d0,(a0)                         	| [$8a0a: sta	$005a]
-	POP_SR
 	GET_ADDRESS	0x005b                     	| [$8a0c: lda	$005b]
 	move.b	(a0),d0                         	| [$8a0c: lda	$005b]
 	move.b	#0x00,d4	| [$8a0e: adc #$00]
@@ -6215,7 +6111,7 @@ l_89e6:
 	rts                                    	| [$8a1c: rts]
 
 
-
+* not reached?
 	jbsr	l_e649                            	| [$8b0f: jsr	$e649]
 	CLR_I_FLAG                             	| [$8b12: cli]
 	jbsr	l_9290                            	| [$8b13: jsr	$9290]
@@ -6414,54 +6310,45 @@ l_8c02:
 	cmp.b	#0x3a,d0                         	| [$8c0c: cmp #$3a]
 	* bcc=>bcs
 	bcs	l_8c12                             	| [$8c0e: bcc	$8c12]
-	move.b	#0x07,d4	| [$8c10: adc #$07]
-	addx.b	d4,d0                        	| [$8c10: adc #$07]
+	* carry is set, just add 8 instead of 7
+	addq.b	#8,d0                        	| [$8c10: adc #$07]
 l_8c12:
-	PUSH_SR
 	GET_ADDRESS	0x11a0                     	| [$8c12: sta	$11a0]
 	move.b	d0,(a0)                         	| [$8c12: sta	$11a0]
-	POP_SR
 	move.b	d1,d0                           	| [$8c15: txa]
 	and.b	#0x0f,d0                         	| [$8c16: and #$0f]
 	or.b	#0x30,d0                          	| [$8c18: ora #$30]
 	cmp.b	#0x3a,d0                         	| [$8c1a: cmp #$3a]
 	* bcc=>bcs
 	bcs	l_8c20                             	| [$8c1c: bcc	$8c20]
-	move.b	#0x07,d4	| [$8c1e: adc #$07]
-	addx.b	d4,d0                        	| [$8c1e: adc #$07]
+	* carry is set, just add 8 instead of 7
+	addq.b	#8,d0                        	| [$8c1e: adc #$07]
 l_8c20:
-	PUSH_SR
 	GET_ADDRESS	0x11a2                     	| [$8c20: sta	$11a2]
 	move.b	d0,(a0)                         	| [$8c20: sta	$11a2]
-	POP_SR
 	move.b	d2,d0                           	| [$8c23: tya]
 	lsr.b	#4,d0                            	| [$8c24: lsr a] * 4
 	or.b	#0x30,d0                          	| [$8c28: ora #$30]
 	cmp.b	#0x3a,d0                         	| [$8c2a: cmp #$3a]
 	* bcc=>bcs
 	bcs	l_8c30                             	| [$8c2c: bcc	$8c30]
-	move.b	#0x07,d4	| [$8c2e: adc #$07]
-	addx.b	d4,d0                        	| [$8c2e: adc #$07]
+	* carry is set, just add 8 instead of 7
+	addq.b	#8,d0                        	| [$8c2e: adc #$07]
 l_8c30:
-	PUSH_SR
 	GET_ADDRESS	0x11a6                     	| [$8c30: sta	$11a6]
 	move.b	d0,(a0)                         	| [$8c30: sta	$11a6]
-	POP_SR
 	move.b	d2,d0                           	| [$8c33: tya]
 	and.b	#0x0f,d0                         	| [$8c34: and #$0f]
 	or.b	#0x30,d0                          	| [$8c36: ora #$30]
 	cmp.b	#0x3a,d0                         	| [$8c38: cmp #$3a]
 	* bcc=>bcs
 	bcs	l_8c3e                             	| [$8c3a: bcc	$8c3e]
-	move.b	#0x07,d4	| [$8c3c: adc #$07]
-	addx.b	d4,d0                        	| [$8c3c: adc #$07]
+	* carry is set, just add 8 instead of 7
+	addq.b	#8,d0                        	| [$8c3c: adc #$07]
 l_8c3e:
-	PUSH_SR
 	GET_ADDRESS	0x11a8                     	| [$8c3e: sta	$11a8]
 	move.b	d0,(a0)                         	| [$8c3e: sta	$11a8]
-	POP_SR
 	clr.b	d0                               	| [$8c41: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x11a1                     	| [$8c43: sta	$11a1]
 	move.b	d0,(a0)                         	| [$8c43: sta	$11a1]
 	GET_ADDRESS	0x11a3                     	| [$8c46: sta	$11a3]
@@ -6472,16 +6359,13 @@ l_8c3e:
 	move.b	d0,(a0)                         	| [$8c4c: sta	$11a9]
 	GET_ADDRESS	0x11ad                     	| [$8c4f: sta	$11ad]
 	move.b	d0,(a0)                         	| [$8c4f: sta	$11ad]
-	POP_SR
 l_8c52:
 	clr.b	d1                               	| [$8c52: ldx #$00]
 l_8c54:
 	GET_ADDRESS	0x8c8c                     	| [$8c54: lda	$8c8c, x]
 	move.b	(a0,d1.w),d0                    	| [$8c54: lda	$8c8c, x]
-	PUSH_SR
 	GET_ADDRESS	0x118a                     	| [$8c57: sta	$118a, x]
     move.b	d0,(a0,d1.w)                 	| [$8c57: sta	$118a, x]
-	POP_SR
 	addq.b	#1,d1                           	| [$8c5a: inx]
 	cmp.b	#0x14,d1                         	| [$8c5b: cpx #$14]
 	* bcc=>bcs
@@ -6489,19 +6373,15 @@ l_8c54:
 	move.b	#0x0f,d1                        	| [$8c5f: ldx #$0f]
 	st.b	d0                                	| [$8c61: lda #$ff]
 l_8c63:
-	PUSH_SR
 	GET_ADDRESS	0x2000                     	| [$8c63: sta	$2000, x]
     move.b	d0,(a0,d1.w)                 	| [$8c63: sta	$2000, x]
-	POP_SR
 	subq.b	#1,d1                           	| [$8c66: dex]
 	bpl	l_8c63                             	| [$8c67: bpl	$8c63]
 	clr.b	d0                               	| [$8c69: lda #$00]
 	move.b	d0,d1                           	| [$8c6b: tax]
 	move.b	d0,d2                           	| [$8c6c: tay]
-	PUSH_SR
 	GET_ADDRESS	0x2000                     	| [$8c6d: sta	$2000]
 	move.b	d0,(a0)                         	| [$8c6d: sta	$2000]
-	POP_SR
 	move.b	#0xa8,d0	| [$8c70: lda #$a8]
 	* pokey set audio channel frequency 1
 	*PUSH_SR
@@ -6626,6 +6506,7 @@ l_9264:
 	lsr.b	#4,d0                            	| [$9265: lsr a] * 4
 	cmp.b	#0x0a,d0                         	| [$9269: cmp #$0a]
 	* bcc=>bcs
+	SET_X_FROM_CLEARED_C
 	bcs	l_9270                             	| [$926b: bcc	$9270]
 	                           	| [$926d: clc]
 	add.b	#0x07,d0                        	| [$926e: adc #$07]
@@ -6648,6 +6529,7 @@ l_9270:
 	move.w	(sp)+,d0                        	| [$927c: pla]
 	and.b	#0x0f,d0                         	| [$927d: and #$0f]
 	cmp.b	#0x0a,d0                         	| [$927f: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_9286                             	| [$9281: bcc	$9286]
 	                           	| [$9283: clc]
@@ -6687,13 +6569,10 @@ l_939c:
 	bcs	l_93a6                             	| [$93a2: bcc	$93a6]
 	clr.b	d2                               	| [$93a4: ldy #$00]
 l_93a6:
-	PUSH_SR
 	GET_ADDRESS	0x0689                     	| [$93a6: sty	$0689]
 	move.b	d2,(a0)                         	| [$93a6: sty	$0689]
-	POP_SR
 	GET_ADDRESS	0x93c2                     	| [$93a9: lda	$93c2, y]
 	move.b	(a0,d2.w),d0                    	| [$93a9: lda	$93c2, y]
-	PUSH_SR
 	GET_ADDRESS	0x200f                     	| [$93ac: sta	$200f]
 	move.b	d0,(a0)                         	| [$93ac: sta	$200f]
 	GET_ADDRESS	0x2061                     	| [$93af: sta	$2061]
@@ -6702,7 +6581,6 @@ l_93a6:
 	move.b	d0,(a0)                         	| [$93b2: sta	$2062]
 	GET_ADDRESS	0x2063                     	| [$93b5: sta	$2063]
 	move.b	d0,(a0)                         	| [$93b5: sta	$2063]
-	POP_SR
 	move.b	d2,d0                           	| [$93b8: tya]
 	                           	| [$93b9: clc]
 	add.b	#0x1c,d0                        	| [$93ba: adc #$1c]
@@ -6972,19 +6850,15 @@ l_94e5:
 	move.b	(a0),d0                         	| [$94ea: lda	$068b]
 	                           	| [$94ed: clc]
 	add.b	#0x03,d0                        	| [$94ee: adc #$03]
-	PUSH_SR
 	GET_ADDRESS	0x068b                     	| [$94f0: sta	$068b]
 	move.b	d0,(a0)                         	| [$94f0: sta	$068b]
-	POP_SR
 	cmp.b	#0x18,d0                         	| [$94f3: cmp #$18]
 	* bcc=>bcs
 	bcs	l_94e5                             	| [$94f5: bcc	$94e5]
 l_94f7:
 	move.b	#0x03,d0                        	| [$94f7: lda #$03]
-	PUSH_SR
 	GET_ADDRESS	0x068b                     	| [$94f9: sta	$068b]
 	move.b	d0,(a0)                         	| [$94f9: sta	$068b]
-	POP_SR
 	rts                                    	| [$94fc: rts]
 l_94fd:
 	jbsr	l_93d8                            	| [$94fd: jsr	$93d8]
@@ -7154,10 +7028,9 @@ l_95b1:
 	jbsr	l_8cbc                            	| [$95b3: jsr	$8cbc]
 	GET_ADDRESS	0x06ee                     	| [$95b6: lda	$06ee]
 	move.b	(a0),d0                         	| [$95b6: lda	$06ee]
-	SET_XC_FLAGS                           	| [$95b9: sec]
+	                           	| [$95b9: sec]
 	GET_ADDRESS	0x06ef                     	| [$95ba: sbc	$06ef]
-	move.b	(a0),d4	| [$95ba: sbc	$06ef]
-	subx.b	d4,d0                         	| [$95ba: sbc	$06ef]
+	sub.b	(a0),d0	| [$95ba: sbc	$06ef]
 	cmp.b	#0x07,d0                         	| [$95bd: cmp #$07]
 	* bcc=>bcs
 	bcs	l_95c5                             	| [$95bf: bcc	$95c5]
@@ -7173,28 +7046,20 @@ l_95c7:
 	jbsr	l_940e                            	| [$95ce: jsr	$940e]
 	GET_ADDRESS	screen_address_lsb_00ad                     	| [$95d1: lda	$00ad]
 	move.b	(a0),d0                         	| [$95d1: lda	$00ad]
-	PUSH_SR
 	GET_ADDRESS	0x06ea                     	| [$95d3: sta	$06ea]
 	move.b	d0,(a0)                         	| [$95d3: sta	$06ea]
-	POP_SR
 	GET_ADDRESS	screen_address_msb_00ae                     	| [$95d6: lda	$00ae]
 	move.b	(a0),d0                         	| [$95d6: lda	$00ae]
-	PUSH_SR
 	GET_ADDRESS	0x06eb                     	| [$95d8: sta	$06eb]
 	move.b	d0,(a0)                         	| [$95d8: sta	$06eb]
-	POP_SR
 	clr.b	d2                               	| [$95db: ldy #$00]
 	GET_ADDRESS_Y	screen_address_lsb_00ad                     	| [$95dd: lda ($ad), y]
 	move.b	(a0,d2.w),d0                    	| [$95dd: lda ($ad), y]
-	PUSH_SR
 	GET_ADDRESS	logical_grid_address_lsb_001f                     	| [$95df: sta	$001f]
 	move.b	d0,(a0)                         	| [$95df: sta	$001f]
-	POP_SR
 	lsr.b	#3,d0                            	| [$95e1: lsr a] * 3
-	PUSH_SR
 	GET_ADDRESS	0x0021                     	| [$95e4: sta	$0021]
 	move.b	d0,(a0)                         	| [$95e4: sta	$0021]
-	POP_SR
 	GET_ADDRESS	logical_grid_address_lsb_001f                     	| [$95e6: lda	$001f]
 	move.b	(a0),d0                         	| [$95e6: lda	$001f]
 	and.b	#0x07,d0                         	| [$95e8: and #$07]
@@ -7612,11 +7477,10 @@ l_9a90:
 	bpl	game_mainloop_9A48                 	| [$9a98: bpl game_mainloop_9A48]
 	GET_ADDRESS	0x0016                     	| [$9a9a: lda	$0016]
 	move.b	(a0),d0                         	| [$9a9a: lda	$0016]
-	PUSH_SR
 	GET_ADDRESS	0x0015                     	| [$9a9c: sta	$0015]
 	move.b	d0,(a0)                         	| [$9a9c: sta	$0015]
-	POP_SR
 	cmp.b	#0x03,d0                         	| [$9a9e: cmp #$03]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_9aa6                             	| [$9aa0: bcc	$9aa6]
 	move.b	#0x02,d4	| [$9aa2: sbc #$02]
@@ -7625,10 +7489,8 @@ l_9a90:
 l_9aa6:
 	move.b	#0x01,d0                        	| [$9aa6: lda #$01]
 l_9aa8:
-	PUSH_SR
 	GET_ADDRESS	0x0016                     	| [$9aa8: sta	$0016]
 	move.b	d0,(a0)                         	| [$9aa8: sta	$0016]
-	POP_SR
 l_9aaa:
 	jbsr	l_d6db                            	| [$9aaa: jsr	$d6db]
 	jbsr	l_c247                            	| [$9aad: jsr	$c247]
@@ -8087,7 +7949,7 @@ l_9ccc:
 	                           	| [$9ce8: sec]
 	GET_ADDRESS	unknown_001d                     	| [$9ce9: sbc	$001d]
 	sub.b	(a0),d0	| [$9ce9: sbc	$001d]
-	move.b	#0x00,d4	| [$9ceb: adc #$00]
+	clr.b	d4	| [$9ceb: adc #$00]
 	addx.b	d4,d0                        	| [$9ceb: adc #$00]
 	jbsr	draw_shape_row_d5e4                            	| [$9ced: jsr	$d5e4]
 	jra	l_9ca8                             	| [$9cf0: jmp	$9ca8]
@@ -9204,7 +9066,7 @@ l_a24c:
 	GET_ADDRESS	unknown_001d                     	| [$a265: sta	$001d]
 	move.b	d0,(a0)                         	| [$a265: sta	$001d]
 	POP_SR
-	jra	l_b53f                             	| [$a267: jmp	$b53f]
+	jra	update_player_score_b53f                             	| [$a267: jmp	$b53f]
 l_a26a:
 	rts                                    	| [$a26a: rts]
 
@@ -9547,13 +9409,11 @@ l_a3e1:
 	move.b	(a0),d0                         	| [$a3e6: lda	$001f]
 	                           	| [$a3e8: sec]
 	sub.b	#0x10,d0                        	| [$a3e9: sbc #$10]
-	PUSH_SR
 	GET_ADDRESS	unknown_001d                     	| [$a3eb: sta	$001d]
 	move.b	d0,(a0)                         	| [$a3eb: sta	$001d]
-	POP_SR
 	GET_ADDRESS	logical_grid_address_msb_or_controls_0020                     	| [$a3ed: lda	$0020]
 	move.b	(a0),d0                         	| [$a3ed: lda	$0020]
-	move.b	#0x00,d4	| [$a3ef: sbc #$00]
+	clr.b	d4	| [$a3ef: sbc #$00]
 	subx.b	d4,d0                        	| [$a3ef: sbc #$00]
 	PUSH_SR
 	GET_ADDRESS	0x001e                     	| [$a3f1: sta	$001e]
@@ -10151,6 +10011,7 @@ l_a6d0:
 	                           	| [$a6e2: clc]
 	add.b	#0x01,d0                        	| [$a6e3: adc #$01]
 	cmp.b	#0x3a,d0                         	| [$a6e5: cmp #$3a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_a6ec                             	| [$a6e7: bcc	$a6ec]
 	* carry is set in the original code, can use sub
@@ -10164,6 +10025,7 @@ l_a6ec:
 	move.b	#0x00,d4	| [$a6f2: adc #$00]
 	addx.b	d4,d0                        	| [$a6f2: adc #$00]
 	cmp.b	#0x3a,d0                         	| [$a6f4: cmp #$3a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_a6fb                             	| [$a6f6: bcc	$a6fb]
 	* carry is set in the original code, can use sub
@@ -10177,6 +10039,7 @@ l_a6fb:
 	move.b	#0x00,d4	| [$a701: adc #$00]
 	addx.b	d4,d0                        	| [$a701: adc #$00]
 	cmp.b	#0x3a,d0                         	| [$a703: cmp #$3a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_a70a                             	| [$a705: bcc	$a70a]
 	* carry is set in the original code, can use sub
@@ -10190,6 +10053,7 @@ l_a70a:
 	move.b	#0x00,d4	| [$a710: adc #$00]
 	addx.b	d4,d0                        	| [$a710: adc #$00]
 	cmp.b	#0x3a,d0                         	| [$a712: cmp #$3a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_a718                             	| [$a714: bcc	$a718]
 	move.b	#0x39,d0                        	| [$a716: lda #$39]
@@ -10223,7 +10087,7 @@ l_a732:
 	GET_ADDRESS	0x0649                     	| [$a73c: lda	$0649, x]
 	move.b	(a0,d1.w),d0                    	| [$a73c: lda	$0649, x]
 	                           	| [$a73f: clc]
-	add.b	#0x01,d0                        	| [$a740: adc #$01]
+	addq.b	#0x01,d0                        	| [$a740: adc #$01]
 	cmp.b	#0x78,d0                         	| [$a742: cmp #$78]
 	* bcc=>bcs
 	bcs	l_a748                             	| [$a744: bcc	$a748]
@@ -10652,7 +10516,7 @@ l_a945:
 	move.b	#0x30,d0                        	| [$a969: lda #$30]
 l_a96b:
 	PUSH_SR
-	GET_ADDRESS	0x0600                     	| [$a96b: sta	$0600, x]
+	GET_ADDRESS	score_digit_1_0600                     	| [$a96b: sta	$0600, x]
     move.b	d0,(a0,d1.w)                 	| [$a96b: sta	$0600, x]
 	GET_ADDRESS	0x0606                     	| [$a96e: sta	$0606, x]
     move.b	d0,(a0,d1.w)                 	| [$a96e: sta	$0606, x]
@@ -10704,35 +10568,25 @@ l_a9ab:
 	bcs	l_a9d1                             	| [$a9af: bcc	$a9d1]
 	move.b	#0x32,d2                        	| [$a9b1: ldy #$32]
 	move.b	#0x0a,d0                        	| [$a9b3: lda #$0a]
-	PUSH_SR
 	GET_ADDRESS	0x0649                     	| [$a9b5: sta	$0649, x]
     move.b	d0,(a0,d1.w)                 	| [$a9b5: sta	$0649, x]
 	GET_ADDRESS	0x0079                     	| [$a9b8: sta	$0079, x]
     move.b	d0,(a0,d1.w)                 	| [$a9b8: sta	$0079, x]
-	POP_SR
 	tst.b	d1                               	| [$a9ba: cpx #$00]
 	bne	l_a9c9                             	| [$a9bc: bne	$a9c9]
-	PUSH_SR
 	GET_ADDRESS	0x0601                     	| [$a9be: sty	$0601]
 	move.b	d2,(a0)                         	| [$a9be: sty	$0601]
-	POP_SR
 	move.b	#0x02,d0                        	| [$a9c1: lda #$02]
-	PUSH_SR
 	GET_ADDRESS	0x0615                     	| [$a9c3: sta	$0615]
 	move.b	d0,(a0)                         	| [$a9c3: sta	$0615]
-	POP_SR
 * clv+bvc => jra
 	jra	l_a9d1                             	| [$a9c7: jra	$a9d1]
 l_a9c9:
-	PUSH_SR
 	GET_ADDRESS	0x0607                     	| [$a9c9: sty	$0607]
 	move.b	d2,(a0)                         	| [$a9c9: sty	$0607]
-	POP_SR
 	move.b	#0x02,d0                        	| [$a9cc: lda #$02]
-	PUSH_SR
 	GET_ADDRESS	0x0617                     	| [$a9ce: sta	$0617]
 	move.b	d0,(a0)                         	| [$a9ce: sta	$0617]
-	POP_SR
 l_a9d1:
 	GET_ADDRESS	0x002f                     	| [$a9d1: lda	$002f]
 	move.b	(a0),d0                         	| [$a9d1: lda	$002f]
@@ -10741,40 +10595,28 @@ l_a9d1:
 	bcs	l_a9f7                             	| [$a9d5: bcc	$a9f7]
 	move.b	#0x34,d2                        	| [$a9d7: ldy #$34]
 	move.b	#0x14,d0                        	| [$a9d9: lda #$14]
-	PUSH_SR
 	GET_ADDRESS	0x0649                     	| [$a9db: sta	$0649, x]
     move.b	d0,(a0,d1.w)                 	| [$a9db: sta	$0649, x]
 	GET_ADDRESS	0x0079                     	| [$a9de: sta	$0079, x]
     move.b	d0,(a0,d1.w)                 	| [$a9de: sta	$0079, x]
-	POP_SR
 	tst.b	d1                               	| [$a9e0: cpx #$00]
 	bne	l_a9ef                             	| [$a9e2: bne	$a9ef]
-	PUSH_SR
 	GET_ADDRESS	0x0601                     	| [$a9e4: sty	$0601]
 	move.b	d2,(a0)                         	| [$a9e4: sty	$0601]
-	POP_SR
 	move.b	#0x04,d0                        	| [$a9e7: lda #$04]
-	PUSH_SR
 	GET_ADDRESS	0x0615                     	| [$a9e9: sta	$0615]
 	move.b	d0,(a0)                         	| [$a9e9: sta	$0615]
-	POP_SR
 * clv+bvc => jra
 	jra	l_a9f7                             	| [$a9ed: jra	$a9f7]
 l_a9ef:
-	PUSH_SR
 	GET_ADDRESS	0x0607                     	| [$a9ef: sty	$0607]
 	move.b	d2,(a0)                         	| [$a9ef: sty	$0607]
-	POP_SR
 	move.b	#0x04,d0                        	| [$a9f2: lda #$04]
-	PUSH_SR
 	GET_ADDRESS	0x0617                     	| [$a9f4: sta	$0617]
 	move.b	d0,(a0)                         	| [$a9f4: sta	$0617]
-	POP_SR
 l_a9f7:
-	PUSH_SR
 	GET_ADDRESS	0x064e                     	| [$a9f7: stx	$064e]
 	move.b	d1,(a0)                         	| [$a9f7: stx	$064e]
-	POP_SR
 	jbsr	l_b605                            	| [$a9fa: jsr	$b605]
 	GET_ADDRESS	0x064e                     	| [$a9fd: ldx	$064e]
 	move.b	(a0),d1                         	| [$a9fd: ldx	$064e]
@@ -10788,7 +10630,7 @@ l_aa01:
 	* bcc=>bcs
 	bcs	l_aa18                             	| [$aa0a: bcc	$aa18]
 	                           	| [$aa0c: sec]
-	sub.b	#0x02,d0                        	| [$aa0d: sbc #$02]
+	subq.b	#0x02,d0                        	| [$aa0d: sbc #$02]
 	cmp.b	#0x08,d0                         	| [$aa0f: cmp #$08]
 	* bcc=>bcs
 	bcs	l_aa15                             	| [$aa11: bcc	$aa15]
@@ -10799,17 +10641,13 @@ l_aa15:
 l_aa18:
 	clr.b	d0                               	| [$aa18: lda #$00]
 l_aa1a:
-	PUSH_SR
 	GET_ADDRESS	0x0615                     	| [$aa1a: sta	$0615]
 	move.b	d0,(a0)                         	| [$aa1a: sta	$0615]
-	POP_SR
 	jbsr	l_a7ad                            	| [$aa1d: jsr	$a7ad]
 	GET_ADDRESS	0x06af                     	| [$aa20: lda	$06af]
 	move.b	(a0),d0                         	| [$aa20: lda	$06af]
-	PUSH_SR
 	GET_ADDRESS	0x0649                     	| [$aa23: sta	$0649]
 	move.b	d0,(a0)                         	| [$aa23: sta	$0649]
-	POP_SR
 * clv+bvc => jra
 	jra	l_aa4a                             	| [$aa27: jra	$aa4a]
 l_aa29:
@@ -10819,7 +10657,7 @@ l_aa29:
 	* bcc=>bcs
 	bcs	l_aa3c                             	| [$aa2e: bcc	$aa3c]
 	                           	| [$aa30: sec]
-	sub.b	#0x02,d0                        	| [$aa31: sbc #$02]
+	subq.b	#0x02,d0                        	| [$aa31: sbc #$02]
 	cmp.b	#0x08,d0                         	| [$aa33: cmp #$08]
 	* bcc=>bcs
 	bcs	l_aa39                             	| [$aa35: bcc	$aa39]
@@ -10830,28 +10668,22 @@ l_aa39:
 l_aa3c:
 	clr.b	d0                               	| [$aa3c: lda #$00]
 l_aa3e:
-	PUSH_SR
 	GET_ADDRESS	0x0617                     	| [$aa3e: sta	$0617]
 	move.b	d0,(a0)                         	| [$aa3e: sta	$0617]
-	POP_SR
 	jbsr	l_a7ad                            	| [$aa41: jsr	$a7ad]
 	GET_ADDRESS	0x06af                     	| [$aa44: lda	$06af]
 	move.b	(a0),d0                         	| [$aa44: lda	$06af]
-	PUSH_SR
 	GET_ADDRESS	0x064a                     	| [$aa47: sta	$064a]
 	move.b	d0,(a0)                         	| [$aa47: sta	$064a]
-	POP_SR
 l_aa4a:
 	rts                                    	| [$aa4a: rts]
 l_aa4b:
 	GET_ADDRESS	0x0045                     	| [$aa4b: lda	$0045]
 	move.b	(a0),d0                         	| [$aa4b: lda	$0045]
 	                           	| [$aa4d: clc]
-	add.b	#0x03,d0                        	| [$aa4e: adc #$03]
-	PUSH_SR
+	addq.b	#0x03,d0                        	| [$aa4e: adc #$03]
 	GET_ADDRESS	0x0007                     	| [$aa50: sta	$0007]
 	move.b	d0,(a0)                         	| [$aa50: sta	$0007]
-	POP_SR
 	jbsr	l_abc0                            	| [$aa52: jsr	$abc0]
 	SET_I_FLAG                             	| [$aa55: sei]
 	clr.b	d0                               	| [$aa56: lda #$00]
@@ -11261,7 +11093,7 @@ l_ac31:
 	bne	l_ac4c                             	| [$ac33: bne	$ac4c]
 	move.b	#0x30,d0                        	| [$ac35: lda #$30]
 	PUSH_SR
-	GET_ADDRESS	0x0600                     	| [$ac37: sta	$0600, y]
+	GET_ADDRESS	score_digit_1_0600                     	| [$ac37: sta	$0600, y]
     move.b	d0,(a0,d2.w)                 	| [$ac37: sta	$0600, y]
 	POP_SR
 	cmp.b	#0x04,d2                         	| [$ac3a: cpy #$04]
@@ -11882,7 +11714,7 @@ l_aeb7:
 
 l_aef3:
 	                           	| [$aef3: sec]
-	sub.b	#0x08,d0                        	| [$aef4: sbc #$08]
+	subq.b	#0x08,d0                        	| [$aef4: sbc #$08]
 	                           	| [$aef6: clc]
 	add.b	#0xd9,d0                        	| [$aef7: adc #$d9]
 	GET_ADDRESS	unknown_001d                     	| [$aef9: sta	$001d]
@@ -12198,7 +12030,7 @@ l_b07b:
 	move.b	(a0),d0                         	| [$b087: lda	$281a]
 	and.b	#0x07,d0                         	| [$b08a: and #$07]
 	                           	| [$b08c: clc]
-	add.b	#0x04,d0                        	| [$b08d: adc #$04]
+	addq.b	#0x04,d0                        	| [$b08d: adc #$04]
 	move.b	d0,d2                           	| [$b08f: tay]
 	clr.b	d0                               	| [$b090: lda #$00]
 	PUSH_SR
@@ -12280,10 +12112,8 @@ l_b14f:
 	cmp.b	(a0),d0                          	| [$b152: cmp	$001b]
 	* bcs=>bcc
 	bcc	l_b158                             	| [$b154: bcs	$b158]
-	PUSH_SR
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b156: sta	$001b]
 	move.b	d0,(a0)                         	| [$b156: sta	$001b]
-	POP_SR
 l_b158:
 	addq.b	#1,d1                           	| [$b158: inx]
 	cmp.b	#0x0d,d1                         	| [$b159: cpx #$0d]
@@ -12304,8 +12134,8 @@ l_b164:
 	cmp.b	#0x0d,d0                         	| [$b16c: cmp #$0d]
 	* bcc=>bcs
 	bcs	l_b172                             	| [$b16e: bcc	$b172]
-	move.b	#0x08,d4	| [$b170: sbc #$08]
-	subx.b	d4,d0                        	| [$b170: sbc #$08]
+	* carry is set, just sub 8
+	subq.b	#8,d0                        	| [$b170: sbc #$08]
 l_b172:
 	move.b	d0,d1                           	| [$b172: tax]
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b173: sta	$001b]
@@ -12537,11 +12367,8 @@ l_b250:
 l_b264:
 	GET_ADDRESS_Y	logical_grid_address_lsb_001f                     	| [$b264: lda ($1f), y]
 	move.b	(a0,d2.w),d0                    	| [$b264: lda ($1f), y]
-	PUSH_SR
 	GET_ADDRESS_Y	0x21                     	| [$b266: sta ($21), y]
 	move.b	d0,(a0,d2.w)                    	| [$b266: sta ($21), y]
-
-	POP_SR
 	addq.b	#1,d2                           	| [$b268: iny]
 	cmp.b	#0x10,d2                         	| [$b269: cpy #$10]
 	* bcc=>bcs
@@ -12635,8 +12462,8 @@ l_b2bb:
 	cmp.b	#0x64,d0                         	| [$b2bb: cmp #$64]
 	* bcc=>bcs
 	bcs	l_b2c5                             	| [$b2bd: bcc	$b2c5]
-	move.b	#0x64,d4	| [$b2bf: sbc #$64]
-	subx.b	d4,d0                        	| [$b2bf: sbc #$64]
+	* carry is set, simple sub works
+	sub.b	#0x64,d0	| [$b2bf: sbc #$64]
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b2c1: inc	$001b]
 	addq.b	#1,(a0)                         	| [$b2c1: inc	$001b]
 	bne	l_b2bb                             	| [$b2c3: bne	$b2bb]
@@ -12644,16 +12471,14 @@ l_b2c5:
 	cmp.b	#0x0a,d0                         	| [$b2c5: cmp #$0a]
 	* bcc=>bcs
 	bcs	l_b2cf                             	| [$b2c7: bcc	$b2cf]
-	move.b	#0x0a,d4	| [$b2c9: sbc #$0a]
-	subx.b	d4,d0                        	| [$b2c9: sbc #$0a]
+	* carry is set, simple sub works
+	sub.b	#0x0a,d0                        	| [$b2c9: sbc #$0a]
 	GET_ADDRESS	0x001c                     	| [$b2cb: inc	$001c]
 	addq.b	#1,(a0)                         	| [$b2cb: inc	$001c]
 	bne	l_b2c5                             	| [$b2cd: bne	$b2c5]
 l_b2cf:
-	PUSH_SR
 	GET_ADDRESS	unknown_001d                     	| [$b2cf: sta	$001d]
 	move.b	d0,(a0)                         	| [$b2cf: sta	$001d]
-	POP_SR
 	rts                                    	| [$b2d1: rts]
 l_b2d2:
 	GET_ADDRESS	0x0097                     	| [$b2d2: lda	$0097, x]
@@ -12697,10 +12522,8 @@ l_b2f2:
 	* bcc=>bcs
 	bcs	l_b30e                             	| [$b300: bcc	$b30e]
 	move.b	#0x01,d0                        	| [$b302: lda #$01]
-	PUSH_SR
 	GET_ADDRESS	0x063f                     	| [$b304: sta	$063f, x]
     move.b	d0,(a0,d1.w)                 	| [$b304: sta	$063f, x]
-	POP_SR
 	move.b	d1,d0                           	| [$b307: txa]
 	move.w	d0,-(sp)                        	| [$b308: pha]
 	jbsr	l_b20d                            	| [$b309: jsr	$b20d]
@@ -12758,19 +12581,18 @@ l_b325:
 	POP_SR
 l_b341:
 	jbsr	l_9ec0                            	| [$b341: jsr	$9ec0]
-	PUSH_SR
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b344: stx	$001b]
 	move.b	d1,(a0)                         	| [$b344: stx	$001b]
-	POP_SR
 	move.b	d1,d0                           	| [$b346: txa]
 	asl.b	#1,d0                            	| [$b347: asl a]
 	move.b	#0x83,d4	| [$b348: adc #$83]
 	addx.b	d4,d0                        	| [$b348: adc #$83]
 	move.b	d0,d1                           	| [$b34a: tax]
 l_b34b:
-	jbsr	l_b4ac                            	| [$b34b: jsr	$b4ac]
+	jbsr	random_b4ac                            	| [$b34b: jsr	$b4ac]
 	and.b	#0x07,d0                         	| [$b34e: and #$07]
 	beq	l_b34b                             	| [$b350: beq	$b34b]
+	* set next tile (pseudo-random)
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b352: ldx	$001b]
 	move.b	(a0),d1                         	| [$b352: ldx	$001b]
 	GET_ADDRESS	current_shape_array_008b                     	| [$b354: sta	$008b, x]
@@ -12919,20 +12741,16 @@ l_b3ca:
 	GET_ADDRESS	0x0003                     	| [$b403: adc	$0003]
 	move.b	(a0),d4	| [$b403: adc	$0003]
 	addx.b	d4,d0                         	| [$b403: adc	$0003]
-	PUSH_SR
 	GET_ADDRESS	0x0003                     	| [$b405: sta	$0003]
 	move.b	d0,(a0)                         	| [$b405: sta	$0003]
-	POP_SR
 	GET_ADDRESS	0x00a0                     	| [$b407: lda	$00a0, y]
 	move.b	(a0,d2.w),d0                    	| [$b407: lda	$00a0, y]
 	and.b	#0x08,d0                         	| [$b40a: and #$08]
 	beq	l_b410                             	| [$b40c: beq	$b410]
 	move.b	#0x80,d0                        	| [$b40e: lda #$80]
 l_b410:
-	PUSH_SR
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b410: sta	$001b]
 	move.b	d0,(a0)                         	| [$b410: sta	$001b]
-	POP_SR
 	GET_ADDRESS	current_shape_array_008b                     	| [$b412: lda	$008b]
 	move.b	(a0),d0                         	| [$b412: lda	$008b]
 	asl.b	#1,d0                            	| [$b414: asl a]
@@ -12949,10 +12767,8 @@ l_b410:
 	move.b	(a0),d0                         	| [$b41c: lda	$0003]
 	move.b	#0x00,d4	| [$b41e: sbc #$00]
 	subx.b	d4,d0                        	| [$b41e: sbc #$00]
-	PUSH_SR
 	GET_ADDRESS	0x0003                     	| [$b420: sta	$0003]
 	move.b	d0,(a0)                         	| [$b420: sta	$0003]
-	POP_SR
 	clr.b	d2                               	| [$b422: ldy #$00]
 	GET_ADDRESS	0x0100                     	| [$b424: lda	$0100]
 	move.b	(a0),d0                         	| [$b424: lda	$0100]
@@ -13013,36 +12829,30 @@ l_b469:
 	move.b	(a0,d1.w),d0                    	| [$b469: lda	$b45a, x]
 	move.b	#0x04,d2                        	| [$b46c: ldy #$04]
 l_b46e:
-	PUSH_SR
 	GET_ADDRESS	0x0087                     	| [$b46e: sty	$0087, x]
     move.b	d2,(a0,d1.w)                 	| [$b46e: sty	$0087, x]
 	GET_ADDRESS	0x0089                     	| [$b470: sta	$0089, x]
     move.b	d0,(a0,d1.w)                 	| [$b470: sta	$0089, x]
-	POP_SR
 	clr.b	d0                               	| [$b472: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x008f                     	| [$b474: sta	$008f, x]
     move.b	d0,(a0,d1.w)                 	| [$b474: sta	$008f, x]
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b476: stx	$001b]
 	move.b	d1,(a0)                         	| [$b476: stx	$001b]
-	POP_SR
 	move.b	d1,d0                           	| [$b478: txa]
 	asl.b	#1,d0                            	| [$b479: asl a]
 	move.b	#0x83,d4	| [$b47a: adc #$83]
 	addx.b	d4,d0                        	| [$b47a: adc #$83]
 	move.b	d0,d1                           	| [$b47c: tax]
 l_b47d:
-	jbsr	l_b4ac                            	| [$b47d: jsr	$b4ac]
+	jbsr	random_b4ac                            	| [$b47d: jsr	$b4ac]
 	and.b	#0x07,d0                         	| [$b480: and #$07]
 	beq	l_b47d                             	| [$b482: beq	$b47d]
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b484: ldx	$001b]
 	move.b	(a0),d1                         	| [$b484: ldx	$001b]
-	PUSH_SR
 	GET_ADDRESS	current_shape_array_008b                     	| [$b486: sta	$008b, x]
     move.b	d0,(a0,d1.w)                 	| [$b486: sta	$008b, x]
 	GET_ADDRESS	next_shape_array_008d                     	| [$b488: sta	$008d, x]
     move.b	d0,(a0,d1.w)                 	| [$b488: sta	$008d, x]
-	POP_SR
 	jbsr	l_9dfa                            	| [$b48a: jsr	$9dfa]
 	GET_ADDRESS	0x000b                     	| [$b48d: lda	$000b]
 	move.b	(a0),d0                         	| [$b48d: lda	$000b]
@@ -13051,12 +12861,9 @@ l_b47d:
 	move.b	(a0),d0                         	| [$b491: lda	$009d]
 	CLR_XC_FLAGS                           	| [$b493: clc]
 	GET_ADDRESS	0xb45c                     	| [$b494: adc	$b45c, x]
-	move.b	(a0,d1.w),d4	| [$b494: adc	$b45c, x]
-	addx.b	d4,d0                    	| [$b494: adc	$b45c, x]
-	PUSH_SR
+	add.b	(a0,d1.w),d0	| [$b494: adc	$b45c, x]
 	GET_ADDRESS	0x009d                     	| [$b497: sta	$009d]
 	move.b	d0,(a0)                         	| [$b497: sta	$009d]
-	POP_SR
 l_b499:
 	jbsr	l_9ee8                            	| [$b499: jsr	$9ee8]
 	jbsr	clear_player_grid_9E8F            	| [$b49c: jsr	clear_player_grid_9E8F]
@@ -13070,7 +12877,7 @@ l_b499:
     move.b	d0,(a0,d1.w)                 	| [$b4a8: sta	$008b, x]
 	rts                                    	| [$b4aa: rts]
 
-l_b4ac:
+random_b4ac:
 	jbsr	l_b4b2                            	| [$b4ac: jsr	$b4b2]
 	jbsr	l_b4b2                            	| [$b4af: jsr	$b4b2]
 l_b4b2:
@@ -13082,6 +12889,7 @@ l_b4b2:
 	bne	l_b4bc                             	| [$b4b6: bne	$b4bc]
 	GET_ADDRESS	0x0001                     	| [$b4b8: cmp	$0001, x]
 	cmp.b	(a0,d1.w),d0                     	| [$b4b8: cmp	$0001, x]
+	SET_X_FROM_CLEARED_C
 	beq	l_b4be                             	| [$b4ba: beq	$b4be]
 l_b4bc:
 	asl.b	#2,d0                            	| [$b4bc: asl a]
@@ -13098,12 +12906,14 @@ l_b4be:
 	GET_ADDRESS	0x0000                     	| [$b4c2: lda	$0000, x]
 	move.b	(a0,d1.w),d0                    	| [$b4c2: lda	$0000, x]
 	rts                                    	| [$b4c4: rts]
+
 l_b4c5:
 	GET_ADDRESS	0x062c                     	| [$b4c5: lda	$062c, x]
 	move.b	(a0,d1.w),d0                    	| [$b4c5: lda	$062c, x]
 	cmp.b	#0x02,d0                         	| [$b4c8: cmp #$02]
 	* bcs=>bcc
 	bcc	l_b4f0                             	| [$b4ca: bcs	$b4f0]
+	SET_X_FROM_CLEARED_C
 	GET_ADDRESS	unknown_001d                     	| [$b4cc: lda	$001d]
 	move.b	(a0),d0                         	| [$b4cc: lda	$001d]
 	GET_ADDRESS	unknown_001d                     	| [$b4ce: adc	$001d]
@@ -13111,14 +12921,13 @@ l_b4c5:
 	addx.b	d4,d0                         	| [$b4ce: adc	$001d]
 	cmp.b	#0x0a,d0                         	| [$b4d0: cmp #$0a]
 	* bcc=>bcs
+	SET_X_FROM_CLEARED_C
 	bcs	l_b4d6                             	| [$b4d2: bcc	$b4d6]
 	move.b	#0x0a,d4	| [$b4d4: sbc #$0a]
 	subx.b	d4,d0                        	| [$b4d4: sbc #$0a]
 l_b4d6:
-	PUSH_SR
 	GET_ADDRESS	unknown_001d                     	| [$b4d6: sta	$001d]
 	move.b	d0,(a0)                         	| [$b4d6: sta	$001d]
-	POP_SR
 	GET_ADDRESS	0x001c                     	| [$b4d8: lda	$001c]
 	move.b	(a0),d0                         	| [$b4d8: lda	$001c]
 	GET_ADDRESS	0x001c                     	| [$b4da: adc	$001c]
@@ -13127,28 +12936,26 @@ l_b4d6:
 	cmp.b	#0x0a,d0                         	| [$b4dc: cmp #$0a]
 	* bcc=>bcs
 	bcs	l_b4e2                             	| [$b4de: bcc	$b4e2]
+	SET_X_FROM_CLEARED_C
 	move.b	#0x0a,d4	| [$b4e0: sbc #$0a]
 	subx.b	d4,d0                        	| [$b4e0: sbc #$0a]
 l_b4e2:
-	PUSH_SR
 	GET_ADDRESS	0x001c                     	| [$b4e2: sta	$001c]
 	move.b	d0,(a0)                         	| [$b4e2: sta	$001c]
-	POP_SR
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b4e4: lda	$001b]
 	move.b	(a0),d0                         	| [$b4e4: lda	$001b]
-	GET_ADDRESS	current_player_control_status_001b                     	| [$b4e6: adc	$001b]
+	                     	| [$b4e6: adc	$001b]
 	move.b	(a0),d4	| [$b4e6: adc	$001b]
 	addx.b	d4,d0                         	| [$b4e6: adc	$001b]
 	cmp.b	#0x0a,d0                         	| [$b4e8: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_b4ee                             	| [$b4ea: bcc	$b4ee]
 	move.b	#0x0a,d4	| [$b4ec: sbc #$0a]
 	subx.b	d4,d0                        	| [$b4ec: sbc #$0a]
 l_b4ee:
-	PUSH_SR
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b4ee: sta	$001b]
 	move.b	d0,(a0)                         	| [$b4ee: sta	$001b]
-	POP_SR
 l_b4f0:
 	rts                                    	| [$b4f0: rts]
 l_b4f1:
@@ -13175,50 +12982,39 @@ l_b501:
 	* bcc=>bcs
 	bcs	l_b510                             	| [$b508: bcc	$b510]
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b50a: lda	$001b]
+	* carry is set, add one more
 	move.b	(a0),d0                         	| [$b50a: lda	$001b]
-	move.b	#0x09,d4	| [$b50c: adc #$09]
-	addx.b	d4,d0                        	| [$b50c: adc #$09]
-	PUSH_SR
+	add.b	#0x0A,d0                        	| [$b50c: adc #$09]
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b50e: sta	$001b]
 	move.b	d0,(a0)                         	| [$b50e: sta	$001b]
-	POP_SR
 l_b510:
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b510: lda	$001b]
 	move.b	(a0),d0                         	| [$b510: lda	$001b]
-	CLR_XC_FLAGS                           	| [$b512: clc]
+	                           	| [$b512: clc]
 	GET_ADDRESS	0x000a                     	| [$b513: adc	$000a]
-	move.b	(a0),d4	| [$b513: adc	$000a]
-	addx.b	d4,d0                         	| [$b513: adc	$000a]
+	add.b	(a0),d0	| [$b513: adc	$000a]
 	jbsr	l_b295                            	| [$b515: jsr	$b295]
 	jbsr	l_b4c5                            	| [$b518: jsr	$b4c5]
 	clr.b	d0                               	| [$b51b: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x068d                     	| [$b51d: sta	$068d, x]
     move.b	d0,(a0,d1.w)                 	| [$b51d: sta	$068d, x]
-	POP_SR
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b520: lda	$001b]
 	move.b	(a0),d0                         	| [$b520: lda	$001b]
-	PUSH_SR
 	GET_ADDRESS	0x068f                     	| [$b522: sta	$068f, x]
     move.b	d0,(a0,d1.w)                 	| [$b522: sta	$068f, x]
-	POP_SR
 	GET_ADDRESS	0x001c                     	| [$b525: lda	$001c]
 	move.b	(a0),d0                         	| [$b525: lda	$001c]
-	PUSH_SR
 	GET_ADDRESS	0x0691                     	| [$b527: sta	$0691, x]
     move.b	d0,(a0,d1.w)                 	| [$b527: sta	$0691, x]
-	POP_SR
 	GET_ADDRESS	unknown_001d                     	| [$b52a: lda	$001d]
 	move.b	(a0),d0                         	| [$b52a: lda	$001d]
-	PUSH_SR
 	GET_ADDRESS	0x0693                     	| [$b52c: sta	$0693, x]
     move.b	d0,(a0,d1.w)                 	| [$b52c: sta	$0693, x]
-	POP_SR
 	GET_ADDRESS	game_state_0008                     	| [$b52f: lda	$0008]
 	move.b	(a0),d0                         	| [$b52f: lda	$0008]
 	bne	l_b536                             	| [$b531: bne	$b536]
 	* in-play
-	jbsr	l_b53f                            	| [$b533: jsr	$b53f]
+	jbsr	update_player_score_b53f                            	| [$b533: jsr	$b53f]
 l_b536:
 	jbsr	l_a2d0                            	| [$b536: jsr	$a2d0]
 	move.b	#0x1e,d0                        	| [$b539: lda #$1e]
@@ -13227,12 +13023,11 @@ l_b536:
     move.b	d0,(a0,d1.w)                 	| [$b53b: sta	$0679, x]
 	POP_SR
 	rts                                    	| [$b53e: rts]
-l_b53f:
+	
+update_player_score_b53f:
 	move.b	d1,d0                           	| [$b53f: txa]
-	PUSH_SR
 	GET_ADDRESS	0x001e                     	| [$b540: sta	$001e]
 	move.b	d0,(a0)                         	| [$b540: sta	$001e]
-	POP_SR
 	asl.b	#1,d0                            	| [$b542: asl a]
 	GET_ADDRESS	0x001e                     	| [$b543: adc	$001e]
 	move.b	(a0),d4	| [$b543: adc	$001e]
@@ -13246,32 +13041,30 @@ l_b53f:
 	move.b	(a0,d2.w),d4	| [$b54a: adc	$0605, y]
 	addx.b	d4,d0                    	| [$b54a: adc	$0605, y]
 	cmp.b	#0x3a,d0                         	| [$b54d: cmp #$3a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_b554                             	| [$b54f: bcc	$b554]
-	move.b	#0x0a,d4	| [$b551: sbc #$0a]
-	subx.b	d4,d0                        	| [$b551: sbc #$0a]
+	* carry was set, simple sub works
+	sub.b	#0x0A,d0                        	| [$b551: sbc #$0a]
 	SET_XC_FLAGS                           	| [$b553: sec]
 l_b554:
-	PUSH_SR
 	GET_ADDRESS	0x0605                     	| [$b554: sta	$0605, y]
     move.b	d0,(a0,d2.w)                 	| [$b554: sta	$0605, y]
-	POP_SR
 	GET_ADDRESS	0x0604                     	| [$b557: lda	$0604, y]
 	move.b	(a0,d2.w),d0                    	| [$b557: lda	$0604, y]
 	GET_ADDRESS	0x001c                     	| [$b55a: adc	$001c]
 	move.b	(a0),d4	| [$b55a: adc	$001c]
 	addx.b	d4,d0                         	| [$b55a: adc	$001c]
 	cmp.b	#0x3a,d0                         	| [$b55c: cmp #$3a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_b563                             	| [$b55e: bcc	$b563]
-	move.b	#0x0a,d4	| [$b560: sbc #$0a]
-	subx.b	d4,d0                        	| [$b560: sbc #$0a]
+	* carry was set, simple sub works
+	sub.b	#0x0A,d0                        	| [$b560: sbc #$0a]
 	SET_XC_FLAGS                           	| [$b562: sec]
 l_b563:
-	PUSH_SR
 	GET_ADDRESS	0x0604                     	| [$b563: sta	$0604, y]
     move.b	d0,(a0,d2.w)                 	| [$b563: sta	$0604, y]
-	POP_SR
 	GET_ADDRESS	0x0603                     	| [$b566: lda	$0603, y]
 	move.b	(a0,d2.w),d0                    	| [$b566: lda	$0603, y]
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b569: adc	$001b]
@@ -13279,9 +13072,10 @@ l_b563:
 	addx.b	d4,d0                         	| [$b569: adc	$001b]
 	cmp.b	#0x3a,d0                         	| [$b56b: cmp #$3a]
 	* bcc=>bcs
+	SET_X_FROM_CLEARED_C
 	bcs	l_b572                             	| [$b56d: bcc	$b572]
-	move.b	#0x0a,d4	| [$b56f: sbc #$0a]
-	subx.b	d4,d0                        	| [$b56f: sbc #$0a]
+	* carry was set, simple sub works
+	sub.b	#0x0A,d0	| [$b56f: sbc #$0a]
 	SET_XC_FLAGS                           	| [$b571: sec]
 l_b572:
 	PUSH_SR
@@ -13294,44 +13088,41 @@ l_b572:
 	addx.b	d4,d0                        	| [$b578: adc #$00]
 	cmp.b	#0x3a,d0                         	| [$b57a: cmp #$3a]
 	* bcc=>bcs
+	SET_X_FROM_CLEARED_C
 	bcs	l_b581                             	| [$b57c: bcc	$b581]
-	move.b	#0x0a,d4	| [$b57e: sbc #$0a]
-	subx.b	d4,d0                        	| [$b57e: sbc #$0a]
+	* carry was set, simple sub works
+	sub.b	#0x0A,d0	| [$b57e: sbc #$0a]
 	SET_XC_FLAGS                           	| [$b580: sec]
 l_b581:
-	PUSH_SR
 	GET_ADDRESS	0x0602                     	| [$b581: sta	$0602, y]
     move.b	d0,(a0,d2.w)                 	| [$b581: sta	$0602, y]
-	POP_SR
 	GET_ADDRESS	0x0601                     	| [$b584: lda	$0601, y]
 	move.b	(a0,d2.w),d0                    	| [$b584: lda	$0601, y]
 	move.b	#0x00,d4	| [$b587: adc #$00]
 	addx.b	d4,d0                        	| [$b587: adc #$00]
 	cmp.b	#0x3a,d0                         	| [$b589: cmp #$3a]
 	* bcc=>bcs
+	SET_X_FROM_CLEARED_C
 	bcs	l_b590                             	| [$b58b: bcc	$b590]
-	move.b	#0x0a,d4	| [$b58d: sbc #$0a]
-	subx.b	d4,d0                        	| [$b58d: sbc #$0a]
+	* carry was set, simple sub works
+	sub.b	#0x0A,d0	| [$b58d: sbc #$0a]
 	SET_XC_FLAGS                           	| [$b58f: sec]
 l_b590:
-	PUSH_SR
 	GET_ADDRESS	0x0601                     	| [$b590: sta	$0601, y]
     move.b	d0,(a0,d2.w)                 	| [$b590: sta	$0601, y]
-	POP_SR
-	GET_ADDRESS	0x0600                     	| [$b593: lda	$0600, y]
+	GET_ADDRESS	score_digit_1_0600                     	| [$b593: lda	$0600, y]
 	move.b	(a0,d2.w),d0                    	| [$b593: lda	$0600, y]
 	move.b	#0x00,d4	| [$b596: adc #$00]
 	addx.b	d4,d0                        	| [$b596: adc #$00]
 	cmp.b	#0x3a,d0                         	| [$b598: cmp #$3a]
 	* bcc=>bcs
+	SET_X_FROM_CLEARED_C
 	bcs	l_b59e                             	| [$b59a: bcc	$b59e]
-	move.b	#0x0a,d4	| [$b59c: sbc #$0a]
-	subx.b	d4,d0                        	| [$b59c: sbc #$0a]
+	* carry was set, simple sub works
+	sub.b	#0x0A,d0	| [$b59c: sbc #$0a]
 l_b59e:
-	PUSH_SR
-	GET_ADDRESS	0x0600                     	| [$b59e: sta	$0600, y]
+	GET_ADDRESS	score_digit_1_0600                     	| [$b59e: sta	$0600, y]
     move.b	d0,(a0,d2.w)                 	| [$b59e: sta	$0600, y]
-	POP_SR
 	GET_ADDRESS	0x0079                     	| [$b5a1: inc	$0079, x]
     addq.b	#1,(a0,d1.w)                 	| [$b5a1: inc	$0079, x]
 	rts                                    	| [$b5a3: rts]
@@ -13341,10 +13132,8 @@ l_b5a4:
 	move.b	d0,d2                           	| [$b5a6: tay]
 	GET_ADDRESS	0x0615                     	| [$b5a7: lda	$0615, y]
 	move.b	(a0,d2.w),d0                    	| [$b5a7: lda	$0615, y]
-	PUSH_SR
 	GET_ADDRESS	fall_timeout_timer_0091                     	| [$b5aa: sta	$0091, x]
     move.b	d0,(a0,d1.w)                 	| [$b5aa: sta	$0091, x]
-	POP_SR
 	move.b	d0,d2                           	| [$b5ac: tay]
 	GET_ADDRESS	0x08bb                     	| [$b5ad: lda	$08bb]
 	move.b	(a0),d0                         	| [$b5ad: lda	$08bb]
@@ -13938,12 +13727,13 @@ l_b93c:
 	GET_ADDRESS	0x001c                     	| [$b94a: sta	$001c]
 	move.b	d0,(a0)                         	| [$b94a: sta	$001c]
 	POP_SR
-	jbsr	l_b53f                            	| [$b94c: jsr	$b53f]
+	jbsr	update_player_score_b53f                            	| [$b94c: jsr	$b53f]
 	GET_ADDRESS	0x0691                     	| [$b94f: lda	$0691, x]
 	move.b	(a0,d1.w),d0                    	| [$b94f: lda	$0691, x]
 	                           	| [$b952: clc]
 	add.b	#0x01,d0                        	| [$b953: adc #$01]
 	cmp.b	#0x0a,d0                         	| [$b955: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_b95b                             	| [$b957: bcc	$b95b]
 	clr.b	d0                               	| [$b959: lda #$00]
@@ -13957,6 +13747,7 @@ l_b95b:
 	move.b	#0x00,d4	| [$b961: adc #$00]
 	addx.b	d4,d0                        	| [$b961: adc #$00]
 	cmp.b	#0x0a,d0                         	| [$b963: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_b969                             	| [$b965: bcc	$b969]
 	clr.b	d0                               	| [$b967: lda #$00]
@@ -13970,14 +13761,13 @@ l_b969:
 	move.b	#0x00,d4	| [$b96f: adc #$00]
 	addx.b	d4,d0                        	| [$b96f: adc #$00]
 	cmp.b	#0x0a,d0                         	| [$b971: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_b977                             	| [$b973: bcc	$b977]
 	clr.b	d0                               	| [$b975: lda #$00]
 l_b977:
-	PUSH_SR
 	GET_ADDRESS	0x068d                     	| [$b977: sta	$068d, x]
     move.b	d0,(a0,d1.w)                 	| [$b977: sta	$068d, x]
-	POP_SR
 	jbsr	l_a2d0                            	| [$b97a: jsr	$a2d0]
 	GET_ADDRESS	0x0041                     	| [$b97d: dec	$0041, x]
     subq.b	#1,(a0,d1.w)                 	| [$b97d: dec	$0041, x]
@@ -14391,6 +14181,7 @@ l_bb90:
 	                           	| [$bb93: clc]
 	add.b	#0x01,d0                        	| [$bb94: adc #$01]
 	cmp.b	#0x0a,d0                         	| [$bb96: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_bb9c                             	| [$bb98: bcc	$bb9c]
 	clr.b	d0                               	| [$bb9a: lda #$00]
@@ -14406,6 +14197,7 @@ l_bb9c:
 	move.b	#0x00,d4	| [$bba4: adc #$00]
 	addx.b	d4,d0                        	| [$bba4: adc #$00]
 	cmp.b	#0x0a,d0                         	| [$bba6: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_bbac                             	| [$bba8: bcc	$bbac]
 	clr.b	d0                               	| [$bbaa: lda #$00]
@@ -14421,7 +14213,7 @@ l_bbac:
 	GET_ADDRESS	unknown_001d                     	| [$bbb3: sta	$001d]
 	move.b	d0,(a0)                         	| [$bbb3: sta	$001d]
 	POP_SR
-	jbsr	l_b53f                            	| [$bbb5: jsr	$b53f]
+	jbsr	update_player_score_b53f                            	| [$bbb5: jsr	$b53f]
 	move.b	#0x19,d0                        	| [$bbb8: lda #$19]
 	jbsr	l_e659                            	| [$bbba: jsr	$e659]
 	* from now on using decimal mode        | [$bbbd: sed]
@@ -14432,6 +14224,7 @@ l_bbac:
 	move.b	(a0,d1.w),d4	| [$bbc2: adc	$0697, x]
 	abcd	d4,d0                    	| [$bbc2: adc	$0697, x]
 	cmp.b	#0x0a,d0                         	| [$bbc5: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_bbcc                             	| [$bbc7: bcc	$bbcc]
 	and.b	#0x0f,d0                         	| [$bbc9: and #$0f]
@@ -14447,6 +14240,7 @@ l_bbcc:
 	move.b	(a0,d1.w),d4	| [$bbd2: adc	$0695, x]
 	abcd	d4,d0                    	| [$bbd2: adc	$0695, x]
 	cmp.b	#0x0a,d0                         	| [$bbd5: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_bbdc                             	| [$bbd7: bcc	$bbdc]
 	and.b	#0x0f,d0                         	| [$bbd9: and #$0f]
@@ -14461,6 +14255,7 @@ l_bbdc:
 	move.b	#0x00,d4	| [$bbe2: adc #$00]
 	abcd	d4,d0                        	| [$bbe2: adc #$00]
 	cmp.b	#0x0a,d0                         	| [$bbe4: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_bbeb                             	| [$bbe6: bcc	$bbeb]
 	and.b	#0x0f,d0                         	| [$bbe8: and #$0f]
@@ -14476,6 +14271,7 @@ l_bbf2:
 	GET_ADDRESS	0x0043                     	| [$bbf2: lda	$0043]
 	move.b	(a0),d0                         	| [$bbf2: lda	$0043]
 	cmp.b	#0x0a,d0                         	| [$bbf4: cmp #$0a]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_bbfd                             	| [$bbf6: bcc	$bbfd]
 	GET_ADDRESS	0x0043                     	| [$bbf8: dec	$0043]
@@ -14529,6 +14325,7 @@ l_bc29:
 
 	addq.b	#1,d2                           	| [$bc2e: iny]
 	cmp.b	#0x14,d2                         	| [$bc2f: cpy #$14]
+	SET_X_FROM_CLEARED_C
 	* bcc=>bcs
 	bcs	l_bc29                             	| [$bc31: bcc	$bc29]
 * clv+bvc => jra
@@ -15520,15 +15317,13 @@ l_c268:
 	GET_ADDRESS	0x004e                     	| [$c26c: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$c26c: lda	$004e, x]
 	bne	l_c2a0                             	| [$c26e: bne	$c2a0]
-	PUSH_SR
 	GET_ADDRESS	current_player_control_status_001b                     	| [$c270: stx	$001b]
 	move.b	d1,(a0)                         	| [$c270: stx	$001b]
-	POP_SR
+	
 	move.b	#0x01,d0                        	| [$c272: lda #$01]
-	SET_XC_FLAGS                           	| [$c274: sec]
+	                           	| [$c274: sec]
 	GET_ADDRESS	0x064b                     	| [$c275: sbc	$064b]
-	move.b	(a0),d4	| [$c275: sbc	$064b]
-	subx.b	d4,d0                         	| [$c275: sbc	$064b]
+	sub.b	(a0),d0	| [$c275: sbc	$064b]
 	PUSH_SR
 	GET_ADDRESS	0x064b                     	| [$c278: sta	$064b]
 	move.b	d0,(a0)                         	| [$c278: sta	$064b]
@@ -16017,10 +15812,9 @@ l_c56b:
 	and.b	#0x1f,d0                         	| [$c56d: and #$1f]
 	bne	l_c586                             	| [$c56f: bne	$c586]
 	move.b	#0x01,d0                        	| [$c571: lda #$01]
-	SET_XC_FLAGS                           	| [$c573: sec]
+	                           	| [$c573: sec]
 	GET_ADDRESS	0x0650                     	| [$c574: sbc	$0650]
-	move.b	(a0),d4	| [$c574: sbc	$0650]
-	subx.b	d4,d0                         	| [$c574: sbc	$0650]
+	sub.b	(a0),d0	| [$c574: sbc	$0650]
 	PUSH_SR
 	GET_ADDRESS	0x0650                     	| [$c577: sta	$0650]
 	move.b	d0,(a0)                         	| [$c577: sta	$0650]
@@ -16765,10 +16559,8 @@ l_c8d2:
 	GET_ADDRESS	0x06e1                     	| [$c8ec: sbc	$06e1]
 	move.b	(a0),d4	| [$c8ec: sbc	$06e1]
 	subx.b	d4,d0                         	| [$c8ec: sbc	$06e1]
-	PUSH_SR
 	GET_ADDRESS	0x06df                     	| [$c8ef: sta	$06df]
 	move.b	d0,(a0)                         	| [$c8ef: sta	$06df]
-	POP_SR
 	jra	l_c90f                             	| [$c8f2: jmp	$c90f]
 l_c8f5:
 	GET_ADDRESS	0x06de                     	| [$c8f5: lda	$06de]
@@ -16782,19 +16574,15 @@ l_c8f5:
 	move.b	(a0),d4	| [$c8fe: sbc	$06e1]
 	subx.b	d4,d0                         	| [$c8fe: sbc	$06e1]
 	bcc	l_c912                             	| [$c901: bcc	$c912]
-	PUSH_SR
 	GET_ADDRESS	0x06df                     	| [$c903: sta	$06df]
 	move.b	d0,(a0)                         	| [$c903: sta	$06df]
-	POP_SR
 	GET_ADDRESS	0x06de                     	| [$c906: lda	$06de]
 	move.b	(a0),d0                         	| [$c906: lda	$06de]
 	GET_ADDRESS	0x06e0                     	| [$c909: sbc	$06e0]
 	move.b	(a0),d4	| [$c909: sbc	$06e0]
 	subx.b	d4,d0                         	| [$c909: sbc	$06e0]
-	PUSH_SR
 	GET_ADDRESS	0x06de                     	| [$c90c: sta	$06de]
 	move.b	d0,(a0)                         	| [$c90c: sta	$06de]
-	POP_SR
 l_c90f:
 	GET_ADDRESS	0x06dc                     	| [$c90f: inc	$06dc]
 	addq.b	#1,(a0)                         	| [$c90f: inc	$06dc]
@@ -16950,29 +16738,28 @@ l_c9b4:
 	beq	l_c9d2                             	| [$c9be: beq	$c9d2]
 	cmp.b	#0x0c,d1                         	| [$c9c0: cpx #$0c]
 	* bcs=>bcc
+	SET_X_FROM_CLEARED_C
 	bcc	l_ca19                             	| [$c9c2: bcs	$ca19]
 	GET_ADDRESS	0x001c                     	| [$c9c4: adc	$001c]
 	move.b	(a0),d4	| [$c9c4: adc	$001c]
 	addx.b	d4,d0                         	| [$c9c4: adc	$001c]
-	SET_XC_FLAGS                           	| [$c9c6: sec]
+	                           	| [$c9c6: sec]
 	GET_ADDRESS	0x05c1                     	| [$c9c7: sbc	$05c1, x]
-	move.b	(a0,d1.w),d4	| [$c9c7: sbc	$05c1, x]
-	subx.b	d4,d0                    	| [$c9c7: sbc	$05c1, x]
+	sub.b	(a0,d1.w),d0	| [$c9c7: sbc	$05c1, x]
 	bcc	l_c9d2                             	| [$c9ca: bcc	$c9d2]
 	not.b	d0                               	| [$c9cc: eor #$ff]
 	GET_ADDRESS	0x001c                     	| [$c9ce: adc	$001c]
 	move.b	(a0),d4	| [$c9ce: adc	$001c]
 	addx.b	d4,d0                         	| [$c9ce: adc	$001c]
-	PUSH_SR
 	GET_ADDRESS	0x001c                     	| [$c9d0: sta	$001c]
 	move.b	d0,(a0)                         	| [$c9d0: sta	$001c]
-	POP_SR
 l_c9d2:
 	GET_ADDRESS	0xcbfe                     	| [$c9d2: lda	$cbfe, y]
 	move.b	(a0,d2.w),d0                    	| [$c9d2: lda	$cbfe, y]
 	cmp.b	#0x80,d0                         	| [$c9d5: cmp #$80]
 	beq	l_c9eb                             	| [$c9d7: beq	$c9eb]
 	cmp.b	#0x0c,d1                         	| [$c9d9: cpx #$0c]
+	SET_X_FROM_CLEARED_C
 	* bcs=>bcc
 	bcc	l_ca19                             	| [$c9db: bcs	$ca19]
 	GET_ADDRESS	0x001c                     	| [$c9dd: adc	$001c]
@@ -16987,34 +16774,30 @@ l_c9d2:
 	GET_ADDRESS	0x001c                     	| [$c9e7: adc	$001c]
 	move.b	(a0),d4	| [$c9e7: adc	$001c]
 	addx.b	d4,d0                         	| [$c9e7: adc	$001c]
-	PUSH_SR
 	GET_ADDRESS	0x001c                     	| [$c9e9: sta	$001c]
 	move.b	d0,(a0)                         	| [$c9e9: sta	$001c]
-	POP_SR
 l_c9eb:
 	GET_ADDRESS	0xcbff                     	| [$c9eb: lda	$cbff, y]
 	move.b	(a0,d2.w),d0                    	| [$c9eb: lda	$cbff, y]
 	cmp.b	#0x80,d0                         	| [$c9ee: cmp #$80]
 	beq	l_ca04                             	| [$c9f0: beq	$ca04]
 	cmp.b	#0x0c,d1                         	| [$c9f2: cpx #$0c]
+	SET_X_FROM_CLEARED_C
 	* bcs=>bcc
 	bcc	l_ca19                             	| [$c9f4: bcs	$ca19]
 	GET_ADDRESS	0x001c                     	| [$c9f6: adc	$001c]
 	move.b	(a0),d4	| [$c9f6: adc	$001c]
 	addx.b	d4,d0                         	| [$c9f6: adc	$001c]
-	SET_XC_FLAGS                           	| [$c9f8: sec]
+	                           	| [$c9f8: sec]
 	GET_ADDRESS	0x05c3                     	| [$c9f9: sbc	$05c3, x]
-	move.b	(a0,d1.w),d4	| [$c9f9: sbc	$05c3, x]
-	subx.b	d4,d0                    	| [$c9f9: sbc	$05c3, x]
+	sub.b	(a0,d1.w),d0	| [$c9f9: sbc	$05c3, x]
 	bcc	l_ca04                             	| [$c9fc: bcc	$ca04]
 	not.b	d0                               	| [$c9fe: eor #$ff]
 	GET_ADDRESS	0x001c                     	| [$ca00: adc	$001c]
 	move.b	(a0),d4	| [$ca00: adc	$001c]
 	addx.b	d4,d0                         	| [$ca00: adc	$001c]
-	PUSH_SR
 	GET_ADDRESS	0x001c                     	| [$ca02: sta	$001c]
 	move.b	d0,(a0)                         	| [$ca02: sta	$001c]
-	POP_SR
 l_ca04:
 	GET_ADDRESS	0x001c                     	| [$ca04: lda	$001c]
 	move.b	(a0),d0                         	| [$ca04: lda	$001c]
@@ -19720,7 +19503,7 @@ continue_startup_e661:
 * put	$0030 ('0' ?) in	$0600-$617
 l_e680:
 	PUSH_SR
-	GET_ADDRESS	0x0600                     	| [$e680: sta	$0600, y]
+	GET_ADDRESS	score_digit_1_0600                     	| [$e680: sta	$0600, y]
     move.b	d0,(a0,d2.w)                 	| [$e680: sta	$0600, y]
 	POP_SR
 	subq.b	#1,d2                           	| [$e683: dey]
@@ -20398,7 +20181,7 @@ l_e9b1:
 	move.b	d0,d1                           	| [$e9cf: tax]
 	clr.b	d2                               	| [$e9d0: ldy #$00]
 l_e9d2:
-	GET_ADDRESS	0x0600                     	| [$e9d2: lda	$0600, x]
+	GET_ADDRESS	score_digit_1_0600                     	| [$e9d2: lda	$0600, x]
 	move.b	(a0,d1.w),d0                    	| [$e9d2: lda	$0600, x]
 	asl.b	#4,d0                            	| [$e9d5: asl a] * 4
 	PUSH_SR
@@ -20519,7 +20302,7 @@ l_ea40:
 	GET_ADDRESS	0x097a                     	| [$ea5b: sbc	$097a, x]
 	move.b	(a0,d1.w),d4	| [$ea5b: sbc	$097a, x]
 	subx.b	d4,d0                    	| [$ea5b: sbc	$097a, x]
-	GET_ADDRESS	0x0600                     	| [$ea5e: lda	$0600, y]
+	GET_ADDRESS	score_digit_1_0600                     	| [$ea5e: lda	$0600, y]
 	move.b	(a0,d2.w),d0                    	| [$ea5e: lda	$0600, y]
 	GET_ADDRESS	0x0979                     	| [$ea61: sbc	$0979, x]
 	move.b	(a0,d1.w),d4	| [$ea61: sbc	$0979, x]
@@ -20609,7 +20392,7 @@ l_ea9c:
 	GET_ADDRESS	0x097a                     	| [$eab7: sta	$097a, x]
     move.b	d0,(a0,d1.w)                 	| [$eab7: sta	$097a, x]
 	POP_SR
-	GET_ADDRESS	0x0600                     	| [$eaba: lda	$0600, y]
+	GET_ADDRESS	score_digit_1_0600                     	| [$eaba: lda	$0600, y]
 	move.b	(a0,d2.w),d0                    	| [$eaba: lda	$0600, y]
 	PUSH_SR
 	GET_ADDRESS	0x0979                     	| [$eabd: sta	$0979, x]
@@ -20672,7 +20455,7 @@ l_eada:
 	GET_ADDRESS	0x097a                     	| [$eaf5: sbc	$097a, x]
 	move.b	(a0,d1.w),d4	| [$eaf5: sbc	$097a, x]
 	subx.b	d4,d0                    	| [$eaf5: sbc	$097a, x]
-	GET_ADDRESS	0x0600                     	| [$eaf8: lda	$0600, y]
+	GET_ADDRESS	score_digit_1_0600                     	| [$eaf8: lda	$0600, y]
 	move.b	(a0,d2.w),d0                    	| [$eaf8: lda	$0600, y]
 	GET_ADDRESS	0x0979                     	| [$eafb: sbc	$0979, x]
 	move.b	(a0,d1.w),d4	| [$eafb: sbc	$0979, x]
@@ -20952,16 +20735,13 @@ l_ec1f:
 	GET_ADDRESS	0x0884                     	| [$ec28: lda	$0884, x]
 	move.b	(a0,d1.w),d0                    	| [$ec28: lda	$0884, x]
 	and.b	#0x0f,d0                         	| [$ec2b: and #$0f]
-	PUSH_SR
 	GET_ADDRESS	0x0069                     	| [$ec2d: sta	$0069]
 	move.b	d0,(a0)                         	| [$ec2d: sta	$0069]
-	POP_SR
 	GET_ADDRESS	0x08a2                     	| [$ec2f: lda	$08a2, y]
 	move.b	(a0,d2.w),d0                    	| [$ec2f: lda	$08a2, y]
-	SET_XC_FLAGS                           	| [$ec32: sec]
+	                           	| [$ec32: sec]
 	GET_ADDRESS	0x0069                     	| [$ec33: sbc	$0069]
-	move.b	(a0),d4	| [$ec33: sbc	$0069]
-	subx.b	d4,d0                         	| [$ec33: sbc	$0069]
+	sub.b	(a0),d0	| [$ec33: sbc	$0069]
 	bcs	l_ec3e                             	| [$ec35: bcs	$ec3e]
 	GET_ADDRESS	0x08a2                     	| [$ec37: lda	$08a2, y]
 	move.b	(a0,d2.w),d0                    	| [$ec37: lda	$08a2, y]
@@ -20982,10 +20762,8 @@ l_ec45:
 	cmp.b	#0xff,d0                         	| [$ec4a: cmp #$ff]
 	beq	l_ec67                             	| [$ec4c: beq	$ec67]
 	and.b	#0x0f,d0                         	| [$ec4e: and #$0f]
-	PUSH_SR
 	GET_ADDRESS	0x0069                     	| [$ec50: sta	$0069]
 	move.b	d0,(a0)                         	| [$ec50: sta	$0069]
-	POP_SR
 	GET_ADDRESS	0x0884                     	| [$ec52: lda	$0884, y]
 	move.b	(a0,d2.w),d0                    	| [$ec52: lda	$0884, y]
 	lsr.b	#4,d0                            	| [$ec55: lsr a] * 4
@@ -21008,47 +20786,36 @@ l_ec6e:
 	move.b	(a0),d2                         	| [$ec6e: ldy	$ed03]
 	GET_ADDRESS	0x08fb                     	| [$ec71: lda	$08fb, y]
 	move.b	(a0,d2.w),d0                    	| [$ec71: lda	$08fb, y]
-	PUSH_SR
 	GET_ADDRESS	0x0884                     	| [$ec74: sta	$0884, x]
     move.b	d0,(a0,d1.w)                 	| [$ec74: sta	$0884, x]
-	POP_SR
 	move.b	d1,d0                           	| [$ec77: txa]
-	PUSH_SR
 	GET_ADDRESS	0x0070                     	| [$ec78: sta	$0070]
 	move.b	d0,(a0)                         	| [$ec78: sta	$0070]
-	POP_SR
 	jbsr	l_ee23                            	| [$ec7a: jsr	$ee23]
 	GET_ADDRESS	0x0074                     	| [$ec7d: ldy	$0074]
 	move.b	(a0),d2                         	| [$ec7d: ldy	$0074]
 	GET_ADDRESS	0x08a2                     	| [$ec7f: lda	$08a2, y]
 	move.b	(a0,d2.w),d0                    	| [$ec7f: lda	$08a2, y]
 	                           	| [$ec82: clc]
-	add.b	#0x01,d0                        	| [$ec83: adc #$01]
+	addq.b	#0x01,d0                        	| [$ec83: adc #$01]
 	and.b	#0x0f,d0                         	| [$ec85: and #$0f]
-	PUSH_SR
 	GET_ADDRESS	0x08a2                     	| [$ec87: sta	$08a2, y]
     move.b	d0,(a0,d2.w)                 	| [$ec87: sta	$08a2, y]
-	POP_SR
 	GET_ADDRESS	0x006e                     	| [$ec8a: ldy	$006e]
 	move.b	(a0),d2                         	| [$ec8a: ldy	$006e]
 	GET_ADDRESS	0x08fb                     	| [$ec8c: lda	$08fb, y]
 	move.b	(a0,d2.w),d0                    	| [$ec8c: lda	$08fb, y]
-	PUSH_SR
 	*GET_ADDRESS	eeprom_write_enable_3400                     	| [$ec8f: sta	$3400]
 	*move.b	d0,(a0)                         	| [$ec8f: sta	$3400]
 	GET_ADDRESS_Y	0x72                     	| [$ec92: sta ($72), y]
 	move.b	d0,(a0,d2.w)                    	| [$ec92: sta ($72), y]
 
-	POP_SR
 	SET_XC_FLAGS                           	| [$ec94: sec]
 	rts                                    	| [$ec95: rts]
 l_ec96:
-	PUSH_SR
 	GET_ADDRESS	0x0067                     	| [$ec96: stx	$0067]
 	move.b	d1,(a0)                         	| [$ec96: stx	$0067]
-	POP_SR
 	clr.b	d0                               	| [$ec98: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x08fb                     	| [$ec9a: sta	$08fb]
 	move.b	d0,(a0)                         	| [$ec9a: sta	$08fb]
 	GET_ADDRESS	0x08fc                     	| [$ec9d: sta	$08fc]
@@ -21059,15 +20826,12 @@ l_ec96:
 	move.b	d0,(a0)                         	| [$eca3: sta	$08ff]
 	GET_ADDRESS	0x0903                     	| [$eca6: sta	$0903]
 	move.b	d0,(a0)                         	| [$eca6: sta	$0903]
-	POP_SR
 	GET_ADDRESS	0x0074                     	| [$eca9: ldy	$0074]
 	move.b	(a0),d2                         	| [$eca9: ldy	$0074]
 	move.b	d2,d0                           	| [$ecab: tya]
 	asl.b	#4,d0                            	| [$ecac: asl a] * 4
-	PUSH_SR
 	GET_ADDRESS	0x0068                     	| [$ecb0: sta	$0068]
 	move.b	d0,(a0)                         	| [$ecb0: sta	$0068]
-	POP_SR
 	GET_ADDRESS	0x08a2                     	| [$ecb2: lda	$08a2, y]
 	move.b	(a0,d2.w),d0                    	| [$ecb2: lda	$08a2, y]
 	                           	| [$ecb5: clc]
@@ -21077,10 +20841,8 @@ l_ec96:
 	or.b	(a0),d0                           	| [$ecba: ora	$0068]
 	GET_ADDRESS	0xed03                     	| [$ecbc: ldx	$ed03]
 	move.b	(a0),d1                         	| [$ecbc: ldx	$ed03]
-	PUSH_SR
 	GET_ADDRESS	0x08fb                     	| [$ecbf: sta	$08fb, x]
     move.b	d0,(a0,d1.w)                 	| [$ecbf: sta	$08fb, x]
-	POP_SR
 	jbsr	l_ed09                            	| [$ecc2: jsr	$ed09]
 	GET_ADDRESS	0x0067                     	| [$ecc5: lda	$0067]
 	move.b	(a0),d0                         	| [$ecc5: lda	$0067]
@@ -21090,17 +20852,13 @@ l_ec96:
 l_eccd:
 	GET_ADDRESS	0xecf9                     	| [$eccd: lda	$ecf9, x]
 	move.b	(a0,d1.w),d0                    	| [$eccd: lda	$ecf9, x]
-	PUSH_SR
 	GET_ADDRESS	0x0067                     	| [$ecd0: stx	$0067]
 	move.b	d1,(a0)                         	| [$ecd0: stx	$0067]
-	POP_SR
 	move.b	d0,d1                           	| [$ecd2: tax]
 	GET_ADDRESS	0x0914                     	| [$ecd3: lda	$0914, y]
 	move.b	(a0,d2.w),d0                    	| [$ecd3: lda	$0914, y]
-	PUSH_SR
 	GET_ADDRESS	0x08fb                     	| [$ecd6: sta	$08fb, x]
     move.b	d0,(a0,d1.w)                 	| [$ecd6: sta	$08fb, x]
-	POP_SR
 	jbsr	l_ed09                            	| [$ecd9: jsr	$ed09]
 	GET_ADDRESS	0x0067                     	| [$ecdc: ldx	$0067]
 	move.b	(a0),d1                         	| [$ecdc: ldx	$0067]
@@ -21474,10 +21232,9 @@ l_ee41:
 	GET_ADDRESS	0x0884                     	| [$ee5e: lda	$0884, y]
 	move.b	(a0,d2.w),d0                    	| [$ee5e: lda	$0884, y]
 	and.b	#0x0f,d0                         	| [$ee61: and #$0f]
-	SET_XC_FLAGS                           	| [$ee63: sec]
+	                           	| [$ee63: sec]
 	GET_ADDRESS	0x0068                     	| [$ee64: sbc	$0068]
-	move.b	(a0),d4	| [$ee64: sbc	$0068]
-	subx.b	d4,d0                         	| [$ee64: sbc	$0068]
+	sub.b	(a0),d0	| [$ee64: sbc	$0068]
 	bcs	l_ee70                             	| [$ee66: bcs	$ee70]
 	not.b	d0                               	| [$ee68: eor #$ff]
 	cmp.b	#0x08,d0                         	| [$ee6a: cmp #$08]
@@ -21671,10 +21428,9 @@ l_ef0f:
 	move.b	(a0,d2.w),d0                    	| [$ef25: lda	$08a2, y]
 	cmp.b	#0xff,d0                         	| [$ef28: cmp #$ff]
 	beq	l_ef3d                             	| [$ef2a: beq	$ef3d]
-	SET_XC_FLAGS                           	| [$ef2c: sec]
+	                           	| [$ef2c: sec]
 	GET_ADDRESS	0x0067                     	| [$ef2d: sbc	$0067]
-	move.b	(a0),d4	| [$ef2d: sbc	$0067]
-	subx.b	d4,d0                         	| [$ef2d: sbc	$0067]
+	sub.b	(a0),d0	| [$ef2d: sbc	$0067]
 	bcs	l_ef39                             	| [$ef2f: bcs	$ef39]
 	not.b	d0                               	| [$ef31: eor #$ff]
 	cmp.b	#0x08,d0                         	| [$ef33: cmp #$08]
@@ -22657,10 +22413,14 @@ l_f3f6:
 	GET_ADDRESS	0x00c3                     	| [$f3fd: inc	$00c3]
 	addq.b	#1,(a0)                         	| [$f3fd: inc	$00c3]
 	cmp.b	#0x04,d2                         	| [$f3ff: cpy #$04]
+	SET_X_FROM_CLEARED_C
 	bne	l_f3f5                             	| [$f401: bne	$f3f5]
+	PUSH_SR
 	GET_ADDRESS	0x00c3                     	| [$f403: inc	$00c3]
 	addq.b	#1,(a0)                         	| [$f403: inc	$00c3]
-	bra	l_f3f6                             	| [$f405: bcs	$f3f6] or maybe always branches here
+	POP_SR
+	* bcs=>bcc
+	bcc	l_f3f6                             	| [$f405: bcs	$f3f6] or maybe always branches here
 
 l_f40f:
 	GET_ADDRESS	0x00c0                     	| [$f40f: lda	$00c0]
