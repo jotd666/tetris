@@ -9,6 +9,7 @@
 	OPT_SKIP_INTRO_SCREEN=0           | LEAVE AT 0!!!
 	OPT_SKIP_GAME_DEMO=0              | LEAVE AT 0!!!
 	OPT_NO_FORCED_DOWN=0              | LEAVE AT 0!!!
+	OPT_FORCED_RANDOM=0              | LEAVE AT 0!!!
 	.else
 	
     * hardware options
@@ -22,7 +23,7 @@
 	OPT_SKIP_INTRO_SCREEN=0
 	OPT_SKIP_GAME_DEMO=0
 	OPT_NO_FORCED_DOWN=1
-
+	OPT_FORCED_RANDOM=0
 	.endif
 	
 ***
