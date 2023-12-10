@@ -1,9 +1,7 @@
-- controls: some up/down/left/right is actually 2P start: to fix
-- in-play: shapes are drawn wrong/overlap, end up crashing
-  debug at d5e4 check inputs compare / game
+- NEXT tile red bar drawn 1 tile too low, interfering with current tile movement
 - controls: insert coin not working
 - 2 credits inserted at start: debug around f3a8
-
+- 2P start? 2P controls to code
 - bug in demo when filling grid with "TET" => all blocks go to the left and overlap
 - deduce score, round, line numbers, current block X,Y,type... from screen writes
 - remove bank switching see what happens
@@ -27,6 +25,7 @@ low pri:
 
 converter:
 
+- subx: replace by one of SBC macros!
 - cmp: add a FIX_CMP_CARRY after each one: INVERT_C + SET_X_FROM_C
 - cmp + bmi??
 - after a subx: add INVERT_XC_FLAGS
