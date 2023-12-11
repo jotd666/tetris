@@ -22,7 +22,17 @@
     OPT_START_SCORE=0
 	OPT_SKIP_INTRO_SCREEN=0
 	OPT_SKIP_GAME_DEMO=0
-	OPT_NO_FORCED_DOWN=1
+	OPT_NO_FORCED_DOWN=0
+	
+* shape:
+* 1: red bar
+* 2: green T
+* 3: blue square
+* 4: yellow L
+* 5: purple L
+* 6: light blue S
+* 7: orange S
+
 	OPT_FORCED_RANDOM=0
 	.endif
 	

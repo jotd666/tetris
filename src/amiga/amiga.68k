@@ -179,60 +179,13 @@ _user:
 0:	
 	lea		program_args,a0
 
-	move.l	(A0)+,D0	| INVINCIBLE/S
-	beq.b	1f
-	or.l	#1,cheat_flags
-	st.b	cheat_used
-1:
-	move.l	(A0)+,D0	| INFLIVES/S
-	beq.b	2f
-	or.l	#2,cheat_flags
-	st.b	cheat_used
-2:
-	move.l	(A0)+,D0	| INFTIME/S
-	beq.b	2f
-	or.l	#4,cheat_flags
-	st.b	cheat_used
-2:
-	move.l	(A0)+,D0	| INFPICK/S
-	beq.b	2f
-	or.l	#8,cheat_flags
-	st.b	cheat_used
 2:
 	move.l	(A0)+,D0	| CHEATKEYS/S
 	beq.b	2f
 	* cheat isn't used as long as no cheat key is used
-	or.l	#0x10,cheat_flags
-2:
-	move.l	(A0)+,D0	| HARDBAGS/S
-	beq.b	2f
-	or.l	#1,misc_options
-2:
-	move.l	(A0)+,D0	| FRENCH/S
-	beq.b	2f
-	or.l	#2,misc_options
-2:
-	move.l	(A0)+,D0	| GUNSATSTART/S
-	beq.b	2f
-	or.l	#4,misc_options
+	or.l	#0x1,cheat_flags
 2:
 
-	move.l	(A0)+,D0	| SKILL/S
-	beq.b	2f
-	bsr		bcpl_string_to_int
-	move.l	d0,dip_switch_difficulty
-2:
-	move.l	(A0)+,D0	| STARTLIVES/S
-	beq.b	2f
-	bsr		bcpl_string_to_int
-	subq.b	#1,d0
-	bmi.b	2f
-	move.l	d0,dip_switch_start_lives
-	bra.b	3f
-2:
-	move.l	#4,dip_switch_start_lives		| 5 lives default
-3:
-	
 
 	lea		_custom,a5
 	lea		debug_copperlist,a0
@@ -290,6 +243,7 @@ _user:
 	move.l	#-1,184(A0)	| pr_WindowPtr: no more system requesters (insert volume, write protected...)
 
 .no_forbid:
+	.ifne	0
 	move.l	dip_switch_difficulty(pc),d0
 	lsl.b	#3,d0
 	
@@ -316,7 +270,7 @@ _user:
 	btst	#2,d0
 	
 	btst	#3,d0
-	
+	.endif
 	
 	jsr	 _detect_controller_types 
 	clr.b	controller_joypad_0
@@ -528,7 +482,12 @@ demo_game:
 		move		#0x7FFF,_custom+intreq						| ack all interrupts
 		bsr			platform_init					| amiga-specific init
 
-
+		lea			bank0_4000+0xF36,a0
+		lea 		jotd_credits,a1
+		move.w		#jotd_credits_end-jotd_credits-1,d0
+0:
+		move.b	(a1)+,(a0)+
+		dbf		d0,0b
 		jmp			tetris_reset					| pass control to the tetris core
 		
 	
@@ -619,6 +578,25 @@ _vblank:
 4:
     rte
 	
+
+osd_get_random:
+* > D0: pseudo random value (8 bits, all other bits zeroed)
+	movem.l	a0,-(a7)
+	lea	seed(pc),a0
+	move.l	(a0),d0
+	* thanks meynaf
+	mulu #0xa57b,d0
+	addi.l #0xbb40e62d,d0
+	rol.l #6,d0	
+	move.l	d0,(a0) 
+	movem.l	(a7)+,a0
+	add.b	_custom+vposr,d0
+	and.l	#0xFF,d0
+	rts
+seed:
+	dc.l	0x12345678
+
+
 osd_break:
 	* sends a WinUAE command to enter WinUAE debugger
 	.ifndef	RELEASE
@@ -1633,26 +1611,17 @@ handle_keyboard:
     bsr	toggle_pause
 0:
 
-	btst	#4,cheat_flags+3
+	btst	#0,cheat_flags+3
 	jeq		10f
 	* cheat keys
 	cmp.b	#0x50,d0	| F1 key
 	bne.b	0f
 	st.b	cheat_used
-	move.w	#0x0FF,_custom+color
+	* complete level
+	lea		game_ram+0x30,a0
+	move.b	#0x30,(a0)+
+	move.b	#0x30,(a0)
 	
-0:
-	cmp.b	#0x51,d0	| F2 key
-	bne.b	0f
-	st.b	cheat_used
-	move.w	#0x0FF,_custom+color
-	
-0:
-	cmp.b	#0x52,d0	| F3 key
-	bne.b	0f
-	st.b	cheat_used
-	* add 10000 points
-	nop  |add.b	#1,player_1_score_6176+2
 
 0:
 10:
@@ -1715,8 +1684,7 @@ program_args_end:
 	.align	4
 read_args_string:
 	.byte	read_args_string_end-read_args_string
-	.ascii	"INVINCIBLE/S,INFLIVES/S,INFTIME/S,INFPICK/S,"
-	.ascii	"CHEATKEYS/S,HARDBAGS/S,FRENCH/S,GUNSATSTART/S,SKILL/K/N,STARTLIVES/K/N"
+	.ascii	"CHEATKEYS/S"
 read_args_string_end:
 
 	.ifndef	RELEASE
@@ -1854,6 +1822,9 @@ dynamic_color_mode:
 
 cheat_used:
 	.byte	0
+jotd_credits:
+	.ascii	"AMIGA VE;SION BY JOTD 2024"
+jotd_credits_end:
 dosname:
 	.ascii	"dos.library"
 	.byte	0
