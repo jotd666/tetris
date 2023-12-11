@@ -1,7 +1,7 @@
-- controls: insert coin not working
+- controls: insert coin not working (debounce shit?)
 - 2 credits inserted at start: debug around f3a8
 - 2P start? 2P controls to code
-
+- advancing lines: always the same! (debug with MAME)
 
 - save highscores
 - convert tunes from MAME ripped format
@@ -13,7 +13,6 @@
 
 low pri:
 
-- fmode=3
 - fix osd_w_videoram_nc (optim)
 - log used tiles to reduce memory size
 
