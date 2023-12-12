@@ -1,4 +1,3 @@
-- 2 credits inserted at start: debug around f3a8
 - 2P start? 2P controls to code
 
 - save highscores

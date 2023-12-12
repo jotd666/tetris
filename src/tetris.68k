@@ -4585,10 +4585,8 @@ l_822e:
 	not.b	d0                               	| [$824c: eor #$ff]
 	GET_ADDRESS	0x00b3                     	| [$824e: and	$00b3]
 	and.b	(a0),d0                          	| [$824e: and	$00b3]
-	PUSH_SR
 	GET_ADDRESS	0x00b5                     	| [$8250: sta	$00b5]
 	move.b	d0,(a0)                         	| [$8250: sta	$00b5]
-	POP_SR
 	move.b	#0x07,d1                        	| [$8252: ldx #$07]
 l_8254:
 	GET_ADDRESS	0x00b3                     	| [$8254: lda	$00b3]
@@ -4597,11 +4595,9 @@ l_8254:
 	and.b	(a0,d1.w),d0                     	| [$8256: and	$82f2, x]
 	bne	l_8261                             	| [$8259: bne	$8261]
 	clr.b	d0                               	| [$825b: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x00b8                     	| [$825d: sta	$00b8, x]
     move.b	d0,(a0,d1.w)                 	| [$825d: sta	$00b8, x]
-	POP_SR
-	beq	l_827c                             	| [$825f: beq	$827c]
+	bra	l_827c                             	| [$825f: beq	$827c]
 l_8261:
 	GET_ADDRESS	0x00b8                     	| [$8261: inc	$00b8, x]
     addq.b	#1,(a0,d1.w)                 	| [$8261: inc	$00b8, x]
@@ -17863,12 +17859,10 @@ periodic_interrupt_D70E:
 * copy first byte of rom bank in first_byte_of_bank_000d
 	GET_ADDRESS	0x4000                     	| [$d713: lda	$4000]
 	move.b	(a0),d0                         	| [$d713: lda	$4000]
-	PUSH_SR
 	GET_ADDRESS	first_byte_of_bank_000d      	| [$d716: sta first_byte_of_bank_000d]
 	move.b	d0,(a0)                         	| [$d716: sta first_byte_of_bank_000d]
-	POP_SR
 	
-	jbsr	osd_read_pokey1						| [$d718: cld]
+	*jbsr	osd_read_pokey1						| [$d718: cld]
 	*PUSH_SR
 	*GET_ADDRESS	potgo_280b                     	| [$d719: sta	$280b]
 	*move.b	d0,(a0)                         	| [$d719: sta	$280b]
@@ -17877,6 +17871,8 @@ periodic_interrupt_D70E:
 	*move.b	(a0),d0                         	| [$d71c: lda	$2808]
 	
 	* periodically get pokey state and copy it to 0x700
+	* disabled, pokey 1 reads are not useful as soon as credits are managed some other way
+	moveq	#0,d0
 	GET_ADDRESS	pokey1_state_copy_0700                     	| [$d71f: sta	$0700]
 	move.b	d0,(a0)                         	| [$d71f: sta	$0700]
 	bpl	l_d745                             	| [$d722: bpl	$d745]
