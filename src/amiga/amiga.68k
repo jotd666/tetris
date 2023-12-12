@@ -1231,7 +1231,6 @@ osd_r_videoram:
 * < D0: code
 * should preserve all registers
 
-osd_w_videoram_nc:
 osd_w_videoram:
 	movem.l	d0-d3/d6/a0-a2,-(a7)
 	
@@ -1277,7 +1276,7 @@ osd_w_videoram:
 * < D0: code
 * should preserve all registers
 
-osd_w_videoram_nc_todo:
+osd_w_videoram_nc:
 	movem.l	d0-d3/d6/a0-a2,-(a7)
 	
 	cmp.w	#SCREEN_ADDRESS,a0
