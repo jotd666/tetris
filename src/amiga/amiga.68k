@@ -245,6 +245,10 @@ _user:
 	move.l	#-1,184(A0)	| pr_WindowPtr: no more system requesters (insert volume, write protected...)
 
 .no_forbid:
+	move.l	number_of_credits,d0
+	seq		unlimited_credits_flag
+	move.b	d0,start_number_of_credits	| 0: game sets to 5
+
 	.ifne	0
 	move.l	dip_switch_difficulty(pc),d0
 	lsl.b	#3,d0
@@ -490,6 +494,8 @@ demo_game:
 0:
 		move.b	(a1)+,(a0)+
 		dbf		d0,0b
+		
+		
 		jmp			tetris_reset					| pass control to the tetris core
 		
 	
@@ -1059,6 +1065,14 @@ platform_init:
 	swap	d0
 	addq.w	#8,a1
 	dbf		d1,0b
+	
+	lea	bg_screen_buffer,a0
+	addq	#8,a0
+	move.l	a0,d0
+	and.w	#0xFFF8,d0
+	move.l	d0,a0
+	move.l	a0,bg_drawed_screen_ptr
+	move.l	a0,bg_displayed_screen_ptr
 	
 	bsr		set_bg_bitplanes
 	
@@ -1732,6 +1746,10 @@ _tag:
 cheat_flags:
 		.long	0
 
+		.long	WHDLTAG_CUSTOM2_GET
+number_of_credits:
+		.long	0
+
 		.long	WHDLTAG_CUSTOM3_GET
 misc_options:
 		.long	0
@@ -1797,13 +1815,10 @@ delay_timer:
 one_out_of_five:
 	.word	0
 bg_drawed_screen_ptr:
-	.long	bg_screen_data_1
+	.long	0
 bg_displayed_screen_ptr:
-	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
-	.long	bg_screen_data_2
-	.else
-	.long	bg_screen_data_1
-	.endif
+	.long	0
+
 
 
 	*.include	"sound_entries.68k"
@@ -1948,10 +1963,10 @@ sprites:
 	
 		.section .bsschip
 
-bg_screen_data_1:
-
+bg_screen_buffer:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3
+	ds.b	8		| for alignment
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING_BG
 bg_screen_data_2:
 	ds.b	BG_SCREEN_SIZE

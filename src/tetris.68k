@@ -4091,6 +4091,11 @@ l_8000:
 	.endif
 	bsr		cpu_init
 	
+	* if start_number_of_credits was 0, initialize it with default (safety)
+	tst.b	start_number_of_credits
+	bne.b	0f
+	move.b	#5,start_number_of_credits
+0:
 	SET_I_FLAG                             	| [$8000: sei] block interrupts
 	*jra	l_8008                             	| [$8001: jmp	$8008]
 
@@ -11875,7 +11880,6 @@ l_b06a:
 	move.b	(a0,d2.w),d0                    	| [$b06a: lda ($1f), y]
 	bne	l_b07b                             	| [$b06c: bne	$b07b]
 	jbsr	osd_get_random                     	| [$b06e: lda	$281a]
-	move.b	(a0),d0                         	| [$b06e: lda	$281a]
 	and.b	#0x70,d0                         	| [$b071: and #$70]
 	beq	l_b079                             	| [$b073: beq	$b079]
 	GET_ADDRESS	0x001c                     	| [$b075: inc	$001c]
@@ -11895,7 +11899,6 @@ l_b07b:
 	* bcc=>bcs
 	bcs	l_b094                             	| [$b085: bcc	$b094]
 	jbsr	osd_get_random                     	| [$b087: lda	$281a]
-	move.b	(a0),d0                         	| [$b087: lda	$281a]
 	and.b	#0x07,d0                         	| [$b08a: and #$07]
 	                           	| [$b08c: clc]
 	addq.b	#0x04,d0                        	| [$b08d: adc #$04]
@@ -14996,6 +14999,11 @@ l_c15c:
 l_c179:
 	rts                                    	| [$c179: rts]
 l_c17a:
+	* jotd: set a given number of credits when the title screen appears
+	* not more, giving an "arcade" feel limit to the otherwise unlimited game
+	GET_ADDRESS	number_of_credits_00c1                     	| [$f422: inc	$00c1]
+	move.b	start_number_of_credits,(a0)                         	| [$f422: inc	$00c1]
+
 	jbsr	l_d552                            	| [$c17a: jsr	$d552]
 	GET_ADDRESS	0x067d                     	| [$c17d: lda	$067d]
 	move.b	(a0),d0                         	| [$c17d: lda	$067d]
@@ -17478,8 +17486,13 @@ l_d598:
 	                           	| [$d59f: sec]
 	GET_ADDRESS	0xcb3e                     	| [$d5a0: sbc	$cb3e, y]
 	sub.b	(a0,d2.w),d0	| [$d5a0: sbc	$cb3e, y]
-	GET_ADDRESS	number_of_credits_00c1     	| [$d5a3: sta number_of_credits_00c1]
+	     	| [$d5a3: sta number_of_credits_00c1]
+	* don't decrease credits if flag is set
+	tst.b	unlimited_credits_flag
+	bne.b	0f
+	GET_ADDRESS	number_of_credits_00c1 		| [$d5a3: sta number_of_credits_00c1]
 	move.b	d0,(a0)                         	| [$d5a3: sta number_of_credits_00c1]
+0:
 	CLR_I_FLAG                             	| [$d5a6: cli]
 	GET_ADDRESS	0xcb3a                     	| [$d5a7: lda	$cb3a, y]
 	move.b	(a0,d2.w),d0                    	| [$d5a7: lda	$cb3a, y]
@@ -17936,22 +17949,16 @@ l_d762:
 	GET_ADDRESS	0x000f                     	| [$d762: lda	$000f]
 	move.b	(a0),d0                         	| [$d762: lda	$000f]
 	and.b	#0x07,d0                         	| [$d764: and #$07]
-	PUSH_SR
 	GET_ADDRESS	0x0012                     	| [$d766: sta	$0012]
 	move.b	d0,(a0)                         	| [$d766: sta	$0012]
-	POP_SR
 	and.b	#0x03,d0                         	| [$d768: and #$03]
-	PUSH_SR
 	GET_ADDRESS	0x0011                     	| [$d76a: sta	$0011]
 	move.b	d0,(a0)                         	| [$d76a: sta	$0011]
-	POP_SR
 l_d76c:
 	GET_ADDRESS	0x08bc                     	| [$d76c: lda	$08bc]
 	move.b	(a0),d0                         	| [$d76c: lda	$08bc]
-	PUSH_SR
 	GET_ADDRESS	0x00c0                     	| [$d76f: sta	$00c0]
 	move.b	d0,(a0)                         	| [$d76f: sta	$00c0]
-	POP_SR
 	jbsr	l_f37e                            	| [$d772: jsr	$f37e]
 	GET_ADDRESS	number_of_credits_00c1     	| [$d775: lda number_of_credits_00c1]
 	move.b	(a0),d0                         	| [$d775: lda number_of_credits_00c1]
@@ -17960,32 +17967,29 @@ l_d76c:
 	* bcc=>bcs
 	bcs	l_d788                             	| [$d77a: bcc	$d788]
 	move.b	#0x09,d0                        	| [$d77c: lda #$09]
-	PUSH_SR
 	GET_ADDRESS	number_of_credits_00c1     	| [$d77e: sta number_of_credits_00c1]
 	move.b	d0,(a0)                         	| [$d77e: sta number_of_credits_00c1]
 	GET_ADDRESS	0x0051                     	| [$d781: sta	$0051]
 	move.b	d0,(a0)                         	| [$d781: sta	$0051]
-	POP_SR
 	move.b	#0x39,d0                        	| [$d783: lda #$39]
 * clv+bvc => jra
 	jra	l_d78a                             	| [$d786: jmp	$d78a]
 l_d788:
 	or.b	#0x30,d0                          	| [$d788: ora #$30]
 l_d78a:
-	PUSH_SR
 	GET_ADDRESS	0x0618                     	| [$d78a: sta	$0618]
 	move.b	d0,(a0)                         	| [$d78a: sta	$0618]
-	POP_SR
 	GET_ADDRESS	number_of_credits_00c1     	| [$d78d: lda number_of_credits_00c1]
 	move.b	(a0),d0                         	| [$d78d: lda number_of_credits_00c1]
 	GET_ADDRESS	0x0051                     	| [$d790: cmp	$0051]
 	cmp.b	(a0),d0                          	| [$d790: cmp	$0051]
 	beq	l_d7a0                             	| [$d792: beq	$d7a0]
-	PUSH_SR
+	PUSH_SR		| required
 	GET_ADDRESS	0x0051                     	| [$d794: sta	$0051]
 	move.b	d0,(a0)                         	| [$d794: sta	$0051]
-	POP_SR
-	bcc	l_d7a0                             	| [$d796: bcc	$d7a0]
+	POP_SR		| required
+	* bcc=>bcs (cmp)
+	bcs	l_d7a0                             	| [$d796: bcc	$d7a0]
 	jbsr	l_bc16                            	| [$d798: jsr	$bc16]
 	move.b	#0x13,d0                        	| [$d79b: lda #$13]
 	jbsr	l_e659                            	| [$d79d: jsr	$e659]
@@ -18017,12 +18021,10 @@ l_d7c2:
 	move.b	d0,(a0)                         	| [$d7c5: sta	$0052]
 	
 	asl.b	#1,d0                            	| [$d7c7: asl a]
-	PUSH_SR
 	GET_ADDRESS	0x00c8                     	| [$d7c8: lda	$00c8]
 	move.b	(a0),d0                         	| [$d7c8: lda	$00c8]
 	GET_ADDRESS	0x0053                     	| [$d7cb: sta	$0053]
 	move.b	d0,(a0)                         	| [$d7cb: sta	$0053]
-	POP_SR
 	roxr.b	#1,d0                            	| [$d7cd: ror a]
 	lsr.b	#2,d0                            	| [$d7ce: lsr a] * 2
 	and.b	#0x30,d0                         	| [$d7d0: and #$30]
@@ -22160,13 +22162,17 @@ l_f40f:
 	move.b	d0,(a0)                         	| [$f41e: sta	$00c3]
 	clr.b	d0                               	| [$f420: lda #$00]
 l_f422:
-	GET_ADDRESS	number_of_credits_00c1                     	| [$f422: inc	$00c1]
-	addq.b	#1,(a0)                         	| [$f422: inc	$00c1]
+	* add one more credit: for some reason (debounce???) this is always
+	* called twice when game boots in the converted version, awarding 2 credits!!
+	* we're disabling it and set the credits when the title screen is displayed
+	nop
+*	GET_ADDRESS	number_of_credits_00c1                     	| [$f422: inc	$00c1]
+*	addq.b	#5,(a0)                         	| [$f422: inc	$00c1]
 l_f424:
-	PUSH_SR
+	PUSH_SR		| required
 	GET_ADDRESS	0x00c4                     	| [$f424: sta	$00c4]
 	move.b	d0,(a0)                         	| [$f424: sta	$00c4]
-	POP_SR
+	POP_SR		| required
 	bne	l_f40f                             	| [$f426: bne	$f40f]
 l_f428:
 	GET_ADDRESS	0x00c9                     	| [$f428: inc	$00c9]
@@ -22201,17 +22207,17 @@ l_f447:
 	bpl	l_f43b                             	| [$f448: bpl	$f43b]
 	bmi	l_f45c                             	| [$f44a: bmi	$f45c]
 l_f44c:
-	move.b	#0x01,d1                        	| [$f44c: ldx #$01]
+	moveq	#0x01,d1                        	| [$f44c: ldx #$01]
 l_f44e:
 	GET_ADDRESS	0x00c7                     	| [$f44e: lda	$00c7, x]
 	move.b	(a0,d1.w),d0                    	| [$f44e: lda	$00c7, x]
 	beq	l_f459                             	| [$f450: beq	$f459]
 	                           	| [$f452: clc]
 	add.b	#0xef,d0                        	| [$f453: adc #$ef]
-	PUSH_SR
-	GET_ADDRESS	0x00c7                     	| [$f455: sta	$00c7, x]
+	PUSH_SR		| required
+	                     	| [$f455: sta	$00c7, x]
     move.b	d0,(a0,d1.w)                 	| [$f455: sta	$00c7, x]
-	POP_SR
+	POP_SR		| required
 	bmi	l_f45c                             	| [$f457: bmi	$f45c]
 l_f459:
 	subq.b	#1,d1                           	| [$f459: dex]

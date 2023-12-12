@@ -5,6 +5,8 @@
 	.global		bg_videoram
 	.global		palette_entries
 	.global		vb_ticks_count
+	.global		start_number_of_credits
+	.global		unlimited_credits_flag
 	.ifndef		RELEASE
 	.global		memory_dump
 	.endif
@@ -28,4 +30,8 @@ stack_top:
 current_bank:
 	ds.b	1
 vb_ticks_count:
+	ds.b	1
+start_number_of_credits:
+	ds.b	1
+unlimited_credits_flag:
 	ds.b	1

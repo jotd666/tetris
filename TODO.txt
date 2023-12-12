@@ -1,7 +1,5 @@
-- controls: insert coin not working (debounce shit?)
 - 2 credits inserted at start: debug around f3a8
 - 2P start? 2P controls to code
-- advancing lines: always the same! (debug with MAME)
 
 - save highscores
 - convert tunes from MAME ripped format
@@ -11,8 +9,11 @@
 - write midi file: https://stackoverflow.com/questions/11059801/how-can-i-write-a-midi-file-with-python
 - mp3 to midi works great! https://anyconv.com/wav-to-midi-converter/
 
+
 low pri:
 
+- advancing lines: random not so good/similar to POKEY random (one almost filled line each time)
+  maybe check MAME source for ASLR generators
 - fix osd_w_videoram_nc (optim)
 - log used tiles to reduce memory size
 
