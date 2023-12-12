@@ -1,5 +1,5 @@
 .key nope
-set game sbagman
+set game tetris
 ;propack p a $game
 copy $game.RNC DF0:$game
 protect DF0:$game RWED

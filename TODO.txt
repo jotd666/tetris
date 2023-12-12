@@ -1,4 +1,4 @@
-- 2P start? 2P controls to code
+- floppy A1200 nofast: continue screen crashes with 800004 GURU
 
 - save highscores
 - convert tunes from MAME ripped format
@@ -13,7 +13,6 @@ low pri:
 
 - advancing lines: random not so good/similar to POKEY random (one almost filled line each time)
   maybe check MAME source for ASLR generators
-- fix osd_w_videoram_nc (optim)
 - log used tiles to reduce memory size
 
 

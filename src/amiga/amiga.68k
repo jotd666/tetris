@@ -119,7 +119,7 @@ start:
 		*.global osd_calibrate_display		| for debug
 		.global osd_r_videoram
 		.global osd_w_videoram
-		.global osd_w_videoram_nc
+		.global osd_w_colorram
 
 		.global osd_update_sprites
 		.global osd_read_inputs
@@ -1231,7 +1231,7 @@ osd_r_videoram:
 * < D0: code
 * should preserve all registers
 
-osd_w_videoram:
+osd_w_colorram:
 	movem.l	d0-d3/d6/a0-a2,-(a7)
 	
 	cmp.w	#SCREEN_ADDRESS,a0
@@ -1252,13 +1252,17 @@ osd_w_videoram:
 	sub.w	#SCREEN_ADDRESS,a0
 	lea		bg_videoram,a1
 	add.w	a0,a1
-	
-	cmp.b	(a1),d0
-	beq.b	0f		| already the proper value
-3:
 
 	move.b	d0,(a1)	| update logical grid
 	move.l	a1,d0
+	.ifndef	RELEASE
+	btst	#0,d0
+	bne.b	1f
+	lea		write_colorram_called_on_even_address(pc),a0
+	jbsr	osd_break
+	bra.b	0f
+1:
+	.endif
 	bclr	#0,d0
 	move.l	d0,a1
 	* get 16-bit word for tile&color
@@ -1276,7 +1280,7 @@ osd_w_videoram:
 * < D0: code
 * should preserve all registers
 
-osd_w_videoram_nc:
+osd_w_videoram:
 	movem.l	d0-d3/d6/a0-a2,-(a7)
 	
 	cmp.w	#SCREEN_ADDRESS,a0
@@ -1627,7 +1631,9 @@ write_videoram_out_of_range_error:
 	.asciz	"write videoram out of range"
 write_palette_out_of_range_error:
 	.asciz	"write palette out of range"
-	
+write_colorram_called_on_even_address:
+	.asciz	"write colorram on even address"
+
 	.endif
 	.align	2
 	.include	"color_lut.68k"

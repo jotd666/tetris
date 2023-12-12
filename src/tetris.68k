@@ -320,7 +320,7 @@ coin_counters_3C00 = 0x3C00
 	jbsr	get_address
 	.endm
 
-	* doesn't check anything, but osd_w_videoram will
+	* doesn't check anything, but osd_w_colorram will
 	.macro GET_SCREEN_ADDRESS_Y	offset
 	lea	game_ram,a0
 	add.w	#\offset,a0
@@ -432,7 +432,19 @@ switch_to_bank_01:
 	move.b	#1,current_bank
 	rts
 	
+* write color or video ram depending on address
+* reminder: writing videoram doesn't necessarily has to refresh tile
+* whereas writing to colorram refreshes tile
 
+write_video_ram:
+	move.w	a0,d4
+	btst	#0,d4
+	beq.b	0f
+	jra	osd_w_colorram                    	| [$bc39: sta ($ad), y]	
+0:
+	jra	osd_w_videoram                    	| [$bc39: sta ($ad), y]	
+
+	
 * this is bank 1
 
 	jbsr	l_402d                            	| [$4000: jsr	$402d]
@@ -485,15 +497,12 @@ l_402d:
 	
 	move.b	#0x11,d1                        	| [$4043: ldx #$11]
 l_4045:
-	PUSH_SR
 	GET_ADDRESS	0x0e2d                     	| [$4045: sta	$0e2d, x]
     move.b	d0,(a0,d1.w)                 	| [$4045: sta	$0e2d, x]
-	POP_SR
 	subq.b	#1,d1                           	| [$4048: dex]
 	bpl	l_4045                             	| [$4049: bpl	$4045]
 	move.b	#0x09,d1                        	| [$404b: ldx #$09]
 l_404d:
-	PUSH_SR
 	GET_ADDRESS	0x0cb1                     	| [$404d: sta	$0cb1, x]
     move.b	d0,(a0,d1.w)                 	| [$404d: sta	$0cb1, x]
 	GET_ADDRESS	0x0c43                     	| [$4050: sta	$0c43, x]
@@ -504,7 +513,6 @@ l_404d:
     move.b	d0,(a0,d1.w)                 	| [$4056: sta	$0cd9, x]
 	GET_ADDRESS	0x0da1                     	| [$4059: sta	$0da1, x]
     move.b	d0,(a0,d1.w)                 	| [$4059: sta	$0da1, x]
-	POP_SR
 	subq.b	#1,d1                           	| [$405c: dex]
 	bpl	l_404d                             	| [$405d: bpl	$404d]
 	move.b	#0x01,d1                        	| [$405f: ldx #$01]
@@ -529,13 +537,11 @@ l_4061:
 	clr.b	d0                               	| [$406b: lda #$00]
 	move.b	#0x08,d2                        	| [$406d: ldy #$08]
 	
-	PUSH_SR
 	GET_ADDRESS_Y	pokey_pointer_00ce                     	| [$406f: sta ($ce), y]
 	move.b	d0,(a0,d2.w)                    	| [$406f: sta ($ce), y]
 
 	GET_ADDRESS	0x00d9                     	| [$4071: stx	$00d9]
 	move.b	d1,(a0)                         	| [$4071: stx	$00d9]
-	POP_SR
 	CLR_XC_FLAGS                           	| [$4073: clc]
 	GET_ADDRESS	pokey_pointer_00ce                     	| [$4074: lda	$00ce]
 	move.b	(a0),d0                         	| [$4074: lda	$00ce]
@@ -4314,7 +4320,7 @@ l_8101:
 	roxl.b	#1,d0                            	| [$8102: rol a]
 	move.b	d0,d1                           	| [$8103: tax]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_00ad                     	| [$8104: sta ($ad), y]
-	jbsr	osd_w_videoram                    	| [$8104: sta ($ad), y]
+	jbsr	osd_w_colorram                    	| [$8104: sta ($ad), y]
 	move.b	d0,d4
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_00ad                     	| [$8106: eor ($ad), y]
 	jbsr	osd_r_videoram	| [$8106: eor ($ad), y]
@@ -5377,12 +5383,12 @@ l_8622:
 	GET_ADDRESS	0x005e                     	| [$8622: lda	$005e]
 	move.b	(a0),d0                         	| [$8622: lda	$005e]
 	GET_SCREEN_ADDRESS_Y	screen_address_00aa                     	| [$8624: sta ($aa), y]
-	jbsr	osd_w_videoram_nc                    	| [$8624: sta ($aa), y]
+	jbsr	osd_w_videoram                    	| [$8624: sta ($aa), y]
 	addq.b	#1,d2                           	| [$8626: iny]
 	GET_ADDRESS	0x005f                     	| [$8627: lda	$005f]
 	move.b	(a0),d0                         	| [$8627: lda	$005f]
 	GET_SCREEN_ADDRESS_Y	screen_address_00aa                     	| [$8629: sta ($aa), y]
-	jbsr	osd_w_videoram                    	| [$8629: sta ($aa), y]
+	jbsr	osd_w_colorram                    	| [$8629: sta ($aa), y]
 
 	addq.b	#1,d2                           	| [$862b: iny]
 	bne	l_8622                             	| [$862c: bne	$8622]
@@ -5551,12 +5557,12 @@ l_8764:
 	GET_ADDRESS	0x005e                     	| [$8764: lda	$005e]
 	move.b	(a0),d0                         	| [$8764: lda	$005e]
 	GET_ADDRESS_Y	screen_address_00aa                     	| [$8766: sta ($aa), y]
-	jbsr	osd_w_videoram_nc                   	| [$8766: sta ($aa), y]
+	jbsr	osd_w_videoram                   	| [$8766: sta ($aa), y]
 	addq.b	#1,d2                           	| [$8768: iny]
 	GET_ADDRESS	0x005f                     	| [$8769: lda	$005f]
 	move.b	(a0),d0                         	| [$8769: lda	$005f]
 	GET_ADDRESS_Y	screen_address_00aa                     	| [$876b: sta ($aa), y]
-	jbsr	osd_w_videoram                    	| [$876b: sta ($aa), y]
+	jbsr	osd_w_colorram                    	| [$876b: sta ($aa), y]
 	addq.b	#1,d2                           	| [$876d: iny]
 	cmp.b	#0x40,d2                         	| [$876e: cpy #$40]
 	* bcc=>bcs
@@ -5687,12 +5693,12 @@ l_886b:
 
 	
 	GET_SCREEN_ADDRESS_Y	screen_address_00aa                     	| [$8871: sta ($aa), y]	
-	jbsr	osd_w_videoram_nc						 	| [$8871: sta ($aa), y]
+	jbsr	osd_w_videoram						 	| [$8871: sta ($aa), y]
 	addq.b	#1,d2                           	| [$8873: iny]
 	GET_ADDRESS	0x0686                     	| [$8874: lda	$0686]
 	move.b	(a0),d0                         	| [$8874: lda	$0686]
 	GET_SCREEN_ADDRESS_Y	screen_address_00aa                     	| [$8877: sta ($aa), y]
-	jbsr	osd_w_videoram                    	| [$8877: sta ($aa), y]
+	jbsr	osd_w_colorram                    	| [$8877: sta ($aa), y]
 	addq.b	#1,d2                           	| [$8879: iny]
 	cmp.b	#0x54,d2                         	| [$887a: cpy #$54]
 	* bcc=>bcs
@@ -5749,10 +5755,10 @@ l_88c0:
 	GET_ADDRESS	0x0685                     	| [$88c1: lda	$0685]
 	move.b	(a0),d0                         	| [$88c1: lda	$0685]
 	addq.b	#1,d0                        	| [$88c4: adc #$01]
-	PUSH_SR
+	PUSH_SR    | required
 	GET_ADDRESS	0x0685                     	| [$88c6: sta	$0685]
 	move.b	d0,(a0)                         	| [$88c6: sta	$0685]
-	POP_SR
+	POP_SR     | required
 	bcc	l_88ce                             	| [$88c9: bcc	$88ce]
 	GET_ADDRESS	0x0686                     	| [$88cb: inc	$0686]
 	addq.b	#1,(a0)                         	| [$88cb: inc	$0686]
@@ -5769,10 +5775,10 @@ l_88d8:
 l_88da:
 	GET_ADDRESS_X	0x5c                     	| [$88da: lda ($5c, x)]
 	move.b	(a0),d0                         	| [$88da: lda ($5c, x)]
-	PUSH_SR
+	PUSH_SR   | required
 	GET_ADDRESS	0x0687                     	| [$88dc: sta	$0687]
 	move.b	d0,(a0)                         	| [$88dc: sta	$0687]
-	POP_SR
+	POP_SR   | required
 	bpl	l_88e5                             	| [$88df: bpl	$88e5]
 	st.b	d0                                	| [$88e1: lda #$ff]
 	bra	l_88e7                             	| [$88e3: bne	$88e7]
@@ -5802,16 +5808,12 @@ l_8907:
 	cmp.b	#0x81,d0                         	| [$8907: cmp #$81]
 	bne	l_891e                             	| [$8909: bne	$891e]
 	move.b	#0x01,d0                        	| [$890b: lda #$01]
-	PUSH_SR
 	GET_ADDRESS	0x0682                     	| [$890d: sta	$0682]
 	move.b	d0,(a0)                         	| [$890d: sta	$0682]
-	POP_SR
 	GET_ADDRESS_X	0x5c                     	| [$8910: lda ($5c, x)]
 	move.b	(a0),d0                         	| [$8910: lda ($5c, x)]
-	PUSH_SR
 	GET_ADDRESS	0x0683                     	| [$8912: sta	$0683]
 	move.b	d0,(a0)                         	| [$8912: sta	$0683]
-	POP_SR
 	jbsr	l_8946                            	| [$8915: jsr	$8946]
 	jra	l_88c0                             	| [$8918: jmp	$88c0]
 * clv+bvc => jra
@@ -5853,10 +5855,10 @@ l_8946:
 	move.b	(a0),d0                         	| [$8946: lda	$005c]
 	                           	| [$8948: clc]
 	add.b	#0x01,d0                        	| [$8949: adc #$01]
-	PUSH_SR
+	PUSH_SR	   | required
 	GET_ADDRESS	0x005c                     	| [$894b: sta	$005c]
 	move.b	d0,(a0)                         	| [$894b: sta	$005c]
-	POP_SR
+	POP_SR	   | required
 	bcc	l_8951                             	| [$894d: bcc	$8951]
 	GET_ADDRESS	0x005d                     	| [$894f: inc	$005d]
 	addq.b	#1,(a0)                         	| [$894f: inc	$005d]
@@ -5864,53 +5866,42 @@ l_8951:
 	rts                                    	| [$8951: rts]
 l_8952:
 	move.b	#0x02,d0                        	| [$8952: lda #$02]
-	PUSH_SR
 	GET_ADDRESS	0x0682                     	| [$8954: sta	$0682]
 	move.b	d0,(a0)                         	| [$8954: sta	$0682]
-	POP_SR
 	clr.b	d0                               	| [$8957: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x0683                     	| [$8959: sta	$0683]
 	move.b	d0,(a0)                         	| [$8959: sta	$0683]
 	GET_ADDRESS	0x0684                     	| [$895c: sta	$0684]
 	move.b	d0,(a0)                         	| [$895c: sta	$0684]
 	GET_ADDRESS	0x068b                     	| [$895f: sta	$068b]
 	move.b	d0,(a0)                         	| [$895f: sta	$068b]
-	POP_SR
 	move.b	#0x20,d0                        	| [$8962: lda #$20]
-	PUSH_SR
 	GET_ADDRESS	screen_address_00aa                     	| [$8964: sta	$00aa]
 	move.b	d0,(a0)                         	| [$8964: sta	$00aa]
-	POP_SR
 	move.b	#0x16,d0                        	| [$8966: lda #$16]
-	PUSH_SR
 	GET_ADDRESS	screen_address_00aa+1                     	| [$8968: sta	$00ab]
 	move.b	d0,(a0)                         	| [$8968: sta	$00ab]
-	POP_SR
 	move.b	d2,d0                           	| [$896a: tya]
 	asl.b	#1,d0                            	| [$896b: asl a]
 	move.b	d0,d2                           	| [$896c: tay]
 	jbsr	switch_to_bank_00_D5B8             	| [$896d: jsr switch_to_bank_00_D5B8]
 	GET_ADDRESS	0x89ab                     	| [$8970: lda	$89ab, y]
 	move.b	(a0,d2.w),d0                    	| [$8970: lda	$89ab, y]
-	PUSH_SR
 	GET_ADDRESS	0x005c                     	| [$8973: sta	$005c]
 	move.b	d0,(a0)                         	| [$8973: sta	$005c]
-	POP_SR
 	GET_ADDRESS	0x89ac                     	| [$8975: lda	$89ac, y]
 	move.b	(a0,d2.w),d0                    	| [$8975: lda	$89ac, y]
-	PUSH_SR
 	GET_ADDRESS	0x005d                     	| [$8978: sta	$005d]
 	move.b	d0,(a0)                         	| [$8978: sta	$005d]
-	POP_SR
 l_897a:
 	clr.b	d2                               	| [$897a: ldy #$00]
+	* curtains
 l_897c:
 	jbsr	l_88aa                            	| [$897c: jsr	$88aa]
 	GET_ADDRESS	0x0685                     	| [$897f: lda	$0685]
 	move.b	(a0),d0                         	| [$897f: lda	$0685]
 	GET_SCREEN_ADDRESS_Y	screen_address_00aa                     	| [$8982: sta ($aa), y]
-	jbsr	osd_w_videoram_nc                    	| [$8982: sta ($aa), y]
+	jbsr	osd_w_videoram                    	| [$8982: sta ($aa), y]
 
 	addq.b	#1,d2                           	| [$8984: iny]
 	GET_ADDRESS	0x0686                     	| [$8985: lda	$0686]
@@ -5918,7 +5909,7 @@ l_897c:
 	and.b	#0x0f,d0                         	| [$8988: and #$0f]
 	or.b	#0x80,d0                          	| [$898a: ora #$80]
 	GET_SCREEN_ADDRESS_Y	screen_address_00aa                     	| [$898c: sta ($aa), y]
-	jbsr	osd_w_videoram                   	| [$898c: sta ($aa), y]
+	jbsr	osd_w_colorram                   	| [$898c: sta ($aa), y]
 
 	addq.b	#1,d2                           	| [$898e: iny]
 	cmp.b	#0x14,d2                         	| [$898f: cpy #$14]
@@ -5928,10 +5919,8 @@ l_897c:
 	move.b	(a0),d0                         	| [$8993: lda	$00aa]
 	                           	| [$8995: clc]
 	add.b	#0x80,d0                        	| [$8996: adc #$80]
-	PUSH_SR
 	GET_ADDRESS	screen_address_00aa                     	| [$8998: sta	$00aa]
 	move.b	d0,(a0)                         	| [$8998: sta	$00aa]
-	POP_SR
 	GET_ADDRESS	screen_address_00aa+1                     	| [$899a: lda	$00ab]
 	move.b	(a0),d0                         	| [$899a: lda	$00ab]
 	clr.b	d4	| [$899c: adc #$00]
@@ -5951,10 +5940,8 @@ l_897c:
 
 l_89b7:
 	clr.b	d0                               	| [$89b7: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x068b                     	| [$89b9: sta	$068b]
 	move.b	d0,(a0)                         	| [$89b9: sta	$068b]
-	POP_SR
 	GET_ADDRESS	0x06a4                     	| [$89bc: lda	$06a4]
 	move.b	(a0),d0                         	| [$89bc: lda	$06a4]
 	bne	l_89cc                             	| [$89bf: bne	$89cc]
@@ -6004,14 +5991,14 @@ l_89e6:
 	GET_ADDRESS_Y	0x5a                     	| [$89e6: lda ($5a), y]
 	move.b	(a0,d2.w),d0                    	| [$89e6: lda ($5a), y]
 	GET_SCREEN_ADDRESS_Y	screen_address_00aa                     	| [$89e8: sta ($aa), y]
-	jbsr	osd_w_videoram_nc                    	| [$89e8: sta ($aa), y]
+	jbsr	osd_w_videoram                    	| [$89e8: sta ($aa), y]
 	addq.b	#1,d2                           	| [$89ea: iny]
 	GET_ADDRESS_Y	0x5a                     	| [$89eb: lda ($5a), y]
 	move.b	(a0,d2.w),d0                    	| [$89eb: lda ($5a), y]
 	and.b	#0x0f,d0                         	| [$89ed: and #$0f]
 	or.b	#0x50,d0                          	| [$89ef: ora #$50]
 	GET_SCREEN_ADDRESS_Y	screen_address_00aa                     	| [$89f1: sta ($aa), y]
-	jbsr	osd_w_videoram                    	| [$89f1: sta ($aa), y]
+	jbsr	osd_w_colorram                    	| [$89f1: sta ($aa), y]
 	addq.b	#1,d2                           	| [$89f3: iny]
 	cmp.b	#0x08,d2                         	| [$89f4: cpy #$08]
 	* bcc=>bcs
@@ -6457,14 +6444,14 @@ l_9270:
 	clr.b	d2                               	| [$9272: ldy #$00]
 	
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                    	| [$9274: sta ($02), y]
-	jbsr	osd_w_videoram_nc                         	| [$9274: sta ($02), y]
+	jbsr	osd_w_videoram                         	| [$9274: sta ($02), y]
 
 
 	addq.b	#1,d2                           	| [$9276: iny]
 	clr.b	d0                               	| [$9277: lda #$00]
 
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$9279: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$9279: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$9279: sta ($02), y]
 
 	addq.b	#1,d2                           	| [$927b: iny]
 	move.w	(sp)+,d0                        	| [$927c: pla]
@@ -6479,12 +6466,12 @@ l_9286:
 	move.b	#0x30,d4	| [$9286: adc #$30]
 	addx.b	d4,d0                        	| [$9286: adc #$30]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                    	| [$9288: sta ($02), y]
-	jbsr	osd_w_videoram_nc                         	| [$9288: sta ($02), y]
+	jbsr	osd_w_videoram                         	| [$9288: sta ($02), y]
 
 	addq.b	#1,d2                           	| [$928a: iny]
 	clr.b	d0                               	| [$928b: lda #$00]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$928d: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$928d: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$928d: sta ($02), y]
 
 
 	rts                                    	| [$928f: rts]
@@ -9005,22 +8992,18 @@ l_a26f:
 	move.b	d0,d2                           	| [$a296: tay]
 	GET_ADDRESS	0xa2c8                     	| [$a297: lda	$a2c8, y]
 	move.b	(a0,d2.w),d0                    	| [$a297: lda	$a2c8, y]
-	PUSH_SR
 	GET_ADDRESS	0x0002                     	| [$a29a: sta	$0002]
 	move.b	d0,(a0)                         	| [$a29a: sta	$0002]
-	POP_SR
 	GET_ADDRESS	0xa2c9                     	| [$a29c: lda	$a2c9, y]
 	move.b	(a0,d2.w),d0                    	| [$a29c: lda	$a2c9, y]
-	PUSH_SR
 	GET_ADDRESS	0x0003                     	| [$a29f: sta	$0003]
 	move.b	d0,(a0)                         	| [$a29f: sta	$0003]
-	POP_SR
 	clr.b	d2                               	| [$a2a1: ldy #$00]
 l_a2a3:
 	GET_ADDRESS	0x657d                     	| [$a2a3: lda	$657d, x]
 	move.b	(a0,d1.w),d0                    	| [$a2a3: lda	$657d, x]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a2a6: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$a2a6: sta ($02), y]
+	jbsr	write_video_ram                           	| [$a2a6: sta ($02), y]
 	addq.b	#1,d1                           	| [$a2a8: inx]
 	addq.b	#1,d2                           	| [$a2a9: iny]
 	cmp.b	#0x14,d2                         	| [$a2aa: cpy #$14]
@@ -9029,10 +9012,10 @@ l_a2a3:
 	move.b	(a0),d0                         	| [$a2ae: lda	$0002]
 	                           	| [$a2b0: clc]
 	add.b	#0x6c,d0                        	| [$a2b1: adc #$6c]
-	PUSH_SR
+	PUSH_SR		| required
 	GET_ADDRESS	screen_address_lsb_0002                     	| [$a2b3: sta	$0002]
 	move.b	d0,(a0)                         	| [$a2b3: sta	$0002]
-	POP_SR
+	POP_SR		| required
 	bcc	l_a2b9                             	| [$a2b5: bcc	$a2b9]
 	GET_ADDRESS	screen_address_msb_0003                     	| [$a2b7: inc	$0003]
 	addq.b	#1,(a0)                         	| [$a2b7: inc	$0003]
@@ -9114,7 +9097,7 @@ l_a30a:
 	move.b	(a0,d2.w),d0                    	| [$a315: lda	$653d, y]
 	clr.b	d2                               	| [$a318: ldy #$00]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a31a: sta ($02), y]
-	jbsr	osd_w_videoram_nc                           	| [$a31a: sta ($02), y]
+	jbsr	osd_w_videoram                           	| [$a31a: sta ($02), y]
 
 	GET_ADDRESS	logical_grid_address_msb_or_controls_0020                     	| [$a31c: ldy	$0020]
 	move.b	(a0),d2                         	| [$a31c: ldy	$0020]
@@ -9122,21 +9105,21 @@ l_a30a:
 	move.b	(a0,d2.w),d0                    	| [$a31e: lda	$653e, y]
 	move.b	#0x01,d2                        	| [$a321: ldy #$01]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a323: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$a323: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$a323: sta ($02), y]
 	GET_ADDRESS	logical_grid_address_msb_or_controls_0020                     	| [$a325: ldy	$0020]
 	move.b	(a0),d2                         	| [$a325: ldy	$0020]
 	GET_ADDRESS	0x653f                     	| [$a327: lda	$653f, y]
 	move.b	(a0,d2.w),d0                    	| [$a327: lda	$653f, y]
 	move.b	#0x80,d2                        	| [$a32a: ldy #$80]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a32c: sta ($02), y]
-	jbsr	osd_w_videoram_nc                           	| [$a32c: sta ($02), y]
+	jbsr	osd_w_videoram                           	| [$a32c: sta ($02), y]
 	GET_ADDRESS	logical_grid_address_msb_or_controls_0020                     	| [$a32e: ldy	$0020]
 	move.b	(a0),d2                         	| [$a32e: ldy	$0020]
 	GET_ADDRESS	0x6540                     	| [$a330: lda	$6540, y]
 	move.b	(a0,d2.w),d0                    	| [$a330: lda	$6540, y]
 	move.b	#0x81,d2                        	| [$a333: ldy #$81]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a335: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$a335: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$a335: sta ($02), y]
 l_a337:
 	GET_ADDRESS	screen_address_lsb_0002                     	| [$a337: lda	$0002]
 	move.b	(a0),d0                         	| [$a337: lda	$0002]
@@ -9613,11 +9596,11 @@ l_a553:
 	add.b	#0x30,d0	| [$a55e: adc #$30]
 	
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$a560: sta ($02), y]
-	jbsr	osd_w_videoram_nc                    	| [$a560: sta ($02), y]
+	jbsr	osd_w_videoram                    	| [$a560: sta ($02), y]
 	addq.b	#1,d2                           	| [$a562: iny]
 	move.b	#0x90,d0                        	| [$a563: lda #$90]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a565: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$a565: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$a565: sta ($02), y]
 	move.b	d1,d0                           	| [$a567: txa]
 	                          	| [$a568: clc]
 	add.b	#0x3b,d0                        	| [$a569: adc #$3b]
@@ -9783,12 +9766,12 @@ l_a64d:
 	clr.b	d0                               	| [$a655: lda #$00]
 l_a657:
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$a657: sta ($02), y]
-	jbsr	osd_w_videoram_nc                          	| [$a657: sta ($02), y]
+	jbsr	osd_w_videoram                          	| [$a657: sta ($02), y]
 	addq.b	#1,d2                           	| [$a659: iny]
 	GET_ADDRESS	0x0005                     	| [$a65a: lda	$0005]
 	move.b	(a0),d0                         	| [$a65a: lda	$0005]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a65c: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$a65c: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$a65c: sta ($02), y]
 
 	addq.b	#1,d2                           	| [$a65e: iny]
 	addq.b	#1,d1                           	| [$a65f: inx]
@@ -9810,12 +9793,12 @@ l_a670:
 	move.b	(a0,d1.w),d0                    	| [$a670: lda	$09d9, x]
 
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$a673: sta ($02), y]
-	jbsr	osd_w_videoram_nc                          	| [$a673: sta ($02), y]
+	jbsr	osd_w_videoram                          	| [$a673: sta ($02), y]
 	addq.b	#1,d2                           	| [$a675: iny]
 	GET_ADDRESS	0x0005                     	| [$a676: lda	$0005]
 	move.b	(a0),d0                         	| [$a676: lda	$0005]	
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$a678: sta ($02), y]
-	jbsr	osd_w_videoram                          	| [$a678: sta ($02), y]
+	jbsr	osd_w_colorram                          	| [$a678: sta ($02), y]
 
 	addq.b	#1,d2                           	| [$a67a: iny]
 	addq.b	#1,d1                           	| [$a67b: inx]
@@ -9865,31 +9848,31 @@ l_a6a7:
 	clr.b	d0                               	| [$a6af: lda #$00]
 l_a6b1:
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$a6b1: sta ($02), y]
-	jbsr	osd_w_videoram_nc                          	| [$a6b1: sta ($02), y]
+	jbsr	osd_w_videoram                          	| [$a6b1: sta ($02), y]
 	addq.b	#1,d2                           	| [$a6b3: iny]
 	GET_ADDRESS	0x0005                     	| [$a6b4: lda	$0005]
 	move.b	(a0),d0                         	| [$a6b4: lda	$0005]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$a6b6: sta ($02), y]
-	jbsr	osd_w_videoram                          	| [$a6b6: sta ($02), y]
+	jbsr	osd_w_colorram                          	| [$a6b6: sta ($02), y]
 	addq.b	#1,d2                           	| [$a6b8: iny]
 	GET_ADDRESS	logical_grid_address_lsb_001f                     	| [$a6b9: lda	$001f]
 	move.b	(a0),d0                         	| [$a6b9: lda	$001f]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a6bb: sta ($02), y]
-	jbsr	osd_w_videoram_nc                           	| [$a6bb: sta ($02), y]
+	jbsr	osd_w_videoram                           	| [$a6bb: sta ($02), y]
 	addq.b	#1,d2                           	| [$a6bd: iny]
 	GET_ADDRESS	0x0005                     	| [$a6be: lda	$0005]
 	move.b	(a0),d0                         	| [$a6be: lda	$0005]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a6c0: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$a6c0: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$a6c0: sta ($02), y]
 	addq.b	#1,d2                           	| [$a6c2: iny]
 	move.b	#0x2e,d0                        	| [$a6c3: lda #$2e]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a6c5: sta ($02), y]
-	jbsr	osd_w_videoram_nc                           	| [$a6c5: sta ($02), y]
+	jbsr	osd_w_videoram                           	| [$a6c5: sta ($02), y]
 	addq.b	#1,d2                           	| [$a6c7: iny]
 	GET_ADDRESS	0x0005                     	| [$a6c8: lda	$0005]
 	move.b	(a0),d0                         	| [$a6c8: lda	$0005]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$a6ca: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$a6ca: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$a6ca: sta ($02), y]
 	addq.b	#3,d2                           	| [$a6cc: iny] * 3
 	rts                                    	| [$a6cf: rts]
 l_a6d0:
@@ -10744,21 +10727,21 @@ l_ab00:
 	beq	l_ab19                             	| [$ab0f: beq	$ab19]
 	
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$ab11: sta ($02), y]
-	jbsr	osd_w_videoram_nc                           	| [$ab11: sta ($02), y]
+	jbsr	osd_w_videoram                           	| [$ab11: sta ($02), y]
 	addq.b	#1,d2                           	| [$ab13: iny]
 	move.b	#0xa0,d0                        	| [$ab14: lda #$a0]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$ab16: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$ab16: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$ab16: sta ($02), y]
 	addq.b	#1,d2                           	| [$ab18: iny]
 l_ab19:
 	GET_ADDRESS	0x0658                     	| [$ab19: lda	$0658]
 	move.b	(a0),d0                         	| [$ab19: lda	$0658]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$ab1c: sta ($02), y]
-	jbsr	osd_w_videoram_nc                           	| [$ab1c: sta ($02), y]
+	jbsr	osd_w_videoram                           	| [$ab1c: sta ($02), y]
 	addq.b	#1,d2                           	| [$ab1e: iny]
 	move.b	#0xa0,d0                        	| [$ab1f: lda #$a0]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$ab21: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$ab21: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$ab21: sta ($02), y]
 	GET_ADDRESS	0x0078                     	| [$ab23: lda	$0078]
 	move.b	(a0),d0                         	| [$ab23: lda	$0078]
 	bne	l_ab30                             	| [$ab25: bne	$ab30]
@@ -12631,12 +12614,12 @@ l_b410:
 	GET_ADDRESS	0x0100                     	| [$b424: lda	$0100]
 	move.b	(a0),d0                         	| [$b424: lda	$0100]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$b427: sta ($02), y]
-	jbsr	osd_w_videoram_nc                           	| [$b427: sta ($02), y]
+	jbsr	osd_w_videoram                           	| [$b427: sta ($02), y]
 	addq.b	#1,d2                           	| [$b429: iny]
 	GET_ADDRESS	0x0101                     	| [$b42a: lda	$0101]
 	move.b	(a0),d0                         	| [$b42a: lda	$0101]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$b42d: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$b42d: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$b42d: sta ($02), y]
 	GET_ADDRESS	current_shape_array_008b                     	| [$b42f: ldx	$008b]
 	move.b	(a0),d1                         	| [$b42f: ldx	$008b]
 	GET_ADDRESS	0x00a0                     	| [$b431: lda	$00a0, x]
@@ -12662,12 +12645,12 @@ l_b446:
 	GET_ADDRESS	0x652d                     	| [$b448: lda	$652d]
 	move.b	(a0),d0                         	| [$b448: lda	$652d]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$b44b: sta ($02), y]
-	jbsr	osd_w_videoram_nc                           	| [$b44b: sta ($02), y]
+	jbsr	osd_w_videoram                           	| [$b44b: sta ($02), y]
 	addq.b	#1,d2                           	| [$b44d: iny]
 	GET_ADDRESS	0x0101                     	| [$b44e: lda	$0101]
 	move.b	(a0),d0                         	| [$b44e: lda	$0101]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$b451: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$b451: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$b451: sta ($02), y]
 	
 l_b453:
 	GET_ADDRESS	0x00a0                     	| [$b453: inc	$00a0, x]
@@ -13181,19 +13164,19 @@ l_b6f3:
 	GET_ADDRESS	0xb7aa                     	| [$b710: lda	$b7aa, x]
 	move.b	(a0,d1.w),d0                    	| [$b710: lda	$b7aa, x]
 	lea	0x17a2.w,a0                     	| [$b713: sta	$17a2]
-	jbsr	osd_w_videoram_nc                         	| [$b713: sta	$17a2]
+	jbsr	osd_w_videoram                         	| [$b713: sta	$17a2]
 	move.b	#0xb0,d0                        	| [$b716: lda #$b0]
 	lea	0x17a3.w,a0                     	| [$b718: sta	$17a3]
-	jbsr	osd_w_videoram                         	| [$b718: sta	$17a3]
+	jbsr	osd_w_colorram                         	| [$b718: sta	$17a3]
 	GET_ADDRESS	0xb7c5                     	| [$b71b: lda	$b7c5, x]
 	move.b	(a0,d1.w),d0                    	| [$b71b: lda	$b7c5, x]
 	                           	| [$b71e: sec]
 	subq.b	#0x01,d0                        	| [$b71f: sbc #$01]
 	lea	0x17a4.w,a0                     	| [$b721: sta	$17a4]
-	jbsr	osd_w_videoram_nc                         	| [$b721: sta	$17a4]
+	jbsr	osd_w_videoram                         	| [$b721: sta	$17a4]
 	move.b	#0xb0,d0                        	| [$b724: lda #$b0]
 	lea	0x17a5.w,a0                     	| [$b726: sta	$17a5]
-	jbsr	osd_w_videoram                         	| [$b726: sta	$17a5]
+	jbsr	osd_w_colorram                         	| [$b726: sta	$17a5]
 l_b729:
 	GET_ADDRESS	0x002b                     	| [$b729: lda	$002b]
 	move.b	(a0),d0                         	| [$b729: lda	$002b]
@@ -14184,7 +14167,7 @@ l_bc29:
 	move.b	(a0,d2.w),d0                    	| [$bc29: lda	$bc7a, y]
 	
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_00ad                     	| [$bc2c: sta ($ad), y]
-	jbsr	osd_w_videoram                    	| [$bc2c: sta ($ad), y]
+	jbsr	osd_w_colorram                    	| [$bc2c: sta ($ad), y]
 
 	addq.b	#1,d2                           	| [$bc2e: iny]
 	cmp.b	#0x14,d2                         	| [$bc2f: cpy #$14]
@@ -14197,9 +14180,7 @@ l_bc36:
 	GET_ADDRESS	0xbc6c                     	| [$bc36: lda	$bc6c, y]
 	move.b	(a0,d2.w),d0                    	| [$bc36: lda	$bc6c, y]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_00ad                     	| [$bc39: sta ($ad), y]
-	jbsr	osd_w_videoram                    	| [$bc39: sta ($ad), y]
-
-	
+	jbsr	write_video_ram
 	addq.b	#1,d2                           	| [$bc3b: iny]
 	move.b	#0x0e-1,d4                        	| [$bc3c: cpy #$0e]
 	cmp.b	d2,d4                            	| [$bc3c: cpy #$0e]
@@ -14210,14 +14191,11 @@ l_bc36:
 	
 	
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_00ad                     	| [$bc45: sta ($ad), y]
-	jbsr	osd_w_videoram_nc                    	| [$bc45: sta ($ad), y]
-
-	
+	jbsr	osd_w_videoram                    	| [$bc45: sta ($ad), y]
 	addq.b	#1,d2                           	| [$bc47: iny]
 	move.b	#0xa0,d0                        	| [$bc48: lda #$a0]
-	
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_00ad                     	| [$bc4a: sta ($ad), y]
-	jbsr	osd_w_videoram                    	| [$bc4a: sta ($ad), y]
+	jbsr	osd_w_colorram                    	| [$bc4a: sta ($ad), y]
 
 	
 	addq.b	#1,d2                           	| [$bc4c: iny]
@@ -14239,14 +14217,11 @@ l_bc36:
 	move.b	(a0,d1.w),d0                    	| [$bc5f: lda	$bc8e, x]
 	
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_00ad                     	| [$bc62: sta ($ad), y]
-	jbsr	osd_w_videoram_nc                    	| [$bc62: sta ($ad), y]
-
-	
+	jbsr	osd_w_videoram                    	| [$bc62: sta ($ad), y]
 	addq.b	#1,d2                           	| [$bc64: iny]
 	move.b	#0xa0,d0                        	| [$bc65: lda #$a0]
-	
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_00ad                  	| [$bc67: sta ($ad), y]
-	jbsr	osd_w_videoram                       	| [$bc67: sta ($ad), y]
+	jbsr	osd_w_colorram                       	| [$bc67: sta ($ad), y]
 
 	
 l_bc69:
@@ -14888,45 +14863,33 @@ l_bfb0:
 	cmp.b	#0x63,d0                         	| [$bfc4: cmp #$63]
 	bne	l_bfd2                             	| [$bfc6: bne	$bfd2]
 	clr.b	d0                               	| [$bfc8: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x06b5                     	| [$bfca: sta	$06b5, x]
     move.b	d0,(a0,d1.w)                 	| [$bfca: sta	$06b5, x]
-	POP_SR
 	move.b	#0xf0,d0                        	| [$bfcd: lda #$f0]
-	PUSH_SR
 	GET_ADDRESS	0x06bb                     	| [$bfcf: sta	$06bb, x]
     move.b	d0,(a0,d1.w)                 	| [$bfcf: sta	$06bb, x]
-	POP_SR
 l_bfd2:
 	GET_ADDRESS	0x06b9                     	| [$bfd2: lda	$06b9, x]
 	move.b	(a0,d1.w),d0                    	| [$bfd2: lda	$06b9, x]
 	cmp.b	#0x8b,d0                         	| [$bfd5: cmp #$8b]
 	bne	l_bfe3                             	| [$bfd7: bne	$bfe3]
 	clr.b	d0                               	| [$bfd9: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x06b5                     	| [$bfdb: sta	$06b5, x]
     move.b	d0,(a0,d1.w)                 	| [$bfdb: sta	$06b5, x]
-	POP_SR
 	move.b	#0xf0,d0                        	| [$bfde: lda #$f0]
-	PUSH_SR
 	GET_ADDRESS	0x06bb                     	| [$bfe0: sta	$06bb, x]
     move.b	d0,(a0,d1.w)                 	| [$bfe0: sta	$06bb, x]
-	POP_SR
 l_bfe3:
 	GET_ADDRESS	0x06b9                     	| [$bfe3: lda	$06b9, x]
 	move.b	(a0,d1.w),d0                    	| [$bfe3: lda	$06b9, x]
 	cmp.b	#0xb3,d0                         	| [$bfe6: cmp #$b3]
 	bne	l_bff4                             	| [$bfe8: bne	$bff4]
 	clr.b	d0                               	| [$bfea: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x06b5                     	| [$bfec: sta	$06b5, x]
     move.b	d0,(a0,d1.w)                 	| [$bfec: sta	$06b5, x]
-	POP_SR
 	move.b	#0xf0,d0                        	| [$bfef: lda #$f0]
-	PUSH_SR
 	GET_ADDRESS	0x06bb                     	| [$bff1: sta	$06bb, x]
     move.b	d0,(a0,d1.w)                 	| [$bff1: sta	$06bb, x]
-	POP_SR
 l_bff4:
 	GET_ADDRESS	player_active_array_0077                     	| [$bff4: lda	$0077, x]
 	move.b	(a0,d1.w),d0                    	| [$bff4: lda	$0077, x]
@@ -14939,10 +14902,8 @@ l_bff4:
 	* bcs=>bcc
 	bcc	l_c008                             	| [$c001: bcs	$c008]
 	move.b	#0x64,d0                        	| [$c003: lda #$64]
-	PUSH_SR
 	GET_ADDRESS	0x06b9                     	| [$c005: sta	$06b9, x]
     move.b	d0,(a0,d1.w)                 	| [$c005: sta	$06b9, x]
-	POP_SR
 l_c008:
 * clv+bvc => jra
 	jra	l_c017                             	| [$c009: jmp	$c017]
@@ -14953,10 +14914,8 @@ l_c00b:
 	* bcs=>bcc
 	bcc	l_c017                             	| [$c010: bcs	$c017]
 	move.b	#0x8c,d0                        	| [$c012: lda #$8c]
-	PUSH_SR
 	GET_ADDRESS	0x06b9                     	| [$c014: sta	$06b9, x]
     move.b	d0,(a0,d1.w)                 	| [$c014: sta	$06b9, x]
-	POP_SR
 l_c017:
 	GET_ADDRESS	0x0035                     	| [$c017: lda	$0035, x]
 	move.b	(a0,d1.w),d0                    	| [$c017: lda	$0035, x]
@@ -14967,10 +14926,8 @@ l_c017:
 	* bcs=>bcc
 	bcc	l_c027                             	| [$c020: bcs	$c027]
 	move.b	#0x46,d0                        	| [$c022: lda #$46]
-	PUSH_SR
 	GET_ADDRESS	0x06b9                     	| [$c024: sta	$06b9, x]
     move.b	d0,(a0,d1.w)                 	| [$c024: sta	$06b9, x]
-	POP_SR
 l_c027:
 	rts                                    	| [$c027: rts]
 
@@ -16809,21 +16766,16 @@ l_caa5:
 	move.b	d0,(a0)                         	| [$caa7: sta	$0008]
 l_caa9:
 	move.b	#0x02,d0                        	| [$caa9: lda #$02]
-	PUSH_SR
 	GET_ADDRESS	0x0007                     	| [$caab: sta	$0007]
 	move.b	d0,(a0)                         	| [$caab: sta	$0007]
 	GET_ADDRESS	0x06ac                     	| [$caad: sta	$06ac]
 	move.b	d0,(a0)                         	| [$caad: sta	$06ac]
-	POP_SR
 	move.b	#0xf0,d0                        	| [$cab0: lda #$f0]
-	PUSH_SR
 	GET_ADDRESS	0x06bb                     	| [$cab2: sta	$06bb]
 	move.b	d0,(a0)                         	| [$cab2: sta	$06bb]
 	GET_ADDRESS	0x06bc                     	| [$cab5: sta	$06bc]
 	move.b	d0,(a0)                         	| [$cab5: sta	$06bc]
-	POP_SR
 	clr.b	d0                               	| [$cab8: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x06b5                     	| [$caba: sta	$06b5]
 	move.b	d0,(a0)                         	| [$caba: sta	$06b5]
 	GET_ADDRESS	0x06b6                     	| [$cabd: sta	$06b6]
@@ -16864,7 +16816,6 @@ l_caa9:
 	move.b	d0,(a0)                         	| [$cae9: sta	$004e]
 	GET_ADDRESS	0x004f                     	| [$caeb: sta	$004f]
 	move.b	d0,(a0)                         	| [$caeb: sta	$004f]
-	POP_SR
 	move.b	#0x08,d0                        	| [$caed: lda #$08]
 	jbsr	display_screen_and_other_stuff_8818	| [$caef: jsr display_screen_and_other_stuff_8818]
 	rts                                    	| [$caf2: rts]
@@ -17539,13 +17490,13 @@ l_d5d2:
 	GET_ADDRESS_Y	0x00                     	| [$d5d2: lda ($00), y]
 	move.b	(a0,d2.w),d0                    	| [$d5d2: lda ($00), y]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$d5d4: sta ($02), y]
-	jbsr	osd_w_videoram_nc                    	| [$d5d4: sta ($02), y]
+	jbsr	osd_w_videoram                    	| [$d5d4: sta ($02), y]
 	GET_ADDRESS	screen_address_lsb_0002                     	| [$d5d6: inc	$0002]
 	addq.b	#1,(a0)                         	| [$d5d6: inc	$0002]
 	GET_ADDRESS	0x0005                     	| [$d5d8: lda	$0005]
 	move.b	(a0),d0                         	| [$d5d8: lda	$0005]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$d5da: sta ($02), y]
-	jbsr	osd_w_videoram                    	| [$d5da: sta ($02), y]
+	jbsr	osd_w_colorram                    	| [$d5da: sta ($02), y]
 
 	addq.b	#1,d2                           	| [$d5dc: iny]
 	GET_ADDRESS	0x0004                     	| [$d5dd: cpy	$0004]
@@ -17603,7 +17554,7 @@ l_d624:
 l_d629:
 	* write tile attribute
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                  	| [$d629: sta ($02), y]
-	jbsr	osd_w_videoram                       	| [$d629: sta ($02), y]
+	jbsr	osd_w_colorram                       	| [$d629: sta ($02), y]
 	addq.b	#1,d2                           	| [$d62b: iny]
 	GET_ADDRESS	0x0004                     	| [$d62c: cpy	$0004]
 	cmp.b	(a0),d2                          	| [$d62c: cpy	$0004]
@@ -17628,13 +17579,13 @@ l_d639:
 	GET_ADDRESS_Y	0x00                     	| [$d639: lda ($00), y]
 	move.b	(a0,d2.w),d0                    	| [$d639: lda ($00), y]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$d63b: sta ($02), y]
-	jbsr	osd_w_videoram_nc                    	| [$d63b: sta ($02), y]
+	jbsr	osd_w_videoram                    	| [$d63b: sta ($02), y]
 
 	addq.b	#1,d2                           	| [$d63d: iny]
 	GET_ADDRESS_Y	0x00                     	| [$d63e: lda ($00), y]
 	move.b	(a0,d2.w),d0                    	| [$d63e: lda ($00), y]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$d640: sta ($02), y]
-	jbsr	osd_w_videoram                          	| [$d640: sta ($02), y]
+	jbsr	osd_w_colorram                          	| [$d640: sta ($02), y]
 
 	addq.b	#1,d2                           	| [$d642: iny]
 	GET_ADDRESS	0x0004                     	| [$d643: dec	$0004]
@@ -17657,12 +17608,12 @@ write_tile_to_screen_d64a:
 	GET_ADDRESS	0x0004                     	| [$d650: lda	$0004]
 	move.b	(a0),d0                         	| [$d650: lda	$0004]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$d652: sta ($02), y]
-	jbsr	osd_w_videoram_nc                          	| [$d652: sta ($02), y]
+	jbsr	osd_w_videoram                          	| [$d652: sta ($02), y]
 	addq.b	#1,d2                           	| [$d654: iny]
 	GET_ADDRESS	0x0005                     	| [$d655: lda	$0005]
 	move.b	(a0),d0                         	| [$d655: lda	$0005]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$d657: sta ($02), y]
-	jbsr	osd_w_videoram                          	| [$d657: sta ($02), y]
+	jbsr	osd_w_colorram                          	| [$d657: sta ($02), y]
 
 	GET_ADDRESS	0x0006                     	| [$d659: ldy	$0006]
 	move.b	(a0),d2                         	| [$d659: ldy	$0006] restore d2
@@ -17677,13 +17628,13 @@ display_text_d65c:
 	move.b	(a0,d2.w),d0                    	| [$d65e: lda ($00), y]
 l_d660:
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$d660: sta ($02), y]
-	bsr		osd_w_videoram_nc                    	| [$d660: sta ($02), y]
+	bsr		osd_w_videoram                    	| [$d660: sta ($02), y]
 	GET_ADDRESS	screen_address_lsb_0002                     	| [$d662: inc	$0002]
 	addq.b	#1,(a0)                         	| [$d662: inc	$0002]
 	GET_ADDRESS	0x0005                     	| [$d664: lda	$0005]
 	move.b	(a0),d0                         	| [$d664: lda	$0005]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$d666: sta ($02), y]
-	bsr		osd_w_videoram                    	| [$d666: sta ($02), y]
+	bsr		osd_w_colorram                    	| [$d666: sta ($02), y]
 	addq.b	#1,d2                           	| [$d668: iny]
 	GET_ADDRESS_Y	0x00                     	| [$d669: lda ($00), y]
 	move.b	(a0,d2.w),d0                    	| [$d669: lda ($00), y]
@@ -19714,7 +19665,7 @@ l_e890:
 	GET_ADDRESS	0x065b                     	| [$e890: lda	$065b, x]
 	move.b	(a0,d1.w),d0                    	| [$e890: lda	$065b, x]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$e893: sta ($02), y]
-	jbsr	osd_w_videoram                    	| [$e893: sta ($02), y]
+	jbsr	osd_w_colorram                    	| [$e893: sta ($02), y]
 
 	GET_ADDRESS	screen_address_lsb_0002                     	| [$e895: inc	$0002]
 	addq.b	#1,(a0)                         	| [$e895: inc	$0002]
@@ -19727,7 +19678,7 @@ l_e89f:
 	move.b	#0x90,d0                        	| [$e89f: lda #$90]
 l_e8a1:
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                    	| [$e8a1: sta ($02), y]
-	jbsr	osd_w_videoram                         	| [$e8a1: sta ($02), y]
+	jbsr	osd_w_colorram                         	| [$e8a1: sta ($02), y]
 	addq.b	#1,d1                           	| [$e8a3: inx]
 	addq.b	#1,d2                           	| [$e8a4: iny]
 	cmp.b	#0x03,d2                         	| [$e8a5: cpy #$03]
@@ -19834,7 +19785,7 @@ l_e914:
 	bcs	l_e938                             	| [$e92d: bcc	$e938]
 	move.b	#0x33,d0                        	| [$e92f: lda #$33]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$e931: sta ($02), y]
-	jbsr	osd_w_videoram                          	| [$e931: sta ($02), y]
+	jbsr	osd_w_colorram                          	| [$e931: sta ($02), y]
 	move.b	#0x1e,d0                        	| [$e933: lda #$1e]
 * clv+bvc => jra
 	jra	l_e958                             	| [$e936: jmp	$e958]
@@ -19845,7 +19796,7 @@ l_e938:
 	move.b	#0x32,d0                        	| [$e93c: lda #$32]
 	PUSH_SR
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$e93e: sta ($02), y]
-	jbsr	osd_w_videoram                          	| [$e93e: sta ($02), y]
+	jbsr	osd_w_colorram                          	| [$e93e: sta ($02), y]
 
 	POP_SR
 	move.b	#0x14,d0                        	| [$e940: lda #$14]
@@ -19857,7 +19808,7 @@ l_e945:
 	bcs	l_e952                             	| [$e947: bcc	$e952]
 	move.b	#0x31,d0                        	| [$e949: lda #$31]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$e94b: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$e94b: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$e94b: sta ($02), y]
 
 	move.b	#0x0a,d0                        	| [$e94d: lda #$0a]
 * clv+bvc => jra
@@ -19865,7 +19816,7 @@ l_e945:
 l_e952:
 	move.b	#0x20,d0                        	| [$e952: lda #$20]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$e954: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$e954: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$e954: sta ($02), y]
 
 
 	clr.b	d0                               	| [$e956: lda #$00]
@@ -19876,7 +19827,7 @@ l_e958:
 	GET_ADDRESS	0x0005                     	| [$e95b: lda	$0005]
 	move.b	(a0),d0                         	| [$e95b: lda	$0005]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                      	| [$e95d: sta ($02), y]
-	jbsr	osd_w_videoram                           	| [$e95d: sta ($02), y]
+	jbsr	osd_w_colorram                           	| [$e95d: sta ($02), y]
 	addq.b	#1,d2                           	| [$e95f: iny]
 	GET_ADDRESS	0x066b                     	| [$e960: lda	$066b, x]
 	move.b	(a0,d1.w),d0                    	| [$e960: lda	$066b, x]
@@ -19887,13 +19838,13 @@ l_e958:
 	or.b	#0x30,d0                          	| [$e969: ora #$30]
 
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$e96b: sta ($02), y]
-	jbsr	osd_w_videoram_nc                          	| [$e96b: sta ($02), y]
+	jbsr	osd_w_videoram                          	| [$e96b: sta ($02), y]
 
 	addq.b	#1,d2                           	| [$e96d: iny]
 	GET_ADDRESS	0x0005                     	| [$e96e: lda	$0005]
 	move.b	(a0),d0                         	| [$e96e: lda	$0005]
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$e970: sta ($02), y]
-	jbsr	osd_w_videoram                          	| [$e970: sta ($02), y]
+	jbsr	osd_w_colorram                          	| [$e970: sta ($02), y]
 	rts                                    	| [$e972: rts]
 l_e973:
 	jbsr	l_ead0                            	| [$e973: jsr	$ead0]

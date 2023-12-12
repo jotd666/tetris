@@ -14,7 +14,7 @@ endif
 GCC_BIN = C:\amiga-gcc\bin
 ASM_BASE = $(GCC_BIN)/m68k-amigaos-as -c --defsym __amiga__=1 
 ASM = $(ASM_BASE) -m68000 $(OPT_RELEASE) 
-ASM_020 = $(ASM_BASE) -m68020 --defsym MC68020=1
+ASM_020 = $(ASM_BASE) -m68020 --defsym MC68020=1 $(OPT_RELEASE) 
 MAIN_OBJ = amiga.o
 WHDLOADER = ..\$(PROGNAME).slave
 WHDLOADER_CHIP = ..\$(PROGNAME)_chip.slave
