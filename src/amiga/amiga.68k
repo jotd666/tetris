@@ -130,6 +130,7 @@ start:
 		.global	osd_get_random
 		.global	osd_wait
 		.global	osd_set_palette_entry
+		.global	osd_write_audio_pokey
 		.global	osd_read_pokey1
 		.global	osd_read_pokey2
 		.global	osd_dump_file
@@ -478,7 +479,7 @@ save_highscores:
 	
 * To get the core to run, you just need to jump to tetris_reset after
 * you've initialised the platform (Amiga) stuff. That essentially does a
-* Z80 reset. You also need to call tetris_im1_irq from the Amiga vblank
+* 6502 reset. You also need to call tetris_irq from the Amiga vblank
 * routine. They are the only 2 entry points required for the core to run,
 * even if there's no other I/O.
 
@@ -495,6 +496,7 @@ demo_game:
 		move.b	(a1)+,(a0)+
 		dbf		d0,0b
 		
+		bsr		sound_test
 		
 		jmp			tetris_reset					| pass control to the tetris core
 		
@@ -666,6 +668,42 @@ osd_set_palette_entry:
 	move.w	(a1,d0.w),(a0)
 	movem.l	(sp)+,a0/a1
 	move.w	(sp)+,d0
+	rts
+	
+se_soundfreq = 6
+se_soundvol = 8
+
+	
+osd_write_audio_pokey:
+	movem.l	d0-d3/a6,-(a7)
+	lea		_custom,a6
+	move.w	a0,d1
+	lsr	#1,d1
+	bcs.b	0f
+	cmp.w	#4,d1
+	bcc.b	0f		| audio control 2808 => skip
+	* was even, now d1 is the channel number
+	* stop previous sound on that channel
+	move.w	d0,d2	| save frequency
+	move.w	d1,d3	| save channel
+	moveq	#0,d0
+	move.w	d1,d0		| channel
+	jsr		_mt_stopfx
+	
+	tst		d2
+	beq.b	0f		| freq 0: stop sound
+	
+	lea		channel_table(pc),a0
+	move.l	(a0,d3.w*4),a0
+	* set frequency
+	lsl.w	#4,d2
+	move.w	d2,(se_soundfreq,a0)
+	moveq	#0,d0
+	move.w	d3,d0		| channel
+	jsr		_mt_loopfx
+	
+0:
+	movem.l	(a7)+,d0-d3/a6
 	rts
 	
 * not useful, credits are handled some other way
@@ -1513,7 +1551,33 @@ osd_write_high_scores:
 	movem.l	(a7)+,d0-d7/a0-a6
 	rts
 
+sound_test:
+	lea		TRI_WFORM_MEDIUM_sound_0,a0
+	lea		_custom,a6
+	* looped sound
+	jsr		_mt_loopfx
+	rts
+	
+    .macro    SOUND_ENTRY    sound_name,size,channel,soundfreq,volume,priority
+\sound_name\()_sound_\channel:
+    .long    \sound_name
+    .word   \size
+    .word   \soundfreq,\volume
+    .byte    \channel
+    .byte    \priority
+    .endm
+	
+	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,0,200,64,1
+	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,1,200,64,1
+	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,2,200,64,1
+	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,3,200,64,1
 
+channel_table:
+	.long	TRI_WFORM_MEDIUM_sound_0
+	.long	TRI_WFORM_MEDIUM_sound_1
+	.long	TRI_WFORM_MEDIUM_sound_2
+	.long	TRI_WFORM_MEDIUM_sound_3
+	
 level2_interrupt:
 	bsr		handle_keyboard
 	move.w	#8,_custom+intreq
@@ -1735,11 +1799,6 @@ bg_drawed_screen_ptr:
 bg_displayed_screen_ptr:
 	.long	0
 
-
-
-	*.include	"sound_entries.68k"
-
-
 	
 _keyexit:
 	.byte	0x45	| ESC by default unless whdload overwrites it
@@ -1876,6 +1935,88 @@ sprites:
 	* aligning on 8 bytes so .align will work
 	* in the next datachip sections
 	.align	8
+	
+	
+RANGE_VERYHIGH = $01E
+RANGE_HIGH = $079
+RANGE_MEDIUM = $1DD
+
+TRI_WFORM_MEDIUM:
+	dc.b	00,-10,-20,-30
+	dc.b	-40,-50,-60,-70
+	dc.b	-60,-50,-40,-30
+	dc.b	-20,-10,00,10
+	dc.b	20,30,40,50
+	dc.b	60,70,60,50
+	dc.b	40,30,20,10
+
+
+TRI_WFORM_LOW:
+	dc.b	00,-5,-10,-15
+	dc.b	-20,-25,-30,-35
+	dc.b	-40,-45,-50,-55
+	dc.b	-60,-65,-70,-65
+	dc.b	-60,-55,-50,-45
+	dc.b	-40,-35,-30,-25
+	dc.b	-20,-15,-10,-5
+
+	dc.b	00,5,10,15
+	dc.b	20,25,30,35
+	dc.b	40,45,50,55
+	dc.b	60,65,70,65
+	dc.b	60,55,50,45
+	dc.b	40,35,30,25
+	dc.b	20,15,10,5
+
+
+
+TRI_WFORM_HIGH:
+	dc.b	00,20,40,70,40,20,0
+	dc.b	-20,-40,-60,-70,-60,-40,-20
+
+
+TRI_WFORM_VERYHIGH:
+	dc.b	00,35,70,35,0,-35,-70,-35
+
+
+SQR_WFORM_MEDIUM:
+	dc.b	60,60,60,60
+	dc.b	60,60,60,60
+	dc.b	60,60,60,60
+	dc.b	60,60,60,60
+	dc.b	30,00,00,-30
+	dc.b	-60,-60,-60,-60
+	dc.b	-60,-60,-60,-60
+	dc.b	-60,-60,-60,-60
+	dc.b	-60,-60,-60,-60
+
+
+SQR_WFORM_LOW:
+	dc.b	60,60,60,60
+	dc.b	60,60,60,60
+	dc.b	60,60,60,60
+	dc.b	60,60,60,60
+	dc.b	60,60,60,60
+	dc.b	60,60,60,60
+	dc.b	60,30,15,00
+
+	dc.b	 00,-15,-30,-60
+	dc.b	-60,-60,-60,-60
+	dc.b	-60,-60,-60,-60
+	dc.b	-60,-60,-60,-60
+	dc.b	-60,-60,-60,-60
+	dc.b	-60,-60,-60,-60
+	dc.b	-60,-60,-60,-60
+
+
+SQR_WFORM_HIGH:
+	dc.b	60,60,60,60,60,60,30
+	dc.b	-30,-60,-60,-60,-60,-60,-60
+	
+
+SQR_WFORM_VERYHIGH:
+	dc.b	50,60,30,0,-30,-60,-50
+	
 	
 		.section .bsschip
 

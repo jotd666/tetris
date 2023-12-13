@@ -11,6 +11,7 @@
 
 low pri:
 
+- insert coin timer when continue screen should be 0
 - advancing lines: random not so good/similar to POKEY random (one almost filled line each time)
   maybe check MAME source for ASLR generators
 - log used tiles to reduce memory size
