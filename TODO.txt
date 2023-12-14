@@ -1,4 +1,5 @@
-- floppy A1200 nofast: continue screen crashes with 800004 GURU
+- test music write to pokey with known values at start & debug ex 10270
+- floppy A1200 nofast: continue screen crashes with 800004 GURU: retest
 
 - save highscores
 - convert tunes from MAME ripped format
