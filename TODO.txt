@@ -1,4 +1,6 @@
 - test music write to pokey with known values at start & debug ex 10270
+- advancing lines: random not so good/similar to POKEY random (one almost filled line each time)
+  ASLR generators temp 128k already generated & test. If works then code it to save memory
 - floppy A1200 nofast: continue screen crashes with 800004 GURU: retest
 
 - save highscores
@@ -13,10 +15,8 @@
 low pri:
 
 - insert coin timer when continue screen should be 0
-- advancing lines: random not so good/similar to POKEY random (one almost filled line each time)
-  maybe check MAME source for ASLR generators
 - log used tiles to reduce memory size
-
+- simulate service mode to allow some settings: difficulty is the only interesting setting
 
 converter:
 

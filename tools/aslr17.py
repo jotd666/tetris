@@ -1,3 +1,5 @@
+import bitplanelib
+
 #if (size == 17)
 #	{
 #		for (uint32_t i = 0; i < mask; i++)
@@ -31,5 +33,6 @@ for i in range(2**size):
     lfsr = (_in << 16) | lfsr
     poly.append(lfsr)
 
-for i in range(100):
-    print(hex((poly[i]>>8)&0xFF))
+poly = [(x>>8)&0xFF for x in poly]
+with open("lfsr.68k","w") as f:
+    bitplanelib.dump_asm_bytes(poly ,f,mit_format=True)

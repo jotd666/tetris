@@ -594,6 +594,19 @@ _vblank:
 	
 
 osd_get_random:
+	move.l	a0,-(a7)
+	move.l	lfsr_index(pc),d0
+	lea		lfsr,a0
+	move.b	(a0,d0.l),d0
+	addq.l	#1,lfsr_index
+	cmp.l	#0x20000,lfsr_index
+	bne.b	0f
+	clr.l	lfsr_index
+0:
+	move.l	(a7)+,a0
+	and.l	#0xFF,d0
+	rts
+	
 * > D0: pseudo random value (8 bits, all other bits zeroed)
 	movem.l	a0,-(a7)
 	lea	seed(pc),a0
@@ -670,17 +683,13 @@ osd_set_palette_entry:
 	move.w	(sp)+,d0
 	rts
 	
-se_soundfreq = 6
-se_soundvol = 8
-FXFREQBASE = 3579564
-magic_val = 63382969   | FXFREQBASE*(10270/580) 10270 pokey freq for C, 580 C freq
 
 osd_write_audio_pokey:
 	tst.b	d0
 	beq.b	0f
 	move.b		#0,0x200
 0:
-	movem.l	d0-d4/a0/a1/a6,-(a7)
+	movem.l	d0-d5/a0/a1/a6,-(a7)
 	lea		_custom,a6
 	moveq	#0,d4
 	move.w	a0,d1
@@ -694,10 +703,13 @@ osd_write_audio_pokey:
 1:
 	cmp.w	#4,d1
 	bcc.b	0f		| audio control 28x8 => skip
+	moveq	#0,d2
 	* was even, now d1 is the channel number
 	* stop previous sound on that channel
-	move.w	d0,d2	| save frequency nibble
+	move.b	d0,d2	| save frequency nibble
 	move.w	d1,d3	| save channel
+	lsr.w	#1,d3	| 16 bit channels: 2 channels per pokey
+	move.b	d3,d5
 	moveq	#0,d0
 	move.w	d1,d0		| channel
 	jsr		_mt_stopfx
@@ -706,30 +718,31 @@ osd_write_audio_pokey:
 	tst.b	d4
 	beq.b	1f
 	addq.w	#4,a0
+	addq	#2,d5
 1:
 	* store freq nibble
-	moveq	#4,d4
-	sub.b	d1,d4		| offset
-	move.b	d2,(a0,d4.w)
+	bchg	#0,d1
+	move.b	d2,(a0,d1.w)
 	
 	* read full freq
 	lea		pokey_frequencies(pc),a0
 	move.w	(a0,d3.w*2),d2
 	beq.b	0f
+	lsl.l	#4,d2
 	move.l	#magic_val,d1
-	divu	d2,d1
+	divu	d1,d2
 	
 	lea		channel_table(pc),a1
-	move.l	(a1,d3.w*4),a1
+	move.l	(a1,d3.w*4),a0
 	* set full frequency
 
-	move.w	d1,(se_soundfreq,a0)
+	move.w	d2,(se_soundfreq,a0)
 	moveq	#0,d0
-	move.w	d3,d0		| channel
+	move.b	d5,d0		| channel
 	jsr		_mt_loopfx
 	
 0:
-	movem.l	(a7)+,d0-d4/a0/a1/a6
+	movem.l	(a7)+,d0-d5/a0/a1/a6
 	rts
 	
 * not useful, credits are handled some other way
@@ -1577,11 +1590,29 @@ osd_write_high_scores:
 	movem.l	(a7)+,d0-d7/a0-a6
 	rts
 
+se_soundfreq = 6
+se_soundvol = 8
+magic_val = 104
+
+
 sound_test:
+	sub.l	a0,a0
+	move.b	#0x00,d0
+	bsr		osd_write_audio_pokey
+	move.l	#2,a0
+	move.b	#0x10,d0
+	bsr		osd_write_audio_pokey
+	blitz
+	rts
+	
+sound_test_xx:
 	lea		TRI_WFORM_MEDIUM_sound_0,a0
+	*move.w	#630,(se_soundfreq,a0)   | 4096
+	move.w	#827,(se_soundfreq,a0)   | 0x1500
 	lea		_custom,a6
 	* looped sound
 	jsr		_mt_loopfx
+	blitz
 	rts
 	
     .macro    SOUND_ENTRY    sound_name,size,channel,soundfreq,volume,priority
@@ -1593,10 +1624,10 @@ sound_test:
     .byte    \priority
     .endm
 	
-	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,0,200,64,1
-	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,1,200,64,1
-	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,2,200,64,1
-	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,3,200,64,1
+	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,0,400,64,1
+	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,1,400,64,1
+	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,2,400,64,1
+	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,3,400,64,1
 
 channel_table:
 	.long	TRI_WFORM_MEDIUM_sound_0
@@ -1825,6 +1856,10 @@ bg_drawed_screen_ptr:
 bg_displayed_screen_ptr:
 	.long	0
 
+lfsr_index:
+	dc.l	0
+lfsr:
+	.include	"lfsr.68k"
 	
 _keyexit:
 	.byte	0x45	| ESC by default unless whdload overwrites it
