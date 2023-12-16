@@ -1,15 +1,11 @@
-- test music write to pokey with known values at start & debug ex 10270
+- 50Hz => 60Hz
+- amiga replay speed is a several times slower!
 - advancing lines: random not so good/similar to POKEY random (one almost filled line each time)
   ASLR generators temp 128k already generated & test. If works then code it to save memory
+  => ok but should pick numbers in irq to make generator faster
 - floppy A1200 nofast: continue screen crashes with 800004 GURU: retest
 
 - save highscores
-- convert tunes from MAME ripped format
-  spec: https://vgmrips.net/wiki/VGM_Specification
-  https://vgmrips.net/packs/pack/tetris-atari-arcade
-- MP3 here: https://downloads.khinsider.com/game-soundtracks/album/tetris-atari-arcade
-- write midi file: https://stackoverflow.com/questions/11059801/how-can-i-write-a-midi-file-with-python
-- mp3 to midi works great! https://anyconv.com/wav-to-midi-converter/
 
 
 low pri:

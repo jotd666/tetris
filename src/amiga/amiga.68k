@@ -685,16 +685,12 @@ osd_set_palette_entry:
 	
 
 osd_write_audio_pokey:
-	tst.b	d0
-	beq.b	0f
-	move.b		#0,0x200
-0:
 	movem.l	d0-d5/a0/a1/a6,-(a7)
 	lea		_custom,a6
 	moveq	#0,d4
 	move.w	a0,d1
 	lsr	#1,d1
-	bcs.b	0f
+	jcs	0f
 	btst	#3,d1
 	beq.b	1f
 	* second pokey
@@ -702,7 +698,7 @@ osd_write_audio_pokey:
 	st.b	d4
 1:
 	cmp.w	#4,d1
-	bcc.b	0f		| audio control 28x8 => skip
+	jcc	0f		| audio control 28x8 => skip
 	moveq	#0,d2
 	* was even, now d1 is the channel number
 	* stop previous sound on that channel
@@ -712,7 +708,6 @@ osd_write_audio_pokey:
 	move.b	d3,d5
 	moveq	#0,d0
 	move.w	d1,d0		| channel
-	jsr		_mt_stopfx
 	
 	lea		pokey_frequencies(pc),a0
 	tst.b	d4
@@ -722,21 +717,50 @@ osd_write_audio_pokey:
 1:
 	* store freq nibble
 	bchg	#0,d1
+	cmp.b	(a0,d1.w),d2
+	beq.b	0f			| same value as before, don't do anything
 	move.b	d2,(a0,d1.w)
 	
 	* read full freq
 	lea		pokey_frequencies(pc),a0
 	move.w	(a0,d3.w*2),d2
-	beq.b	0f
-	lsl.l	#4,d2
-	move.l	#magic_val,d1
-	divu	d1,d2
+	beq.b	3f
 	
-	lea		channel_table(pc),a1
+	moveq	#0,d1
+
+	lea		medium_channel_table(pc),a1
+	move.b	#104,d1
+	lea		high_channel_table(pc),a1
+	move.b	#56,d1
+
+	* which waveform to use? low, medium, ... 
+	* depending on value of D2
+	cmp.w	#0x300,d2
+	bcc.b	1f
+	* switch to very high
+	lea		very_high_channel_table(pc),a1
+	move.b	#65,d1		| wrong
+
+1:
+	move.w	d2,d0		| save it
+	lsl.l	#4,d2
+	
+	divu	d1,d2
+
+
+	* stop sfx now
+	move.w	d0,-(a7)
+	jsr		_mt_stopfx
+	move.w	(a7)+,d0
+	
 	move.l	(a1,d3.w*4),a0
 	* set full frequency
-
-	move.w	d2,(se_soundfreq,a0)
+	
+	cmp.w	#124,d2
+	bcc.b	2f
+	move.b	#1,0x200
+2:
+	move.w	d2,(se_soundfreq.w,a0)
 	moveq	#0,d0
 	move.b	d5,d0		| channel
 	jsr		_mt_loopfx
@@ -744,6 +768,10 @@ osd_write_audio_pokey:
 0:
 	movem.l	(a7)+,d0-d5/a0/a1/a6
 	rts
+3:
+	move.b	d5,d0		| channel
+	jsr		_mt_stopfx
+	bra.b	0b
 	
 * not useful, credits are handled some other way
 osd_read_pokey1:
@@ -1592,16 +1620,18 @@ osd_write_high_scores:
 
 se_soundfreq = 6
 se_soundvol = 8
-magic_val = 104
+
 
 
 sound_test:
 	sub.l	a0,a0
-	move.b	#0x00,d0
+	move.b	#00,d0
 	bsr		osd_write_audio_pokey
-	move.l	#2,a0
-	move.b	#0x10,d0
+	add.l	#2,a0
+	move.b	#0x02,d0
 	bsr		osd_write_audio_pokey
+	
+
 	blitz
 	rts
 	
@@ -1628,12 +1658,32 @@ sound_test_xx:
 	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,1,400,64,1
 	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,2,400,64,1
 	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,3,400,64,1
+	SOUND_ENTRY		TRI_WFORM_HIGH,16,0,400,64,1
+	SOUND_ENTRY		TRI_WFORM_HIGH,16,1,400,64,1
+	SOUND_ENTRY		TRI_WFORM_HIGH,16,2,400,64,1
+	SOUND_ENTRY		TRI_WFORM_HIGH,16,3,400,64,1
+	SOUND_ENTRY		TRI_WFORM_VERYHIGH,10,0,400,64,1
+	SOUND_ENTRY		TRI_WFORM_VERYHIGH,10,1,400,64,1
+	SOUND_ENTRY		TRI_WFORM_VERYHIGH,10,2,400,64,1
+	SOUND_ENTRY		TRI_WFORM_VERYHIGH,10,3,400,64,1
 
-channel_table:
+medium_channel_table:
 	.long	TRI_WFORM_MEDIUM_sound_0
 	.long	TRI_WFORM_MEDIUM_sound_1
 	.long	TRI_WFORM_MEDIUM_sound_2
 	.long	TRI_WFORM_MEDIUM_sound_3
+high_channel_table:
+	.long	TRI_WFORM_HIGH_sound_0
+	.long	TRI_WFORM_HIGH_sound_1
+	.long	TRI_WFORM_HIGH_sound_2
+	.long	TRI_WFORM_HIGH_sound_3
+very_high_channel_table:
+	.long	TRI_WFORM_VERYHIGH_sound_0
+	.long	TRI_WFORM_VERYHIGH_sound_1
+	.long	TRI_WFORM_VERYHIGH_sound_2
+	.long	TRI_WFORM_VERYHIGH_sound_3
+	
+
 	
 level2_interrupt:
 	bsr		handle_keyboard
@@ -2010,6 +2060,7 @@ RANGE_HIGH = $079
 RANGE_MEDIUM = $1DD
 
 TRI_WFORM_MEDIUM:
+	dc.b	0,0
 	dc.b	00,-10,-20,-30
 	dc.b	-40,-50,-60,-70
 	dc.b	-60,-50,-40,-30
@@ -2020,6 +2071,7 @@ TRI_WFORM_MEDIUM:
 
 
 TRI_WFORM_LOW:
+	dc.b	0,0
 	dc.b	00,-5,-10,-15
 	dc.b	-20,-25,-30,-35
 	dc.b	-40,-45,-50,-55
@@ -2039,11 +2091,13 @@ TRI_WFORM_LOW:
 
 
 TRI_WFORM_HIGH:
+	dc.b	0,0
 	dc.b	00,20,40,70,40,20,0
 	dc.b	-20,-40,-60,-70,-60,-40,-20
 
 
 TRI_WFORM_VERYHIGH:
+	dc.b	0,0
 	dc.b	00,35,70,35,0,-35,-70,-35
 
 

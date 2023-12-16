@@ -127,6 +127,8 @@ screen_address_msb_00ae = 0x00ae
 number_of_credits_00c1 = 0x00C1
 * for logging only, never decreases
 number_of_inserted_coins_00c2 = 0x00C2
+* contains a pointer on music/sound commands (per channel)
+music_command_pointer_00cc = 0x00CC
 pokey_pointer_00ce = 0x00CE
 score_digit_1_0600 = 0x0600
 score_digit_2_0601 = 0x0601
@@ -147,6 +149,18 @@ zero_to_seven_palette_index_counter_0641 = 0x0641
 zero_to_seven_palette_index_counter_0642 = 0x0642
 
 pokey1_state_copy_0700 = 0x0700
+
+fallen_shape_counter_prev_0c10 = 0x0C10
+fallen_shape_counter_0c11 = 0x0C11
+
+music_pointers_lsb_0c2f = 0xc2f
+music_pointers_msb_0c39 = 0x0c39
+next_note_timer_array_0c6b = 0xc6b
+
+* contains data for multiple channels
+* (same channel for both pokeys)
+music_channel_msb_value_0e4a = 0xE4A
+music_channel_lsb_value_0e49 = 0xE49
 
 *jump_table_lsb_4bb2 = 0x4bb2
 *jump_table_msb_4bb3 = 0x4bb3
@@ -322,16 +336,15 @@ coin_counters_3C00 = 0x3C00
 
 	* doesn't check anything, but osd_w_colorram will
 	.macro GET_SCREEN_ADDRESS_Y	offset
-	lea	game_ram,a0
-	add.w	#\offset,a0
+	lea	game_ram+\offset,a0
 	READ_LE_WORD	a0
 	add.w	d2,a0
 	.endm
 	
+	
 	* doesn't check anything, but osd_set_palette_entry will
 	.macro GET_PALETTE_ADDRESS_Y	offset
-	lea	game_ram,a0
-	add.w	#\offset,a0
+	lea	game_ram+\offset,a0
 	READ_LE_WORD	a0
 	* read some address between 0x2000 and 0x2100, center on 0-0x100
 	sub.w	#0x2000,a0
@@ -451,16 +464,28 @@ write_to_pokey_00ce_y:
 	sub.l	#0x2800,a0		| sub pokey base
 	jra		osd_write_audio_pokey
 	
-* this is bank 1
+write_to_pokey_00ce_x:
+	* call this macro so no destination address check on A0
 
+	lea	game_ram+pokey_pointer_00ce,a0
+	READ_LE_WORD	a0
+	lea	(a0,d1.w),a0
+	
+	sub.l	#0x2800,a0		| sub pokey base
+	jra		osd_write_audio_pokey
+
+* this is bank 1
+	* never reached?
 	jbsr	l_402d                            	| [$4000: jsr	$402d]
 	CLR_I_FLAG                             	| [$4003: cli]
-l_4004:
+handle_music_4004:
+	* once out of 2 calls, it writes to pokey audio, even if it writes the same
+	* values as before...
 	GET_ADDRESS	0x00ca                     	| [$4004: inc	$00ca]
 	addq.b	#1,(a0)                         	| [$4004: inc	$00ca]
-	GET_ADDRESS	0x0c10                     	| [$4006: ldx	$0c10]
+	GET_ADDRESS	fallen_shape_counter_prev_0c10                     	| [$4006: ldx	$0c10]
 	move.b	(a0),d1                         	| [$4006: ldx	$0c10]
-	GET_ADDRESS	0x0c11                     	| [$4009: cpx	$0c11]
+	GET_ADDRESS	fallen_shape_counter_0c11                     	| [$4009: cpx	$0c11]
 	cmp.b	(a0),d1                            	| [$4009: cpx	$0c11]
 	beq	l_401e                             	| [$400c: beq	$401e]
 	addq.b	#1,d1                           	| [$400e: inx]
@@ -469,21 +494,23 @@ l_4004:
 	bcs	l_4015                             	| [$4011: bcc	$4015]
 	clr.b	d1                               	| [$4013: ldx #$00]
 l_4015:
-	GET_ADDRESS	0x0c10                     	| [$4015: stx	$0c10]
+	* counters go from 0 to F when a shape falls
+	* numbers are different: play sound then equalize them
+	GET_ADDRESS	fallen_shape_counter_prev_0c10                     	| [$4015: stx	$0c10]
 	move.b	d1,(a0)                         	| [$4015: stx	$0c10]
 	GET_ADDRESS	0x0c00                     	| [$4018: ldy	$0c00, x]
 	move.b	(a0,d1.w),d2                    	| [$4018: ldy	$0c00, x]
-	jbsr	l_4160                            	| [$401b: jsr	$4160]
+	jbsr	handle_new_shape_fallen_sound_4160             	| [$401b: jsr	$4160]
 l_401e:
 	GET_ADDRESS	0x00ca                     	| [$401e: lda	$00ca]
 	move.b	(a0),d0                         	| [$401e: lda	$00ca]
 	lsr.b	#1,d0                            	| [$4020: lsr a]
 	bcc	l_4028                             	| [$4021: bcc	$4028]
 	clr.b	d1                               	| [$4023: ldx #$00]
-	jra	l_4b4d                             	| [$4025: jmp	$4b4d]
+	jra	music_tick_4b4d                             	| [$4025: jmp	$4b4d]
 l_4028:
 	move.b	#0x01,d1                        	| [$4028: ldx #$01]
-	jra	l_4b4d                             	| [$402a: jmp	$4b4d]
+	jra	music_tick_4b4d                             	| [$402a: jmp	$4b4d]
 l_402d:
 	PUSH_SR                                	| [$402d: php]
 	SET_I_FLAG                             	| [$402e: sei] handled
@@ -496,9 +523,9 @@ l_402d:
 	move.b	d0,(a0)                         	| [$4037: sta	$0c23]
 	GET_ADDRESS	0x0c24                     	| [$403a: sta	$0c24]
 	move.b	d0,(a0)                         	| [$403a: sta	$0c24]
-	GET_ADDRESS	0x0c10                     	| [$403d: sta	$0c10]
+	GET_ADDRESS	fallen_shape_counter_prev_0c10                     	| [$403d: sta	$0c10]
 	move.b	d0,(a0)                         	| [$403d: sta	$0c10]
-	GET_ADDRESS	0x0c11                     	| [$4040: sta	$0c11]
+	GET_ADDRESS	fallen_shape_counter_0c11                     	| [$4040: sta	$0c11]
 	move.b	d0,(a0)                         	| [$4040: sta	$0c11]
 	
 	move.b	#0x11,d1                        	| [$4043: ldx #$11]
@@ -533,7 +560,6 @@ l_4061:
 	GET_ADDRESS	0x00cf                     	| [$4069: sta	$00cf]
 	move.b	d0,(a0)                         	| [$4069: sta	$00cf]
 	
-	jra		l_40a6
 	
 	clr.b	d0                               	| [$406b: lda #$00]
 	move.b	#0x08,d2                        	| [$406d: ldy #$08]
@@ -554,16 +580,16 @@ l_4061:
 	move.b	d0,(a0)                         	| [$407c: sta	$00ce]
 	clr.b	d1                               	| [$407e: ldx #$00]
 	move.b	d1,d0                           	| [$4080: txa]
-	GET_ADDRESS_X	pokey_pointer_00ce                     	| [$4081: sta ($ce, x)]
-    move.b	d0,(a0)                      	| [$4081: sta ($ce, x)]
+	bsr		write_to_pokey_00ce_y                     	| [$4081: sta ($ce, x)]
+                          	| [$4081: sta ($ce, x)]
 l_4083:
 	move.b	#0x01,d4	| [$4083: adc #$01]
 	addx.b	d4,d0                        	| [$4083: adc #$01]
 	cmp.b	#0x07,d0                         	| [$4085: cmp #$07]
 	bne	l_4083                             	| [$4087: bne	$4083]
 		
-	GET_ADDRESS_X	pokey_pointer_00ce                     	| [$4089: sta ($ce, x)]
-    move.b	d0,(a0)                      	| [$4089: sta ($ce, x)]
+	bsr		write_to_pokey_00ce_x                     	| [$4089: sta ($ce, x)]
+                     	| [$4089: sta ($ce, x)]
 
 	GET_ADDRESS	0x00d9                     	| [$408b: ldx	$00d9]
 	move.b	(a0),d1                         	| [$408b: ldx	$00d9]
@@ -755,7 +781,7 @@ l_413e:
 l_4141:
 	PUSH_SR                                	| [$4141: php]
 	SET_I_FLAG                             	| [$4142: sei]	handled
-	GET_ADDRESS	0x0c11                     	| [$4143: ldy	$0c11]
+	GET_ADDRESS	fallen_shape_counter_0c11                     	| [$4143: ldy	$0c11]
 	move.b	(a0),d2                         	| [$4143: ldy	$0c11]
 	addq.b	#1,d2                           	| [$4146: iny]
 	cmp.b	#0x10,d2                         	| [$4147: cpy #$10]
@@ -763,9 +789,9 @@ l_4141:
 	bcs	l_414d                             	| [$4149: bcc	$414d]
 	clr.b	d2                               	| [$414b: ldy #$00]
 l_414d:
-	GET_ADDRESS	0x0c11                     	| [$414d: sty	$0c11]
+	GET_ADDRESS	fallen_shape_counter_0c11                     	| [$414d: sty	$0c11]
 	move.b	d2,(a0)                         	| [$414d: sty	$0c11]
-	GET_ADDRESS	0x0c10                     	| [$4150: cpy	$0c10]
+	GET_ADDRESS	fallen_shape_counter_prev_0c10                     	| [$4150: cpy	$0c10]
 	cmp.b	(a0),d2                          	| [$4150: cpy	$0c10]
 	bne	l_4159                             	| [$4153: bne	$4159]
 	st.b	d0                                	| [$4155: lda #$ff]
@@ -779,7 +805,10 @@ l_4159:
 	POP_SR                                 	| [$415e: plp]
 	CLR_I_FLAG
 	rts                                    	| [$415f: rts]
-l_4160:
+	
+* plays crunch sound when shape has fallen, but also stops music if
+* level complete and plays level complete sound/music
+handle_new_shape_fallen_sound_4160:
 	cmp.b	#0x1d,d2                         	| [$4160: cpy #$1d]
 	* bcs=>bcc
 	bcc	l_4178                             	| [$4162: bcs	$4178]
@@ -1268,45 +1297,33 @@ l_4324:
 	bpl	l_4324                             	| [$432a: bpl	$4324]
 	clr.b	d2                               	| [$432c: ldy #$00]
 	move.b	#0xd9,d0                        	| [$432e: lda #$d9]
-	CLR_XC_FLAGS                           	| [$4330: clc]
+	                           	| [$4330: clc]
 	GET_ADDRESS	0x00d0                     	| [$4331: adc	$00d0]
-	move.b	(a0),d4	| [$4331: adc	$00d0]
-	addx.b	d4,d0                         	| [$4331: adc	$00d0]
-	PUSH_SR
+	add.b	(a0),d0	| [$4331: adc	$00d0]
 	GET_ADDRESS	0x00d2                     	| [$4333: sta	$00d2]
 	move.b	d0,(a0)                         	| [$4333: sta	$00d2]
-	POP_SR
 	move.b	#0x52,d0                        	| [$4335: lda #$52]
 	GET_ADDRESS	0x00d1                     	| [$4337: adc	$00d1]
 	move.b	(a0),d4	| [$4337: adc	$00d1]
 	addx.b	d4,d0                         	| [$4337: adc	$00d1]
-	PUSH_SR
 	GET_ADDRESS	0x00d3                     	| [$4339: sta	$00d3]
 	move.b	d0,(a0)                         	| [$4339: sta	$00d3]
-	POP_SR
 	GET_ADDRESS_Y	0xd2                     	| [$433b: lda ($d2), y]
 	move.b	(a0,d2.w),d0                    	| [$433b: lda ($d2), y]
-	PUSH_SR
 	GET_ADDRESS	0x00d4                     	| [$433d: sta	$00d4]
 	move.b	d0,(a0)                         	| [$433d: sta	$00d4]
-	POP_SR
 	move.b	#0x19,d0                        	| [$433f: lda #$19]
-	CLR_XC_FLAGS                           	| [$4341: clc]
+	                           	| [$4341: clc]
 	GET_ADDRESS	0x00d0                     	| [$4342: adc	$00d0]
-	move.b	(a0),d4	| [$4342: adc	$00d0]
-	addx.b	d4,d0                         	| [$4342: adc	$00d0]
-	PUSH_SR
+	add.b	(a0),d0	| [$4342: adc	$00d0]
 	GET_ADDRESS	0x00d2                     	| [$4344: sta	$00d2]
 	move.b	d0,(a0)                         	| [$4344: sta	$00d2]
-	POP_SR
 	move.b	#0x53,d0                        	| [$4346: lda #$53]
 	GET_ADDRESS	0x00d1                     	| [$4348: adc	$00d1]
 	move.b	(a0),d4	| [$4348: adc	$00d1]
 	addx.b	d4,d0                         	| [$4348: adc	$00d1]
-	PUSH_SR
 	GET_ADDRESS	0x00d3                     	| [$434a: sta	$00d3]
 	move.b	d0,(a0)                         	| [$434a: sta	$00d3]
-	POP_SR
 	GET_ADDRESS_Y	0xd2                     	| [$434c: lda ($d2), y]
 	move.b	(a0,d2.w),d0                    	| [$434c: lda ($d2), y]
 	                           	| [$434e: clc]
@@ -1335,10 +1352,8 @@ l_4364:
 l_4367:
 	GET_ADDRESS	0x0e2d                     	| [$4367: lda	$0e2d, y]
 	move.b	(a0,d2.w),d0                    	| [$4367: lda	$0e2d, y]
-	PUSH_SR
 	GET_ADDRESS	0x0e2d                     	| [$436a: sta	$0e2d, x]
     move.b	d0,(a0,d1.w)                 	| [$436a: sta	$0e2d, x]
-	POP_SR
 	POP_SR                                 	| [$436d: plp]
 l_436e:
 	move.b	d2,d0                           	| [$436e: tya]
@@ -1346,56 +1361,42 @@ l_436e:
 	jbsr	l_4428                            	| [$4370: jsr	$4428]
 	clr.b	d2                               	| [$4373: ldy #$00]
 	move.b	#0xd9,d0                        	| [$4375: lda #$d9]
-	CLR_XC_FLAGS                           	| [$4377: clc]
+	                           	| [$4377: clc]
 	GET_ADDRESS	0x00d0                     	| [$4378: adc	$00d0]
-	move.b	(a0),d4	| [$4378: adc	$00d0]
-	addx.b	d4,d0                         	| [$4378: adc	$00d0]
-	PUSH_SR
+	add.b	(a0),d0	| [$4378: adc	$00d0]
 	GET_ADDRESS	0x00d2                     	| [$437a: sta	$00d2]
 	move.b	d0,(a0)                         	| [$437a: sta	$00d2]
-	POP_SR
 	move.b	#0x52,d0                        	| [$437c: lda #$52]
 	GET_ADDRESS	0x00d1                     	| [$437e: adc	$00d1]
 	move.b	(a0),d4	| [$437e: adc	$00d1]
 	addx.b	d4,d0                         	| [$437e: adc	$00d1]
-	PUSH_SR
 	GET_ADDRESS	0x00d3                     	| [$4380: sta	$00d3]
 	move.b	d0,(a0)                         	| [$4380: sta	$00d3]
-	POP_SR
 	GET_ADDRESS_Y	0xd2                     	| [$4382: lda ($d2), y]
 	move.b	(a0,d2.w),d0                    	| [$4382: lda ($d2), y]
 	asl.b	#1,d0                            	| [$4384: asl a]
 	SET_XC_FLAGS                           	| [$4385: sec]
 	roxl.b	#1,d0                            	| [$4386: rol a]
-	PUSH_SR
 	GET_ADDRESS	0x0cb1                     	| [$4387: sta	$0cb1, x]
     move.b	d0,(a0,d1.w)                 	| [$4387: sta	$0cb1, x]
-	POP_SR
 	move.b	#0x19,d0                        	| [$438a: lda #$19]
-	CLR_XC_FLAGS                           	| [$438c: clc]
+	                           	| [$438c: clc]
 	GET_ADDRESS	0x00d0                     	| [$438d: adc	$00d0]
-	move.b	(a0),d4	| [$438d: adc	$00d0]
-	addx.b	d4,d0                         	| [$438d: adc	$00d0]
-	PUSH_SR
+	add.b	(a0),d0	| [$438d: adc	$00d0]
 	GET_ADDRESS	0x00d2                     	| [$438f: sta	$00d2]
 	move.b	d0,(a0)                         	| [$438f: sta	$00d2]
-	POP_SR
 	move.b	#0x53,d0                        	| [$4391: lda #$53]
 	GET_ADDRESS	0x00d1                     	| [$4393: adc	$00d1]
 	move.b	(a0),d4	| [$4393: adc	$00d1]
 	addx.b	d4,d0                         	| [$4393: adc	$00d1]
-	PUSH_SR
 	GET_ADDRESS	0x00d3                     	| [$4395: sta	$00d3]
 	move.b	d0,(a0)                         	| [$4395: sta	$00d3]
-	POP_SR
 	GET_ADDRESS_Y	0xd2                     	| [$4397: lda ($d2), y]
 	move.b	(a0,d2.w),d0                    	| [$4397: lda ($d2), y]
 	                           	| [$4399: clc]
 	add.b	#0x0a,d0                        	| [$439a: adc #$0a]
-	PUSH_SR
 	GET_ADDRESS	0x00d4                     	| [$439c: sta	$00d4]
 	move.b	d0,(a0)                         	| [$439c: sta	$00d4]
-	POP_SR
 	GET_ADDRESS	0x00d0                     	| [$439e: lda	$00d0]
 	move.b	(a0),d0                         	| [$439e: lda	$00d0]
 	asl.b	#1,d0                            	| [$43a0: asl a]
@@ -1416,23 +1417,17 @@ l_436e:
 	GET_ADDRESS	0x00d3                     	| [$43b1: adc	$00d3]
 	move.b	(a0),d4	| [$43b1: adc	$00d3]
 	addx.b	d4,d0                         	| [$43b1: adc	$00d3]
-	PUSH_SR
 	GET_ADDRESS	0x00d3                     	| [$43b3: sta	$00d3]
 	move.b	d0,(a0)                         	| [$43b3: sta	$00d3]
-	POP_SR
 	GET_ADDRESS_Y	0xd2                     	| [$43b5: lda ($d2), y]
 	move.b	(a0,d2.w),d0                    	| [$43b5: lda ($d2), y]
-	PUSH_SR
-	GET_ADDRESS	0x0c2f                     	| [$43b7: sta	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$43b7: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$43b7: sta	$0c2f, x]
-	POP_SR
 	addq.b	#1,d2                           	| [$43ba: iny]
 	GET_ADDRESS_Y	0xd2                     	| [$43bb: lda ($d2), y]
 	move.b	(a0,d2.w),d0                    	| [$43bb: lda ($d2), y]
-	PUSH_SR
-	GET_ADDRESS	0x0c39                     	| [$43bd: sta	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$43bd: sta	$0c39, x]
     move.b	d0,(a0,d1.w)                 	| [$43bd: sta	$0c39, x]
-	POP_SR
 	GET_ADDRESS	0x00d4                     	| [$43c0: ldy	$00d4]
 	move.b	(a0),d2                         	| [$43c0: ldy	$00d4]
 	PUSH_SR                                	| [$43c2: php] 
@@ -1515,46 +1510,33 @@ l_43f3:
 	move.b	d0,(a0)                         	| [$4415: sta	$00d3]
 	GET_ADDRESS_Y	0xd2                     	| [$4417: lda ($d2), y]
 	move.b	(a0,d2.w),d0                    	| [$4417: lda ($d2), y]
-	PUSH_SR
 	GET_ADDRESS	0x00d0                     	| [$4419: sta	$00d0]
 	move.b	d0,(a0)                         	| [$4419: sta	$00d0]
-	POP_SR
 	addq.b	#1,d2                           	| [$441b: iny]
 	GET_ADDRESS_Y	0xd2                     	| [$441c: ora ($d2), y]
 	or.b	(a0,d2.w),d0                      	| [$441c: ora ($d2), y]
 	beq	l_4427                             	| [$441e: beq	$4427]
 	GET_ADDRESS_Y	0xd2                     	| [$4420: lda ($d2), y]
 	move.b	(a0,d2.w),d0                    	| [$4420: lda ($d2), y]
-	PUSH_SR
 	GET_ADDRESS	0x00d1                     	| [$4422: sta	$00d1]
 	move.b	d0,(a0)                         	| [$4422: sta	$00d1]
-	POP_SR
 	jra	l_4322                             	| [$4424: jmp	$4322]
 l_4427:
 	rts                                    	| [$4427: rts]
 l_4428:
 	move.b	#0x07,d0                        	| [$4428: lda #$07]
-	PUSH_SR
 	GET_ADDRESS	0x0cd9                     	| [$442a: sta	$0cd9, x]
     move.b	d0,(a0,d1.w)                 	| [$442a: sta	$0cd9, x]
-	POP_SR
 	move.b	#0x10,d0                        	| [$442d: lda #$10]
-	PUSH_SR
 	GET_ADDRESS	0x0d79                     	| [$442f: sta	$0d79, x]
     move.b	d0,(a0,d1.w)                 	| [$442f: sta	$0d79, x]
-	POP_SR
 	move.b	#0xa0,d0                        	| [$4432: lda #$a0]
-	PUSH_SR
 	GET_ADDRESS	0x0da1                     	| [$4434: sta	$0da1, x]
     move.b	d0,(a0,d1.w)                 	| [$4434: sta	$0da1, x]
-	POP_SR
 	st.b	d0                                	| [$4437: lda #$ff]
-	PUSH_SR
 	GET_ADDRESS	0x0cc5                     	| [$4439: sta	$0cc5, x]
     move.b	d0,(a0,d1.w)                 	| [$4439: sta	$0cc5, x]
-	POP_SR
 	clr.b	d0                               	| [$443c: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x0d6f                     	| [$443e: sta	$0d6f, x]
     move.b	d0,(a0,d1.w)                 	| [$443e: sta	$0d6f, x]
 	GET_ADDRESS	0x0ccf                     	| [$4441: sta	$0ccf, x]
@@ -1567,7 +1549,7 @@ l_4428:
     move.b	d0,(a0,d1.w)                 	| [$444a: sta	$0c57, x]
 	GET_ADDRESS	0x0c61                     	| [$444d: sta	$0c61, x]
     move.b	d0,(a0,d1.w)                 	| [$444d: sta	$0c61, x]
-	GET_ADDRESS	0x0c6b                     	| [$4450: sta	$0c6b, x]
+	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$4450: sta	$0c6b, x]
     move.b	d0,(a0,d1.w)                 	| [$4450: sta	$0c6b, x]
 	GET_ADDRESS	0x0dab                     	| [$4453: sta	$0dab, x]
     move.b	d0,(a0,d1.w)                 	| [$4453: sta	$0dab, x]
@@ -1617,14 +1599,11 @@ l_4428:
     move.b	d0,(a0,d1.w)                 	| [$4495: sta	$0d29, x]
 	GET_ADDRESS	0x0cbb                     	| [$4498: sta	$0cbb, x]
     move.b	d0,(a0,d1.w)                 	| [$4498: sta	$0cbb, x]
-	POP_SR
 	move.b	#0x10,d0                        	| [$449b: lda #$10]
-	PUSH_SR
 	GET_ADDRESS	0x0ce3                     	| [$449d: sta	$0ce3, x]
     move.b	d0,(a0,d1.w)                 	| [$449d: sta	$0ce3, x]
 	GET_ADDRESS	0x0cf7                     	| [$44a0: sta	$0cf7, x]
     move.b	d0,(a0,d1.w)                 	| [$44a0: sta	$0cf7, x]
-	POP_SR
 	move.b	#0x50,d0                        	| [$44a3: lda #$50]
 	PUSH_SR
 	GET_ADDRESS	0x0ced                     	| [$44a5: sta	$0ced, x]
@@ -1640,10 +1619,8 @@ l_44d6:
 	beq	l_44dd                             	| [$44d9: beq	$44dd]
 	st.b	d0                                	| [$44db: lda #$ff]
 l_44dd:
-	PUSH_SR
 	GET_ADDRESS	0x00df                     	| [$44dd: sta	$00df]
 	move.b	d0,(a0)                         	| [$44dd: sta	$00df]
-	POP_SR
 	GET_ADDRESS	0x0cb1                     	| [$44df: lda	$0cb1, x]
 	move.b	(a0,d1.w),d0                    	| [$44df: lda	$0cb1, x]
 	beq	l_44eb                             	| [$44e2: beq	$44eb]
@@ -1664,13 +1641,15 @@ l_44ee:
 	move.b	(a0,d1.w),d0                    	| [$44f6: lda	$0cb1, x]
 	GET_ADDRESS	0x0e40                     	| [$44f9: sta	$0e40, y]
     move.b	d0,(a0,d2.w)                 	| [$44f9: sta	$0e40, y]
-	GET_ADDRESS	0x0c2f                     	| [$44fc: lda	$0c2f, x]
+	* update current command music pointer from 2 arrays containing LSB/MSB
+	* of current tune/channel info
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$44fc: lda	$0c2f, x]
 	move.b	(a0,d1.w),d0                    	| [$44fc: lda	$0c2f, x]
-	GET_ADDRESS	0x00cc                     	| [$44ff: sta	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$44ff: sta	$00cc]
 	move.b	d0,(a0)                         	| [$44ff: sta	$00cc]
-	GET_ADDRESS	0x0c39                     	| [$4501: lda	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4501: lda	$0c39, x]
 	move.b	(a0,d1.w),d0                    	| [$4501: lda	$0c39, x]
-	GET_ADDRESS	0x00cd                     	| [$4504: sta	$00cd]
+	GET_ADDRESS	music_command_pointer_00cc+1                     	| [$4504: sta	$00cd]
 	move.b	d0,(a0)                         	| [$4504: sta	$00cd]
 	GET_ADDRESS	0x0c57                     	| [$4506: lda	$0c57, x]
 	move.b	(a0,d1.w),d0                    	| [$4506: lda	$0c57, x]
@@ -1680,18 +1659,29 @@ l_44ee:
 	INVERT_XC_FLAGS
 	GET_ADDRESS	0x0c57                     	| [$450d: sta	$0c57, x]
     move.b	d0,(a0,d1.w)                 	| [$450d: sta	$0c57, x]
+	
+	WPSET	0x202
+	* this is called as frequently as main irq
 	GET_ADDRESS	0x0c61                     	| [$4510: lda	$0c61, x]
 	move.b	(a0,d1.w),d0                    	| [$4510: lda	$0c61, x]
+	* track time multiplier (0x10, 0x20...)
 	SBC_X	0x0d79                     	| [$4513: sbc	$0d79, x]
 	PUSH_SR				| required
+	* set fine counters
 	GET_ADDRESS	0x0c61                     	| [$4516: sta	$0c61, x]
     move.b	d0,(a0,d1.w)                 	| [$4516: sta	$0c61, x]
 	POP_SR				| required
 	bcs	l_4523                             	| [$4519: bcs	$4523]
-	GET_ADDRESS	0x0c6b                     	| [$451b: dec	$0c6b, x]
+	* tick on current note
+	* for music, timer values are located at 0xC72-0xC75
+	* fiddling with the values when game is running desyncs channels
+	* and the music plays with some channels being late
+	*
+	* supposed to be called each 20ms (each 13 irq at 60Hz)
+	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$451b: dec	$0c6b, x]
     subq.b	#1,(a0,d1.w)                 	| [$451b: dec	$0c6b, x]
 	bpl	l_4523                             	| [$451e: bpl	$4523]
-	jra	l_454d                             	| [$4520: jmp	$454d]
+	jra	next_music_note_454d                             	| [$4520: jmp	$454d]
 l_4523:
 	GET_ADDRESS	0x0c89                     	| [$4523: lda	$0c89, x]
 	move.b	(a0,d1.w),d0                    	| [$4523: lda	$0c89, x]
@@ -1722,36 +1712,40 @@ l_4542:
 	jra	l_4924                             	| [$4547: jmp	$4924]
 l_454a:
 	jra	l_4778                             	| [$454a: jmp	$4778]
-l_454d:
-	GET_ADDRESS	0x0c2f                     	| [$454d: lda	$0c2f, x]
+next_music_note_454d:
+	* next music pointer for this channel
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$454d: lda	$0c2f, x]
 	move.b	(a0,d1.w),d0                    	| [$454d: lda	$0c2f, x]
+	* this is a timer used for music it seems
 	                           	| [$4550: clc]
-	add.b	#0x02,d0                        	| [$4551: adc #$02]
+	addq.b	#0x02,d0                        	| [$4551: adc #$02]
 	PUSH_SR				| required
-	GET_ADDRESS	0x0c2f                     	| [$4553: sta	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4553: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$4553: sta	$0c2f, x]
 	POP_SR				| required
 	bcc	l_455b                             	| [$4556: bcc	$455b]
-	GET_ADDRESS	0x0c39                     	| [$4558: inc	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4558: inc	$0c39, x]
     addq.b	#1,(a0,d1.w)                 	| [$4558: inc	$0c39, x]
 l_455b:
 	clr.b	d2                               	| [$455b: ldy #$00]
-	GET_ADDRESS_Y	0xcc                     	| [$455d: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$455d: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$455d: lda ($cc), y]
-	bpl	l_4580                             	| [$455f: bpl	$4580]
+	bpl	handle_all_sound_4580                             	| [$455f: bpl	$4580]
+	* special music/sfx command
+	* reached when tempo changes, or sfx.. or whatever
 	jbsr	l_4b60                            	| [$4561: jsr	$4b60]
 	* flag set by above call
 	bcc	l_4572                             	| [$4564: bcc	$4572]
-	GET_ADDRESS	0x0c39                     	| [$4566: lda	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4566: lda	$0c39, x]
 	move.b	(a0,d1.w),d0                    	| [$4566: lda	$0c39, x]
-	GET_ADDRESS	0x00cd                     	| [$4569: sta	$00cd]
+	GET_ADDRESS	music_command_pointer_00cc+1                     	| [$4569: sta	$00cd]
 	move.b	d0,(a0)                         	| [$4569: sta	$00cd]
-	GET_ADDRESS	0x0c2f                     	| [$456b: lda	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$456b: lda	$0c2f, x]
 	move.b	(a0,d1.w),d0                    	| [$456b: lda	$0c2f, x]
-	GET_ADDRESS	0x00cc                     	| [$456e: sta	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$456e: sta	$00cc]
 	move.b	d0,(a0)                         	| [$456e: sta	$00cc]
 	* bcc handled @4564
-	bra	l_454d                             	| [$4570: bcs	$454d]
+	bra	next_music_note_454d                             	| [$4570: bcs	$454d]
 
 l_4572:
 	GET_ADDRESS	0x0e42                     	| [$4572: lda	$0e42]
@@ -1762,23 +1756,24 @@ l_4572:
 	GET_ADDRESS	0x0e40                     	| [$457a: sta	$0e40, y]
     move.b	d0,(a0,d2.w)                 	| [$457a: sta	$0e40, y]
 	jra	l_4941                             	| [$457d: jmp	$4941]
-l_4580:
+	
+	* RTS it and no music, no sfx nothing
+handle_all_sound_4580:
 	GET_ADDRESS	0x0e42                     	| [$4580: ldy	$0e42]
 	move.b	(a0),d2                         	| [$4580: ldy	$0e42]
 	beq	l_4589                             	| [$4583: beq	$4589]
 	tst.b	d0                               	| [$4585: cmp #$00]
 	beq	l_458d                             	| [$4587: beq	$458d]
 l_4589:
-	CLR_XC_FLAGS                           	| [$4589: clc]
+	                           	| [$4589: clc]
 	GET_ADDRESS	0x0d83                     	| [$458a: adc	$0d83, x]
-	move.b	(a0,d1.w),d4	| [$458a: adc	$0d83, x]
-	addx.b	d4,d0                    	| [$458a: adc	$0d83, x]
+	add.b	(a0,d1.w),d0	| [$458a: adc	$0d83, x]
 l_458d:
 	GET_ADDRESS	0x0e42                     	| [$458d: ldy	$0e42]
 	move.b	(a0),d2                         	| [$458d: ldy	$0e42]
 	beq	l_4596                             	| [$4590: beq	$4596]
 	cmp.b	#0x01,d2                         	| [$4592: cpy #$01]
-	beq	l_45b4                             	| [$4594: beq	$45b4]
+	beq	change_music_note_45b4                             	| [$4594: beq	$45b4]
 l_4596:
 	move.w	d0,-(sp)                        	| [$4596: pha]
 	                           	| [$4597: sec]
@@ -1801,7 +1796,13 @@ l_45a5:
 	GET_ADDRESS	0x0c4d                     	| [$45ae: sta	$0c4d, x]
     move.b	d0,(a0,d1.w)                 	| [$45ae: sta	$0c4d, x]
 	jra	l_45d5                             	| [$45b1: jmp	$45d5]
-l_45b4:
+	
+	* here it sets music notes when it changes (as opposed to POKEY registers
+	* that are written all the time with the current freq values)
+	*
+	* nullifying this routine blocks all music notes but not percussions,
+	* not sfx like shape falling or line completed
+change_music_note_45b4:
 	asl.b	#1,d0                            	| [$45b4: asl a]
 	move.b	d0,d2                           	| [$45b5: tay]
 	                           	| [$45b6: sec]
@@ -1819,6 +1820,7 @@ l_45b4:
     move.b	d0,(a0,d1.w)                 	| [$45c6: sta	$0dbf, x]
 	GET_ADDRESS	0x50de                     	| [$45c9: lda	$50de, y]
 	move.b	(a0,d2.w),d0                    	| [$45c9: lda	$50de, y]
+	* store note value from ROM to current channel note/freq?
 	GET_ADDRESS	0x0c43                     	| [$45cc: sta	$0c43, x]
     move.b	d0,(a0,d1.w)                 	| [$45cc: sta	$0c43, x]
 	GET_ADDRESS	0x50df                     	| [$45cf: lda	$50df, y]
@@ -1830,7 +1832,7 @@ l_45d5:
 	clr.b	d0                               	| [$45d7: lda #$00]
 	GET_ADDRESS	0x00d9                     	| [$45d9: sta	$00d9]
 	move.b	d0,(a0)                         	| [$45d9: sta	$00d9]
-	GET_ADDRESS_Y	0xcc                     	| [$45db: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$45db: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$45db: lda ($cc), y]
 	beq	l_45e2                             	| [$45dd: beq	$45e2]
 	jra	l_462b                             	| [$45df: jmp	$462b]
@@ -1854,18 +1856,18 @@ l_45e2:
 	addq.b	#1,d2                           	| [$45f7: iny]
 	GET_ADDRESS_Y	0xdd                     	| [$45f8: lda ($dd), y]
 	move.b	(a0,d2.w),d0                    	| [$45f8: lda ($dd), y]
-	GET_ADDRESS	0x0c2f                     	| [$45fa: sta	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$45fa: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$45fa: sta	$0c2f, x]
-	GET_ADDRESS	0x00cc                     	| [$45fd: sta	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$45fd: sta	$00cc]
 	move.b	d0,(a0)                         	| [$45fd: sta	$00cc]
 	addq.b	#1,d2                           	| [$45ff: iny]
 	GET_ADDRESS_Y	0xdd                     	| [$4600: lda ($dd), y]
 	move.b	(a0,d2.w),d0                    	| [$4600: lda ($dd), y]
-	GET_ADDRESS	0x0c39                     	| [$4602: sta	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4602: sta	$0c39, x]
     move.b	d0,(a0,d1.w)                 	| [$4602: sta	$0c39, x]
-	GET_ADDRESS	0x00cd                     	| [$4605: sta	$00cd]
+	GET_ADDRESS	music_command_pointer_00cc+1                     	| [$4605: sta	$00cd]
 	move.b	d0,(a0)                         	| [$4605: sta	$00cd]
-	jra	l_454d                             	| [$4607: jmp	$454d]
+	jra	next_music_note_454d                             	| [$4607: jmp	$454d]
 l_460a:
 	GET_ADDRESS	0x0cb1                     	| [$460a: sta	$0cb1, x]
     move.b	d0,(a0,d1.w)                 	| [$460a: sta	$0cb1, x]
@@ -1902,17 +1904,17 @@ l_4634:
 	move.b	d0,d2                           	| [$463a: tay]
 	GET_ADDRESS	0x51a2                     	| [$463b: lda	$51a2, y]
 	move.b	(a0,d2.w),d0                    	| [$463b: lda	$51a2, y]
-	CLR_XC_FLAGS                           	| [$463e: clc]
+	                           	| [$463e: clc]
 	GET_ADDRESS	0x0c61                     	| [$463f: adc	$0c61, x]
 	add.b	(a0,d1.w),d0	| [$463f: adc	$0c61, x]
 	GET_ADDRESS	0x0c61                     	| [$4642: sta	$0c61, x]
     move.b	d0,(a0,d1.w)                 	| [$4642: sta	$0c61, x]
 	GET_ADDRESS	0x51a3                     	| [$4645: lda	$51a3, y]
 	move.b	(a0,d2.w),d0                    	| [$4645: lda	$51a3, y]
-	GET_ADDRESS	0x0c6b                     	| [$4648: adc	$0c6b, x]
+	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$4648: adc	$0c6b, x]
 	move.b	(a0,d1.w),d4	| [$4648: adc	$0c6b, x]
 	addx.b	d4,d0                    	| [$4648: adc	$0c6b, x]
-	GET_ADDRESS	0x0c6b                     	| [$464b: sta	$0c6b, x]
+	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$464b: sta	$0c6b, x]
     move.b	d0,(a0,d1.w)                 	| [$464b: sta	$0c6b, x]
 	GET_ADDRESS	0x00d9                     	| [$464e: lda	$00d9]
 	move.b	(a0),d0                         	| [$464e: lda	$00d9]
@@ -1931,11 +1933,11 @@ l_4634:
 	GET_ADDRESS	0x0c61                     	| [$4661: sta	$0c61, x]
     move.b	d0,(a0,d1.w)                 	| [$4661: sta	$0c61, x]
 	move.w	(sp)+,d0                        	| [$4664: pla]
-	GET_ADDRESS	0x0c6b                     	| [$4665: adc	$0c6b, x]
+	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$4665: adc	$0c6b, x]
 	move.b	(a0,d1.w),d4	| [$4665: adc	$0c6b, x]
 	addx.b	d4,d0                    	| [$4665: adc	$0c6b, x]
 	
-	GET_ADDRESS	0x0c6b                     	| [$4668: sta	$0c6b, x]
+	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$4668: sta	$0c6b, x]
     move.b	d0,(a0,d1.w)                 	| [$4668: sta	$0c6b, x]
 	
 l_466b:
@@ -1983,7 +1985,7 @@ l_466b:
 	GET_ADDRESS	0x0c7f                     	| [$4695: sta	$0c7f, x]
     move.b	d0,(a0,d1.w)                 	| [$4695: sta	$0c7f, x]
 	
-	GET_ADDRESS	0x0c6b                     	| [$4698: lda	$0c6b, x]
+	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$4698: lda	$0c6b, x]
 	move.b	(a0,d1.w),d0                    	| [$4698: lda	$0c6b, x]
 	SBC	0x00d8                     	| [$469b: sbc	$00d8]	
 	GET_ADDRESS	0x0c89                     	| [$469d: sta	$0c89, x]
@@ -2063,12 +2065,12 @@ l_46d6:
 	GET_ADDRESS	0x0c61                     	| [$46f2: sta	$0c61, x]
     move.b	d0,(a0,d1.w)                 	| [$46f2: sta	$0c61, x]
 	move.w	(sp)+,d0                        	| [$46f5: pla]
-	GET_ADDRESS	0x0c6b                     	| [$46f6: adc	$0c6b, x]
+	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$46f6: adc	$0c6b, x]
 	move.b	(a0,d1.w),d4	| [$46f6: adc	$0c6b, x]
 	addx.b	d4,d0                    	| [$46f6: adc	$0c6b, x]
-	GET_ADDRESS	0x0c6b                     	| [$46f9: sta	$0c6b, x]
+	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$46f9: sta	$0c6b, x]
     move.b	d0,(a0,d1.w)                 	| [$46f9: sta	$0c6b, x]
-	GET_ADDRESS_Y	0xcc                     	| [$46fc: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$46fc: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$46fc: lda ($cc), y]
 	GET_ADDRESS	0x00d9                     	| [$46fe: sta	$00d9]
 	move.b	d0,(a0)                         	| [$46fe: sta	$00d9]
@@ -2112,21 +2114,21 @@ l_471b:
     move.b	d0,(a0,d1.w)                 	| [$4733: sta	$0d65, x]
 	GET_ADDRESS	0x0cf7                     	| [$4736: lda	$0cf7, x]
 	move.b	(a0,d1.w),d0                    	| [$4736: lda	$0cf7, x]
-	GET_ADDRESS	0x00cc                     	| [$4739: sta	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$4739: sta	$00cc]
 	move.b	d0,(a0)                         	| [$4739: sta	$00cc]
 	GET_ADDRESS	0x0d01                     	| [$473b: lda	$0d01, x]
 	move.b	(a0,d1.w),d0                    	| [$473b: lda	$0d01, x]
-	GET_ADDRESS	0x00cd                     	| [$473e: sta	$00cd]
+	GET_ADDRESS	music_command_pointer_00cc+1                     	| [$473e: sta	$00cd]
 	move.b	d0,(a0)                         	| [$473e: sta	$00cd]
-	GET_ADDRESS_Y	0xcc                     	| [$4740: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$4740: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$4740: lda ($cc), y]
 	GET_ADDRESS	0x0d3d                     	| [$4742: sta	$0d3d, x]
     move.b	d0,(a0,d1.w)                 	| [$4742: sta	$0d3d, x]
 	addq.b	#1,d2                           	| [$4745: iny]
-	GET_ADDRESS_Y	0xcc                     	| [$4746: ora ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$4746: ora ($cc), y]
 	or.b	(a0,d2.w),d0                      	| [$4746: ora ($cc), y]
 	addq.b	#1,d2                           	| [$4748: iny]
-	GET_ADDRESS_Y	0xcc                     	| [$4749: ora ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$4749: ora ($cc), y]
 	or.b	(a0,d2.w),d0                      	| [$4749: ora ($cc), y]
 	beq	l_4751                             	| [$474b: beq	$4751]
 	GET_ADDRESS	0x0d3d                     	| [$474d: inc	$0d3d, x]
@@ -2143,18 +2145,18 @@ l_4751:
     move.b	d0,(a0,d1.w)                 	| [$475a: sta	$0d29, x]
 	GET_ADDRESS	0x0ce3                     	| [$475d: lda	$0ce3, x]
 	move.b	(a0,d1.w),d0                    	| [$475d: lda	$0ce3, x]
-	GET_ADDRESS	0x00cc                     	| [$4760: sta	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$4760: sta	$00cc]
 	move.b	d0,(a0)                         	| [$4760: sta	$00cc]
 	GET_ADDRESS	0x0ced                     	| [$4762: lda	$0ced, x]
 	move.b	(a0,d1.w),d0                    	| [$4762: lda	$0ced, x]
-	GET_ADDRESS	0x00cd                     	| [$4765: sta	$00cd]
+	GET_ADDRESS	music_command_pointer_00cc+1                     	| [$4765: sta	$00cd]
 	move.b	d0,(a0)                         	| [$4765: sta	$00cd]
-	GET_ADDRESS_Y	0xcc                     	| [$4767: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$4767: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$4767: lda ($cc), y]
 	GET_ADDRESS	0x0d15                     	| [$4769: sta	$0d15, x]
     move.b	d0,(a0,d1.w)                 	| [$4769: sta	$0d15, x]
 	addq.b	#1,d2                           	| [$476c: iny]
-	GET_ADDRESS_Y	0xcc                     	| [$476d: ora ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$476d: ora ($cc), y]
 	or.b	(a0,d2.w),d0                      	| [$476d: ora ($cc), y]
 	beq	l_4775                             	| [$476f: beq	$4775]
 	GET_ADDRESS	0x0d15                     	| [$4771: inc	$0d15, x]
@@ -2192,11 +2194,11 @@ l_4788:
 l_4798:
 	GET_ADDRESS	0x0cf7                     	| [$4798: lda	$0cf7, x]
 	move.b	(a0,d1.w),d0                    	| [$4798: lda	$0cf7, x]
-	GET_ADDRESS	0x00cc                     	| [$479b: sta	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$479b: sta	$00cc]
 	move.b	d0,(a0)                         	| [$479b: sta	$00cc]
 	GET_ADDRESS	0x0d01                     	| [$479d: lda	$0d01, x]
 	move.b	(a0,d1.w),d0                    	| [$479d: lda	$0d01, x]
-	GET_ADDRESS	0x00cd                     	| [$47a0: sta	$00cd]
+	GET_ADDRESS	music_command_pointer_00cc+1                     	| [$47a0: sta	$00cd]
 	move.b	d0,(a0)                         	| [$47a0: sta	$00cd]
 	GET_ADDRESS	0x0d33                     	| [$47a2: ldy	$0d33, x]
 	move.b	(a0,d1.w),d2                    	| [$47a2: ldy	$0d33, x]
@@ -2210,7 +2212,7 @@ l_47ac:
 	bne	l_4807                             	| [$47af: bne	$4807]
 l_47b1:
 	addq.b	#1,d2                           	| [$47b1: iny]
-	GET_ADDRESS_Y	0xcc                     	| [$47b2: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$47b2: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$47b2: lda ($cc), y]
 	GET_ADDRESS	0x0d3d                     	| [$47b4: sta	$0d3d, x]
     move.b	d0,(a0,d1.w)                 	| [$47b4: sta	$0d3d, x]
@@ -2226,42 +2228,42 @@ l_47b1:
 	addq.b	#1,d2                           	| [$47c6: iny]
 	bne	l_47b1                             	| [$47c7: bne	$47b1]
 l_47c9:
-	GET_ADDRESS_Y	0xcc                     	| [$47c9: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$47c9: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$47c9: lda ($cc), y]
 	GET_ADDRESS	0x0d65                     	| [$47cb: sta	$0d65, x]
     move.b	d0,(a0,d1.w)                 	| [$47cb: sta	$0d65, x]
 l_47ce:
 	addq.b	#1,d2                           	| [$47ce: iny]
 	                           	| [$47cf: sec]
-	GET_ADDRESS	0x00cc                     	| [$47d0: lda	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$47d0: lda	$00cc]
 	move.b	(a0),d0                         	| [$47d0: lda	$00cc]
-	GET_ADDRESS_Y	0xcc                     	| [$47d2: sbc ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$47d2: sbc ($cc), y]
 	sub.b	(a0,d2.w),d0	| [$47d2: sbc ($cc), y]
 	INVERT_XC_FLAGS
 	PUSH_SR			| required
-	GET_ADDRESS	0x00cc                     	| [$47d4: sta	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$47d4: sta	$00cc]
 	move.b	d0,(a0)                         	| [$47d4: sta	$00cc]
 	GET_ADDRESS	0x0cf7                     	| [$47d6: sta	$0cf7, x]
     move.b	d0,(a0,d1.w)                 	| [$47d6: sta	$0cf7, x]
 	POP_SR			| required
 	bcs	l_47b1                             	| [$47d9: bcs	$47b1]
  
-	GET_ADDRESS	0x00cd                     	| [$47db: dec	$00cd]
+	GET_ADDRESS	music_command_pointer_00cc+1                     	| [$47db: dec	$00cd]
 	subq.b	#1,(a0)                         	| [$47db: dec	$00cd]
 	GET_ADDRESS	0x0d01                     	| [$47dd: dec	$0d01, x]
     subq.b	#1,(a0,d1.w)                 	| [$47dd: dec	$0d01, x]
 	* bcc=>bra as bcs has been handled above
 	bra	l_47b1                             	| [$47e0: bcc	$47b1]
 l_47e2:
-	GET_ADDRESS_Y	0xcc                     	| [$47e2: ora ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$47e2: ora ($cc), y]
 	or.b	(a0,d2.w),d0                      	| [$47e2: ora ($cc), y]
 	addq.b	#1,d2                           	| [$47e4: iny]
 	cmp.b	#0xf9,d2                         	| [$47e5: cpy #$f9]
-	
+	SET_X_FROM_CLEARED_C		| needed when branching to 484b, there is addx...
 	PUSH_SR    | save flag for the bcs done at $47f3
 	
 	
-	GET_ADDRESS_Y	0xcc                     	| [$47e7: ora ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$47e7: ora ($cc), y]
 	or.b	(a0,d2.w),d0                      	| [$47e7: ora ($cc), y]
 	bne	l_47f2                             	| [$47e9: bne	$47f2]
 	
@@ -2284,6 +2286,7 @@ l_47f2:
 	bcs	l_4804                             	| [$47f3: bcc	$4804]
 	* carry was originally set here, so we can use a simple sub
 	subq.b	#2,d0                        	| [$47f5: sbc #$02]
+	INVERT_XC_FLAGS
 	GET_ADDRESS	0x0cf7                     	| [$47f7: adc	$0cf7, x]
 	move.b	(a0,d1.w),d4	| [$47f7: adc	$0cf7, x]
 	addx.b	d4,d0                    	| [$47f7: adc	$0cf7, x]
@@ -2303,7 +2306,7 @@ l_4807:
 	clr.b	d0                               	| [$4807: lda #$00]
 	GET_ADDRESS	0x00da                     	| [$4809: sta	$00da]
 	move.b	d0,(a0)                         	| [$4809: sta	$00da]
-	GET_ADDRESS_Y	0xcc                     	| [$480b: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$480b: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$480b: lda ($cc), y]
 	bpl	l_4811                             	| [$480d: bpl	$4811]
 	GET_ADDRESS	0x00da                     	| [$480f: dec	$00da]
@@ -2312,7 +2315,7 @@ l_4811:
 	GET_ADDRESS	0x00d9                     	| [$4811: sta	$00d9]
 	move.b	d0,(a0)                         	| [$4811: sta	$00d9]
 	subq.b	#1,d2                           	| [$4813: dey]
-	GET_ADDRESS_Y	0xcc                     	| [$4814: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$4814: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$4814: lda ($cc), y]
 	asl.b	#1,d0                            	| [$4816: asl a]
 	GET_ADDRESS	0x00d9                     	| [$4817: rol	$00d9]
@@ -2401,7 +2404,7 @@ l_484b:
 	GET_ADDRESS	0x0dbf                     	| [$485e: adc	$0dbf, x]
 	move.b	(a0,d1.w),d4	| [$485e: adc	$0dbf, x]
 	addx.b	d4,d0                    	| [$485e: adc	$0dbf, x]
-	GET_ADDRESS	0x0e4a                     	| [$4861: sta	$0e4a]
+	GET_ADDRESS	music_channel_msb_value_0e4a                     	| [$4861: sta	$0e4a]
 	move.b	d0,(a0)                         	| [$4861: sta	$0e4a]
 	GET_ADDRESS	0x0e42                     	| [$4864: lda	$0e42]
 	move.b	(a0),d0                         	| [$4864: lda	$0e42]
@@ -2409,15 +2412,16 @@ l_484b:
 	move.b	d0,d2                           	| [$4869: tay]
 	GET_ADDRESS	0x00d9                     	| [$486a: lda	$00d9]
 	move.b	(a0),d0                         	| [$486a: lda	$00d9]
+	* can write to E49 too
 	GET_ADDRESS	0x0e48                     	| [$486c: sta	$0e48, y]
     move.b	d0,(a0,d2.w)                 	| [$486c: sta	$0e48, y]
 	GET_ADDRESS	0x0ce3                     	| [$486f: lda	$0ce3, x]
 	move.b	(a0,d1.w),d0                    	| [$486f: lda	$0ce3, x]
-	GET_ADDRESS	0x00cc                     	| [$4872: sta	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$4872: sta	$00cc]
 	move.b	d0,(a0)                         	| [$4872: sta	$00cc]
 	GET_ADDRESS	0x0ced                     	| [$4874: lda	$0ced, x]
 	move.b	(a0,d1.w),d0                    	| [$4874: lda	$0ced, x]
-	GET_ADDRESS	0x00cd                     	| [$4877: sta	$00cd]
+	GET_ADDRESS	music_command_pointer_00cc+1                     	| [$4877: sta	$00cd]
 	move.b	d0,(a0)                         	| [$4877: sta	$00cd]
 	GET_ADDRESS	0x0d0b                     	| [$4879: ldy	$0d0b, x]
 	move.b	(a0,d1.w),d2                    	| [$4879: ldy	$0d0b, x]
@@ -2432,7 +2436,7 @@ l_4884:
 	bne	l_48db                             	| [$4887: bne	$48db]
 l_4889:
 	addq.b	#1,d2                           	| [$4889: iny]
-	GET_ADDRESS_Y	0xcc                     	| [$488a: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$488a: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$488a: lda ($cc), y]
 	GET_ADDRESS	0x0d15                     	| [$488c: sta	$0d15, x]
     move.b	d0,(a0,d1.w)                 	| [$488c: sta	$0d15, x]
@@ -2448,20 +2452,20 @@ l_4889:
 	addq.b	#1,d2                           	| [$489e: iny]
 	bne	l_4889                             	| [$489f: bne	$4889]
 l_48a1:
-	GET_ADDRESS_Y	0xcc                     	| [$48a1: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$48a1: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$48a1: lda ($cc), y]
 	GET_ADDRESS	0x0d29                     	| [$48a3: sta	$0d29, x]
     move.b	d0,(a0,d1.w)                 	| [$48a3: sta	$0d29, x]
 l_48a6:
 	addq.b	#1,d2                           	| [$48a6: iny]
 	                           	| [$48a7: sec]
-	GET_ADDRESS	0x00cc                     	| [$48a8: lda	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$48a8: lda	$00cc]
 	move.b	(a0),d0                         	| [$48a8: lda	$00cc]
-	GET_ADDRESS_Y	0xcc                     	| [$48aa: sbc ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$48aa: sbc ($cc), y]
 	sub.b	(a0,d2.w),d0	| [$48aa: sbc ($cc), y]
 	INVERT_XC_FLAGS
 	PUSH_SR			| required
-	GET_ADDRESS	0x00cc                     	| [$48ac: sta	$00cc]
+	GET_ADDRESS	music_command_pointer_00cc                     	| [$48ac: sta	$00cc]
 	move.b	d0,(a0)                         	| [$48ac: sta	$00cc]
 	GET_ADDRESS	0x0ce3                     	| [$48ae: sta	$0ce3, x]
     move.b	d0,(a0,d1.w)                 	| [$48ae: sta	$0ce3, x]
@@ -2469,7 +2473,7 @@ l_48a6:
 
 	bcs	l_4889                             	| [$48b1: bcs	$4889]
 
-	GET_ADDRESS	0x00cd                     	| [$48b3: dec	$00cd]
+	GET_ADDRESS	music_command_pointer_00cc+1                     	| [$48b3: dec	$00cd]
 	subq.b	#1,(a0)                         	| [$48b3: dec	$00cd]
 	GET_ADDRESS	0x0ced                     	| [$48b5: dec	$0ced, x]
     subq.b	#1,(a0,d1.w)                 	| [$48b5: dec	$0ced, x]
@@ -2477,9 +2481,9 @@ l_48a6:
 	bra	l_4889                             	| [$48b8: bcc	$4889]
 l_48ba:
 	cmp.b	#0xf9,d2                         	| [$48ba: cpy #$f9]
-	PUSH_SR   | preserve cmp outcom
+	PUSH_SR   | preserve cmp outcome
 	
-	GET_ADDRESS_Y	0xcc                     	| [$48bc: ora ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$48bc: ora ($cc), y]
 	or.b	(a0,d2.w),d0                      	| [$48bc: ora ($cc), y]
 	bne	l_48c6                             	| [$48be: bne	$48c6]
 	POP_SR    | pop cmp outcome, no need
@@ -2493,14 +2497,15 @@ l_48c6:
 	bcs	l_48d8                             	| [$48c7: bcc	$48d8]
 	* original code assumed carry set, simple sub is ok
 	subq.b	#2,d0                        	| [$48c9: sbc #$02]
+	INVERT_XC_FLAGS
 	GET_ADDRESS	0x0ce3                     	| [$48cb: adc	$0ce3, x]
 	move.b	(a0,d1.w),d4	| [$48cb: adc	$0ce3, x]
 	addx.b	d4,d0                    	| [$48cb: adc	$0ce3, x]
-	PUSH_SR
+	PUSH_SR		| required
 	GET_ADDRESS	0x0ce3                     	| [$48ce: sta	$0ce3, x]
     move.b	d0,(a0,d1.w)                 	| [$48ce: sta	$0ce3, x]
 	move.b	#0x01,d0                        	| [$48d1: lda #$01]
-	POP_SR
+	POP_SR		| required
 	bcc	l_48d8                             	| [$48d3: bcc	$48d8]
 	GET_ADDRESS	0x0ced                     	| [$48d5: inc	$0ced, x]
     addq.b	#1,(a0,d1.w)                 	| [$48d5: inc	$0ced, x]
@@ -2508,7 +2513,7 @@ l_48d8:
 	GET_ADDRESS	0x0d0b                     	| [$48d8: sta	$0d0b, x]
     move.b	d0,(a0,d1.w)                 	| [$48d8: sta	$0d0b, x]
 l_48db:
-	GET_ADDRESS_Y	0xcc                     	| [$48db: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$48db: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$48db: lda ($cc), y]
 	                           	| [$48dd: clc]
 	GET_ADDRESS	0x0d1f                     	| [$48de: adc	$0d1f, x]
@@ -2670,9 +2675,9 @@ l_4996:
 	GET_ADDRESS	0x00d9                     	| [$499e: asl	$00d9]
 	move.b	(a0),d4	| [$499e: asl	$00d9]
 	asl.b	#1,d4                          	| [$499e: asl	$00d9]
-	PUSH_SR
+	PUSH_SR		| required
 	move.b	d4,(a0)	| [$499e: asl	$00d9]
-	POP_SR
+	POP_SR		| required
 	bcc	l_4996                             	| [$49a0: bcc	$4996]
 l_49a2:
 	clr.b	d2                               	| [$49a2: ldy #$00]
@@ -2895,11 +2900,11 @@ l_4a9c:
 l_4ab9:
 	GET_ADDRESS	0x0e45                     	| [$4ab9: lda	$0e45]
 	move.b	(a0),d0                         	| [$4ab9: lda	$0e45]
-	GET_ADDRESS	0x0e4a                     	| [$4abc: sta	$0e4a]
+	GET_ADDRESS	music_channel_msb_value_0e4a                     	| [$4abc: sta	$0e4a]
 	move.b	d0,(a0)                         	| [$4abc: sta	$0e4a]
 	GET_ADDRESS	0x0e48                     	| [$4abf: lda	$0e48]
 	move.b	(a0),d0                         	| [$4abf: lda	$0e48]
-	GET_ADDRESS	0x0e49                     	| [$4ac2: sta	$0e49]
+	GET_ADDRESS	music_channel_lsb_value_0e49                     	| [$4ac2: sta	$0e49]
 	move.b	d0,(a0)                         	| [$4ac2: sta	$0e49]
 	GET_ADDRESS	0x0e44                     	| [$4ac5: lda	$0e44]
 	move.b	(a0),d0                         	| [$4ac5: lda	$0e44]
@@ -2924,7 +2929,7 @@ l_4ab9:
 	rts                                    	| [$4ae0: rts]
 	
 	
-l_4ae1:
+music_tick_4ae1:
 	clr.b	d0                               	| [$4ae1: lda #$00]
 	GET_ADDRESS	0x0e50                     	| [$4ae3: sta	$0e50]
 	move.b	d0,(a0)                         	| [$4ae3: sta	$0e50]
@@ -2944,14 +2949,17 @@ l_4ae1:
 l_4afb:
 	GET_ADDRESS	0x0e50                     	| [$4afb: sta	$0e50]
 	move.b	d0,(a0)                         	| [$4afb: sta	$0e50]
+	
+	* channel freq LSB 2804/2814
 	move.b	#0x04,d2                        	| [$4afe: ldy #$04]
-	GET_ADDRESS	0x0e49                     	| [$4b00: lda	$0e49]
+	GET_ADDRESS	music_channel_lsb_value_0e49                     	| [$4b00: lda	$0e49]
 	move.b	(a0),d0                         	| [$4b00: lda	$0e49]
 	
-	bsr		write_to_pokey_00ce_y
+	bsr		write_to_pokey_00ce_y    | [$4b03]
 
+	* channel freq MSB 2806/2816
 	addq.b	#2,d2                           	| [$4b05: iny] * 2
-	GET_ADDRESS	0x0e4a                     	| [$4b07: lda	$0e4a]
+	GET_ADDRESS	music_channel_msb_value_0e4a                     	| [$4b07: lda	$0e4a]
 	move.b	(a0),d0                         	| [$4b07: lda	$0e4a]
 
 	jbsr	write_to_pokey_00ce_y                 	| [$4b0a: sta ($ce), y]
@@ -2961,7 +2969,6 @@ l_4afb:
 	move.b	(a0),d0                         	| [$4b0d: lda	$0e46]
 	
 	jbsr	write_to_pokey_00ce_y                    	| [$4b10: sta ($ce), y]
-
 
 	addq.b	#2,d2                           	| [$4b12: iny] * 2
 	GET_ADDRESS	0x0e47                     	| [$4b14: lda	$0e47]
@@ -2991,14 +2998,14 @@ l_4b22:
 
 	
 	clr.b	d2                               	| [$4b31: ldy #$00]
-	GET_ADDRESS	0x0e49                     	| [$4b33: lda	$0e49]
+	GET_ADDRESS	music_channel_lsb_value_0e49                     	| [$4b33: lda	$0e49]
 	move.b	(a0),d0                         	| [$4b33: lda	$0e49]
 	
 	jbsr	write_to_pokey_00ce_y                    	| [$4b36: sta ($ce), y]
 
 	
 	addq.b	#2,d2                           	| [$4b38: iny] * 2
-	GET_ADDRESS	0x0e4a                     	| [$4b3a: lda	$0e4a]
+	GET_ADDRESS	music_channel_msb_value_0e4a                     	| [$4b3a: lda	$0e4a]
 	move.b	(a0),d0                         	| [$4b3a: lda	$0e4a]
 	
 	jbsr	write_to_pokey_00ce_y                    	| [$4b3d: sta ($ce), y]
@@ -3019,7 +3026,7 @@ l_4b22:
 
 	
 	rts                                    	| [$4b4c: rts]
-l_4b4d:
+music_tick_4b4d:
 	GET_ADDRESS	0x5008                     	| [$4b4d: lda	$5008, x]
 	move.b	(a0,d1.w),d0                    	| [$4b4d: lda	$5008, x]
 	
@@ -3038,7 +3045,7 @@ l_4b4d:
 	GET_ADDRESS	0x0e4c                     	| [$4b5a: sta	$0e4c]
 	move.b	d0,(a0)                         	| [$4b5a: sta	$0e4c]
 	
-	jra	l_4ae1                             	| [$4b5d: jmp	$4ae1]
+	jra	music_tick_4ae1                             	| [$4b5d: jmp	$4ae1]
 l_4b60:
 	cmp.b	#0xbb,d0                         	| [$4b60: cmp #$bb]
 	* bcc=>bcs
@@ -3068,25 +3075,25 @@ l_4b6b:
 	GET_ADDRESS	0x00d9                     	| [$4b78: ldx	$00d9]
 	move.b	(a0),d1                         	| [$4b78: ldx	$00d9]
 	* parameter
-	GET_ADDRESS_Y	0xcc                     	| [$4b7a: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$4b7a: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$4b7a: lda ($cc), y]
 	SET_XC_FLAGS                           	| [$4b7c: sec]
 	rts                                    	| [$4b7d: rts]
 l_4b7e:
-	GET_ADDRESS	0x0c2f                     	| [$4b7e: lda	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4b7e: lda	$0c2f, x]
 	move.b	(a0,d1.w),d0                    	| [$4b7e: lda	$0c2f, x]
 	                           	| [$4b81: clc]
 	add.b	#0x01,d0                        	| [$4b82: adc #$01]
 	PUSH_SR		| required
-	GET_ADDRESS	0x0c2f                     	| [$4b84: sta	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4b84: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$4b84: sta	$0c2f, x]
 	POP_SR		| required
 	bcc	l_4b8c                             	| [$4b87: bcc	$4b8c]
-	GET_ADDRESS	0x0c39                     	| [$4b89: inc	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4b89: inc	$0c39, x]
     addq.b	#1,(a0,d1.w)                 	| [$4b89: inc	$0c39, x]
 l_4b8c:
 	addq.b	#1,d2                           	| [$4b8c: iny]
-	GET_ADDRESS_Y	0xcc                     	| [$4b8d: lda ($cc), y]
+	GET_ADDRESS_Y	music_command_pointer_00cc                     	| [$4b8d: lda ($cc), y]
 	move.b	(a0,d2.w),d0                    	| [$4b8d: lda ($cc), y]
 	rts                                    	| [$4b8f: rts]
 l_4b90:
@@ -3131,7 +3138,7 @@ l_4c28:
     move.b	d0,(a0,d1.w)                 	| [$4c2a: sta	$0c57, x]
 	GET_ADDRESS	0x0c61                     	| [$4c2d: sta	$0c61, x]
     move.b	d0,(a0,d1.w)                 	| [$4c2d: sta	$0c61, x]
-	GET_ADDRESS	0x0c6b                     	| [$4c30: sta	$0c6b, x]
+	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$4c30: sta	$0c6b, x]
     move.b	d0,(a0,d1.w)                 	| [$4c30: sta	$0c6b, x]
 	GET_ADDRESS	0x0d8d                     	| [$4c33: ldy	$0d8d, x]
 	move.b	(a0,d1.w),d2                    	| [$4c33: ldy	$0d8d, x]
@@ -3180,17 +3187,17 @@ l_4c6c:
 	clr.b	d0                               	| [$4c6f: lda #$00]
 	beq	l_4c3b                             	| [$4c71: beq	$4c3b]
 l_4c73:
-	GET_ADDRESS	0x0c2f                     	| [$4c73: lda	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4c73: lda	$0c2f, x]
 	move.b	(a0,d1.w),d0                    	| [$4c73: lda	$0c2f, x]
 	cmp.b	#0x02,d0                         	| [$4c76: cmp #$02]
 	* bcs=>bcc
 	bcc	l_4c7d                             	| [$4c78: bcs	$4c7d]
-	GET_ADDRESS	0x0c39                     	| [$4c7a: dec	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4c7a: dec	$0c39, x]
     subq.b	#1,(a0,d1.w)                 	| [$4c7a: dec	$0c39, x]
 l_4c7d:
-	GET_ADDRESS	0x0c2f                     	| [$4c7d: dec	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4c7d: dec	$0c2f, x]
     subq.b	#1,(a0,d1.w)                 	| [$4c7d: dec	$0c2f, x]
-	GET_ADDRESS	0x0c2f                     	| [$4c80: dec	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4c80: dec	$0c2f, x]
     subq.b	#1,(a0,d1.w)                 	| [$4c80: dec	$0c2f, x]
 	CLR_XC_FLAGS                           	| [$4c83: clc]
 	rts                                    	| [$4c84: rts]
@@ -3353,24 +3360,24 @@ l_4d24:
 	GET_ADDRESS	0x0dc9                     	| [$4d37: sta	$0dc9, x]
     move.b	d0,(a0,d1.w)                 	| [$4d37: sta	$0dc9, x]
 	addq.b	#1,d2                           	| [$4d3a: iny]
-	GET_ADDRESS	0x0c2f                     	| [$4d3b: lda	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4d3b: lda	$0c2f, x]
 	move.b	(a0,d1.w),d0                    	| [$4d3b: lda	$0c2f, x]
 	GET_ADDRESS_Y	0xdd                     	| [$4d3e: sta ($dd), y]
 	move.b	d0,(a0,d2.w)                    	| [$4d3e: sta ($dd), y]
 	addq.b	#1,d2                           	| [$4d40: iny]
-	GET_ADDRESS	0x0c39                     	| [$4d41: lda	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4d41: lda	$0c39, x]
 	move.b	(a0,d1.w),d0                    	| [$4d41: lda	$0c39, x]
 	GET_ADDRESS_Y	0xdd                     	| [$4d44: sta ($dd), y]
 	move.b	d0,(a0,d2.w)                    	| [$4d44: sta ($dd), y]
 
 	GET_ADDRESS	0x00d9                     	| [$4d46: lda	$00d9]
 	move.b	(a0),d0                         	| [$4d46: lda	$00d9]
-	GET_ADDRESS	0x0c2f                     	| [$4d48: sta	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4d48: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$4d48: sta	$0c2f, x]
 	GET_ADDRESS	0x00da                     	| [$4d4b: lda	$00da]
 	move.b	(a0),d0                         	| [$4d4b: lda	$00da]
 	PUSH_SR
-	GET_ADDRESS	0x0c39                     	| [$4d4d: sta	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4d4d: sta	$0c39, x]
     move.b	d0,(a0,d1.w)                 	| [$4d4d: sta	$0c39, x]
 	POP_SR
 l_4d50:
@@ -3394,7 +3401,7 @@ l_4d52:
     move.b	d0,(a0,d1.w)                 	| [$4d5f: sta	$0dd3, x]
 	POP_SR
 	addq.b	#1,d2                           	| [$4d62: iny]
-	GET_ADDRESS	0x0c2f                     	| [$4d63: lda	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4d63: lda	$0c2f, x]
 	move.b	(a0,d1.w),d0                    	| [$4d63: lda	$0c2f, x]
 	PUSH_SR
 	GET_ADDRESS_Y	0xdd                     	| [$4d66: sta ($dd), y]
@@ -3402,7 +3409,7 @@ l_4d52:
 
 	POP_SR
 	addq.b	#1,d2                           	| [$4d68: iny]
-	GET_ADDRESS	0x0c39                     	| [$4d69: lda	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4d69: lda	$0c39, x]
 	move.b	(a0,d1.w),d0                    	| [$4d69: lda	$0c39, x]
 	PUSH_SR
 	GET_ADDRESS_Y	0xdd                     	| [$4d6c: sta ($dd), y]
@@ -3440,14 +3447,14 @@ l_4d7d:
 	GET_ADDRESS_Y	0xdd                     	| [$4d8b: lda ($dd), y]
 	move.b	(a0,d2.w),d0                    	| [$4d8b: lda ($dd), y]
 	PUSH_SR
-	GET_ADDRESS	0x0c2f                     	| [$4d8d: sta	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4d8d: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$4d8d: sta	$0c2f, x]
 	POP_SR
 	addq.b	#1,d2                           	| [$4d90: iny]
 	GET_ADDRESS_Y	0xdd                     	| [$4d91: lda ($dd), y]
 	move.b	(a0,d2.w),d0                    	| [$4d91: lda ($dd), y]
 	PUSH_SR
-	GET_ADDRESS	0x0c39                     	| [$4d93: sta	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4d93: sta	$0c39, x]
     move.b	d0,(a0,d1.w)                 	| [$4d93: sta	$0c39, x]
 	POP_SR
 l_4d96:
@@ -3655,13 +3662,13 @@ l_4e6c:
 l_4e78:
 	jbsr	l_4b7e                            	| [$4e78: jsr	$4b7e]
 	PUSH_SR
-	GET_ADDRESS	0x0c39                     	| [$4e7b: sta	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4e7b: sta	$0c39, x]
     move.b	d0,(a0,d1.w)                 	| [$4e7b: sta	$0c39, x]
 	POP_SR
 	GET_ADDRESS	0x00d9                     	| [$4e7e: lda	$00d9]
 	move.b	(a0),d0                         	| [$4e7e: lda	$00d9]
 	PUSH_SR
-	GET_ADDRESS	0x0c2f                     	| [$4e80: sta	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4e80: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$4e80: sta	$0c2f, x]
 	POP_SR
 	SET_XC_FLAGS                           	| [$4e83: sec]
@@ -3695,13 +3702,13 @@ l_4e93:
 l_4e9f:
 	jbsr	l_4b7e                            	| [$4e9f: jsr	$4b7e]
 	PUSH_SR
-	GET_ADDRESS	0x0c39                     	| [$4ea2: sta	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4ea2: sta	$0c39, x]
     move.b	d0,(a0,d1.w)                 	| [$4ea2: sta	$0c39, x]
 	POP_SR
 	GET_ADDRESS	0x00d9                     	| [$4ea5: lda	$00d9]
 	move.b	(a0),d0                         	| [$4ea5: lda	$00d9]
 	PUSH_SR
-	GET_ADDRESS	0x0c2f                     	| [$4ea7: sta	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4ea7: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$4ea7: sta	$0c2f, x]
 	POP_SR
 	GET_ADDRESS	0x0e19                     	| [$4eaa: inc	$0e19, x]
@@ -3819,13 +3826,13 @@ l_4f3b:
 	POP_SR
 	jbsr	l_4b7e                            	| [$4f40: jsr	$4b7e]
 	PUSH_SR
-	GET_ADDRESS	0x0c39                     	| [$4f43: sta	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4f43: sta	$0c39, x]
     move.b	d0,(a0,d1.w)                 	| [$4f43: sta	$0c39, x]
 	POP_SR
 	GET_ADDRESS	0x00d9                     	| [$4f46: lda	$00d9]
 	move.b	(a0),d0                         	| [$4f46: lda	$00d9]
 	PUSH_SR
-	GET_ADDRESS	0x0c2f                     	| [$4f48: sta	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$4f48: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$4f48: sta	$0c2f, x]
 	POP_SR
 	SET_XC_FLAGS                           	| [$4f4b: sec]
@@ -3970,11 +3977,11 @@ l_4ff9:
 	GET_ADDRESS	0x00d9                     	| [$4ff9: sta	$00d9]
 	move.b	d0,(a0)                         	| [$4ff9: sta	$00d9]
 	jbsr	l_4b7e                            	| [$4ffb: jsr	$4b7e]
-	GET_ADDRESS	0x0c39                     	| [$4ffe: sta	$0c39, x]
+	GET_ADDRESS	music_pointers_msb_0c39                     	| [$4ffe: sta	$0c39, x]
     move.b	d0,(a0,d1.w)                 	| [$4ffe: sta	$0c39, x]
 	GET_ADDRESS	0x00d9                     	| [$5001: lda	$00d9]
 	move.b	(a0),d0                         	| [$5001: lda	$00d9]
-	GET_ADDRESS	0x0c2f                     	| [$5003: sta	$0c2f, x]
+	GET_ADDRESS	music_pointers_lsb_0c2f                     	| [$5003: sta	$0c2f, x]
     move.b	d0,(a0,d1.w)                 	| [$5003: sta	$0c2f, x]
 	SET_XC_FLAGS                           	| [$5006: sec]
 	rts                                    	| [$5007: rts]
@@ -4665,29 +4672,29 @@ jump_table_4bb2:
 	.long	l_4d7d
 	.long	l_4fb2
 	.long	l_4fce
-	.long	l_454d
-	.long	l_454d
-	.long	l_454d
-	.long	l_454d
-	.long	l_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
 	.long	l_4fdd
-	.long	l_454d
+	.long	next_music_note_454d
 	.long	l_4ff9
-	.long	l_454d
+	.long	next_music_note_454d
 	.long	l_4d09
 	.long	l_4f94
-	.long	l_454d
-	.long	l_454d
-	.long	l_454d
-	.long	l_454d
-	.long	l_454d
-	.long	l_454d
-	.long	l_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
 	.long	l_4daf
-	.long	l_454d
-	.long	l_454d
-	.long	l_454d
-	.long	l_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
+	.long	next_music_note_454d
 	.long	l_4ddc
 	.long	l_4de8
 	.long	l_4df2
@@ -17662,6 +17669,7 @@ l_d6db:
 * main IRQ
 tetris_irq:
 periodic_interrupt_D70E:
+	WPSET	0x201
 * save registers
 	move.w	d0,-(sp)                        	| [$d70e: pha]
 	                           	| [$d70f: txa]
@@ -17720,10 +17728,8 @@ l_d738:
 	move.b	d0,(a0)                         	| [$d73c: sta	$0012]
 	POP_SR
 	and.b	#0x03,d0                         	| [$d73e: and #$03]
-	PUSH_SR
 	GET_ADDRESS	0x0011                     	| [$d740: sta	$0011]
 	move.b	d0,(a0)                         	| [$d740: sta	$0011]
-	POP_SR
 l_d742:
 	jra	l_d7d4                             	| [$d742: jmp	$d7d4]
 l_d745:
@@ -17844,7 +17850,7 @@ l_d7c2:
 	move.b	d0,(a0)                         	| [$d7d2: sta	$000e]
 	
 l_d7d4:
-	jbsr	l_e651                            	| [$d7d4: jsr	$e651]
+	jbsr	switch_to_bank_1_and_handle_music_e651                            	| [$d7d4: jsr	$e651]
 	jbsr	l_eb1d                            	| [$d7d7: jsr	$eb1d]
 * first_byte_of_bank_000d tells if we need to switch bank
 	GET_ADDRESS	first_byte_of_bank_000d      	| [$d7da: lda first_byte_of_bank_000d]
@@ -17870,10 +17876,10 @@ l_d7d4:
 l_d7f6:
 	GET_ADDRESS	0x000e                     	| [$d7f6: lda	$000e]
 	move.b	(a0),d0                         	| [$d7f6: lda	$000e]
-	PUSH_SR
+	*PUSH_SR
 	*GET_ADDRESS	coin_counters_3C00                     	| [$d7f8: sta	$3c00]
 	*move.b	d0,(a0)                         	| [$d7f8: sta	$3c00]
-	POP_SR
+	*POP_SR
 l_d7fb:
 * pokey shit/loop disabled, wait until interrupt is cleared?
 *	PUSH_SR
@@ -19116,11 +19122,11 @@ l_e649:
 	move.w	(sp)+,d0                        	| [$e64d: pla]
 	jra	l_402d                             	| [$e64e: jmp	$402d]
 
-l_e651:
+switch_to_bank_1_and_handle_music_e651:
 	move.w	d0,-(sp)                        	| [$e651: pha]
 	jbsr	switch_to_bank_01_d5c2             	| [$e652: jsr switch_to_bank_01_d5c2]
 	move.w	(sp)+,d0                        	| [$e655: pla]
-	jra	l_4004                             	| [$e656: jmp	$4004]
+	jra	handle_music_4004                             	| [$e656: jmp	$4004]
 
 l_e659:
 	move.w	d0,-(sp)                        	| [$e659: pha]
@@ -20040,10 +20046,8 @@ l_eb28:
 	subq.b	#1,(a0)                         	| [$eb28: dec	$0060]
 	bne	l_eb5b                             	| [$eb2a: bne	$eb5b]
 	move.b	#0xfa,d0                        	| [$eb2c: lda #$fa]
-	PUSH_SR
 	GET_ADDRESS	0x0060                     	| [$eb2e: sta	$0060]
 	move.b	d0,(a0)                         	| [$eb2e: sta	$0060]
-	POP_SR
 	GET_ADDRESS	game_state_0008                     	| [$eb30: lda	$0008]
 	move.b	(a0),d0                         	| [$eb30: lda	$0008]
 	bne	l_eb42                             	| [$eb32: bne	$eb42]
