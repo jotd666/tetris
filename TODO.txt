@@ -5,11 +5,7 @@
 - ignore channel 4/use for sfx/drums
 - remove/simulate "drums" in some tunes (disable channel 4?)
 - find play sample shape falling/line done
-- wrong notes in tunes: sounds much better
 
-- advancing lines: random not so good/similar to POKEY random (one almost filled line each time)
-  ASLR generators temp 128k already generated & test. If works then code it to save memory
-  => ok but should pick numbers in irq to make generator faster
 - floppy A1200 nofast: continue screen crashes with 800004 GURU: retest
 
 - save highscores
@@ -17,7 +13,6 @@
 
 low pri:
 
-- insert coin timer when continue screen should be 0
 - log used tiles to reduce memory size
 - check what service mode sets in EEPROM
   to allow some settings: difficulty is the only interesting setting

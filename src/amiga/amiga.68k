@@ -494,6 +494,11 @@ demo_game:
 0:
 		move.b	(a1)+,(a0)+
 		dbf		d0,0b
+
+		* skip first 8 values, so random blocks aren't in the same line!
+		.rept	8
+		bsr		osd_get_random
+		.endr
 		
 		*bsr		sound_test
 		
@@ -567,25 +572,23 @@ _vblank:
 	moveq	#ONE_TICK,d1
     move.w  vbl_counter(pc),d0
     addq.w  #1,d0
+	clr.b	two_ticks
     cmp.w   #5,d0
     bne.b   22f
     * update a second time, simulate 60Hz
-	moveq	#ONE_TICK*2,d1
+	st.b	two_ticks
 	clr.w d0    
 22:
-	move.b	d1,vb_ticks_count
-    move.w  d0,vbl_counter
-	
-	tst.b	pause_flag
-	bne.b	23f
-
-	sub.w	d1,delay_timer
 	
 	jbsr		tetris_irq
+	tst.b	two_ticks
+	beq.b	23f
+	jbsr		tetris_irq	
+23:
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING_BG
 	bsr		switch_screen_buffers
 	.endif
-23:
+
 	* now we check copper interrupt again
 	move.w	_custom+intreqr,d0
 	btst	#4,d0
@@ -599,36 +602,6 @@ _vblank:
     movem.l (a7)+,d0-d7/a0-a6
     rte
 	
-
-osd_get_random:
-	move.l	a0,-(a7)
-	move.l	lfsr_index(pc),d0
-	lea		lfsr,a0
-	move.b	(a0,d0.l),d0
-	addq.l	#1,lfsr_index
-	cmp.l	#0x20000,lfsr_index
-	bne.b	0f
-	clr.l	lfsr_index
-0:
-	move.l	(a7)+,a0
-	and.l	#0xFF,d0
-	rts
-	
-* > D0: pseudo random value (8 bits, all other bits zeroed)
-	movem.l	a0,-(a7)
-	lea	seed(pc),a0
-	move.l	(a0),d0
-	* thanks meynaf
-	mulu #0xa57b,d0
-	addi.l #0xbb40e62d,d0
-	rol.l #6,d0	
-	move.l	d0,(a0) 
-	movem.l	(a7)+,a0
-	add.b	_custom+vposr,d0
-	and.l	#0xFF,d0
-	rts
-seed:
-	dc.l	0x12345678
 
 
 osd_break:
@@ -690,6 +663,34 @@ osd_set_palette_entry:
 	move.w	(sp)+,d0
 	rts
 	
+osd_get_random:
+	movem.l	d1-d3,-(a7)
+	move.l	lfsr_index(pc),d0
+	moveq	#0,d3
+	moveq	#0,d2	| in8
+	btst	#8,d0
+	beq.b	0f
+	bset	#7,d3
+0:
+	btst	#13,d0
+	beq.b	0f
+	bset	#7,d2
+0:
+	eor.b	d3,d2	| in8
+	moveq	#0,d3
+	btst	#0,d0
+	beq.b	0f
+	bset	#16,d3	| in
+0:
+	lsr.l	#1,d0
+	and.w	#0xFF7F,d0
+	or.b	d2,d0
+	or.l	d3,d0
+	move.l	d0,lfsr_index
+	movem.l	(a7)+,d1-d3
+	and.l	#0xFF,d0
+	rts
+	
 * < D0: value to write
 * < A0: address (minus 0x2800)
 osd_write_audio_pokey:
@@ -733,6 +734,7 @@ osd_write_audio_pokey:
 	cmp.b	(a0,d1.w),d2
 	beq.b	0f			| same value as before, don't do anything
 	move.b	d2,(a0,d1.w)
+
 	
 	* read full freq
 	lea		pokey_frequencies(pc),a0
@@ -788,21 +790,31 @@ osd_write_audio_pokey:
 4:
 	* channel control: D1 contains channel 0-1
 	* d4 set: second pokey
-	bra.b	0b
-	tst.b	d0
-	bne.b	0b
 	tst.b	d4
 	beq.b	41f
 	addq	#2,d1
 41:
-	* write 0 into channel control: stop sound on that channel
-	moveq	#0,d0
-	move.b	d1,d0
-	jsr		_mt_stopfx
+	bra.b	0b
+	and.w	#0xFF,d1
+	cmp.w	#4,d1
+	bcc.b	0b
+	lea	pokey_channel_control(pc),a0
+	move.b	d0,(a0,d1.w)
+	lsl.w	#4,d1
+	add.w	#aud+ac_vol,d1
+	and.w	#0xF,d0
+	lsl.w	#2,d0
+	beq.b	0b
+	move.w	d0,(a5,d1.w)		| change volume
 	bra.b	0b
 5:
 	* main control
-	
+	lea	pokey_master_control(pc),a0
+	tst.b	d4
+	beq.b	6f
+	addq	#1,a0
+6:
+	move.b	d0,(a0)
 	bra.b	0b
 	
 	* the only inreresting thing here is VBLANK flag
@@ -1878,6 +1890,8 @@ intro_music_counter:
 	.word	0
 vbl_counter:
 	.word	0
+two_ticks:
+	.word	0
 _resload:
 	.long	0
 _joypad_state_1:
@@ -1898,9 +1912,8 @@ bg_displayed_screen_ptr:
 	.long	0
 
 lfsr_index:
-	dc.l	0
-lfsr:
-	.include	"lfsr.68k"
+	dc.l	(1<<17)-1
+
 	
 _keyexit:
 	.byte	0x45	| ESC by default unless whdload overwrites it
@@ -1934,7 +1947,11 @@ floppy_file:
 temp_filename_buffer:
 	ds.b	255
 	
+pokey_master_control:
+	.byte	0,0
 	.align	2
+pokey_channel_control:
+	.long	0
 pokey_frequencies:
 	.word	0
 	.word	0
