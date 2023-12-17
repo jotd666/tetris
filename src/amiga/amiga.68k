@@ -112,9 +112,8 @@ start:
 		.global _demo_end
 
 * osd layer		
-		.global osd_disable_vblank_interrupt
-		.global osd_enable_vblank_interrupt
-		.global	osd_is_vblank_interrupt_enabled
+		.global osd_disable_interrupts
+		.global osd_enable_interrupts
 		.global osd_break		| for debug	
 		*.global osd_calibrate_display		| for debug
 		.global osd_r_videoram
@@ -496,7 +495,7 @@ demo_game:
 		move.b	(a1)+,(a0)+
 		dbf		d0,0b
 		
-		bsr		sound_test
+		*bsr		sound_test
 		
 		jmp			tetris_reset					| pass control to the tetris core
 		
@@ -506,9 +505,23 @@ _nmi:
 	move.w	#0x7FFF,_custom+intreq
 	move.w	#0x7FFF,_custom+intreq
 	rts
-				
+			
+_int1:
+	move.w	#0,0x200
+    movem.l d0-d7/a0-a6,-(a7)
+	lea		_custom,a5	
+	move.w	#0x2700,SR		| don't let any other interrupt, as there is one shared irq routine
+	clr.b	is_vblank
+	* call IRQ for music (250 calls/second)
+	jsr		tetris_irq
+	
+	move.w	#0x4,(intreq,a5)		| ack
+    movem.l (a7)+,d0-d7/a0-a6
+	rte
+	
 _vblank:
     movem.l d0-d7/a0-a6,-(a7)
+	st.b	is_vblank
 	lea		_custom,a5
 	move.w	(intreqr,a5),d0
 	btst	#5,d0
@@ -585,11 +598,6 @@ _vblank:
 	move.w	#0x10,_custom+intreq
 3:
     movem.l (a7)+,d0-d7/a0-a6
-	tst.l	return_address
-	beq.b	4f
-	move.l	return_address,(2,a7)		| change return address
-	clr.l	return_address				| just for this time
-4:
     rte
 	
 
@@ -773,9 +781,19 @@ osd_write_audio_pokey:
 	jsr		_mt_stopfx
 	bra.b	0b
 	
-* not useful, credits are handled some other way
+	* the only inreresting thing here is VBLANK flag
+	* because there's only one IRQ vector for both IRQ interupts
+	*
+	* "fast" IRQ 250 times/second
+	* vblank IRQ 60 times/second
+
 osd_read_pokey1:
 	moveq	#0,d0
+	tst.b	is_vblank
+	bne.b	0f
+	* not vblank: set VBLANK bit (apparently inverted logic)
+	bset	#6,d0
+0:
 	rts
 	
 	move.l	a0,-(a7)
@@ -857,45 +875,6 @@ osd_read_pokey2:
 	rts
 	
 
-
-* < D0: number of 1/60Hz ticks
-* can work with interrupts enabled or disabled
-osd_wait:
-	move.w	d0,delay_timer
-	jbsr	osd_is_vblank_interrupt_enabled
-	tst.w	d0
-	jne		2f
-	* interrupts are disabled: timer isn't going to change
-	* wait using vertical blank interrupt request (we don't need it!)
-	clr.w	one_out_of_five
-0:
-	move.w	#0x20,_custom+intreq
-	move.w	#0x20,_custom+intreq
-1:
-	move.w	_custom+intreqr,d0
-	btst	#5,d0
-	beq.b	1b
-	addq.w	#1,one_out_of_five
-	cmp.w	#5,one_out_of_five
-	bne.b	5f
-	subq.w	#1,delay_timer	
-	clr.w	one_out_of_five
-5:
-	subq.w	#1,delay_timer
-	beq.b	4f
-	bpl.b	0b
-4:
-	rts
-	
-2:
-	tst.w	delay_timer
-	beq.b	3f
-	* check for negative, as there can be 2 ticks
-	* because of 60Hz emulation
-	bpl.b	2b
-3:
-	rts
-	
 
 	
 osd_sound_start:
@@ -1231,6 +1210,8 @@ platform_init:
 	pea		level2_interrupt(pc)
 	move.l	system_vbr(pc),a1
 	move.l	(a7)+,(0x68,a1)
+	pea		_int1(pc)
+	move.l	(a7)+,(0x64,a1)
 	pea		_vblank(pc)
 	move.l	(a7)+,(0x6C,a1)
 	pea		_nmi(pc)
@@ -1268,29 +1249,15 @@ osd_dump_file:
 	rts
 	
 	
-* < D0: nonzero interrupts enabled
-osd_is_vblank_interrupt_enabled:
-	move.w	_custom+intenar,d0
-	and.w	#0x0030,d0
-	rts
-	
-* 60Hz VBLANK interrupt (also keyboard)
-osd_enable_vblank_interrupt:
-	move.w	#0xC038,_custom+intena
+* enable 60Hz VBLANK interrupt & level 1 (also keyboard)
+osd_enable_interrupts:
+	move.w	#0xC03C,_custom+intena
 	rts
 
-osd_ack_vblank_interrupt:
-	move.w	#0x30,_custom+intreq
- 	rts
 		
-* not used after all
-*osd_test_vblank_interrupt:
-*	move.w	_custom+intreqr,d0
-*	btst	#5,d0
-*	rts
-	
-osd_disable_vblank_interrupt:
-	move.w	#0x0030,_custom+intena
+* disable 60Hz VBLANK interrupt & level 1
+osd_disable_interrupts:
+	move.w	#0x0034,_custom+intena
 	rts
 
 
@@ -1824,8 +1791,7 @@ old_actiview:
 	.long	0
 old_stack:
 	.long	0
-return_address:
-	.long	0
+
 	
 	
 _tag:
@@ -1864,7 +1830,8 @@ highscore_needs_saving:
 	.byte	0
 highscore_loaded:
 	.byte	0
-
+is_vblank:
+	.byte	0
 	.align	2
 
 keyboard_table:
@@ -2011,6 +1978,11 @@ copperlist_colors:
 	DECL_32_COLORS
 	.endr
 
+	.macro	MUSIC_INTERRUPT
+	.word	intreq
+	.word	0x8004
+	.endm
+	
 sprites:
     * #0
     .word    sprpt+0,0
@@ -2037,16 +2009,33 @@ sprites:
     .word    sprpt+28,0
     .word    sprpt+30,0
 
+	* music
+	* trigger level 1 interrupt then wait 51 lines 
+	* (faster than vblank, for music)
+	MUSIC_INTERRUPT
+	* wait 51 lines
+	.word	0x3301,0xFFFE
+	MUSIC_INTERRUPT
+	* wait 51 lines
+	.word	0x6601,0xFFFE
+	MUSIC_INTERRUPT
+	.word	0x9901,0xFFFE
+	MUSIC_INTERRUPT
+	.word	0xCC01,0xFFFE
 	
 	* pal limit
     .word  0xFFDF,0xFFFE       | PAL wait
-    .word  0x0401,0xFFFE
+ 	
+	*MUSIC_INTERRUPT
 	
-    .word   0x1C01,0xFFFE
-	.set    beampos,0x1E01
+
+    *.word   0x1C01,0xFFFE
+	*.set    beampos,0x1E01
 	
- 	.word	beampos,0xFFFE   | wait before interrupt, avoid losing last bobs lines
+	* set interrupt as soon as reached 256 lines
+	* this will avoid some possible screen tearing
     .word	 intreq,0x8010
+	
     .long    -2					
 	.ascii	"ENDCPLST"
 

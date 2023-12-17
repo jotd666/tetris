@@ -105,6 +105,8 @@ remaining_rows_tenths_0030 = 0x0030
 remaining_rows_units_0031 = 0x0031
 
 palette_pointer_0047 = 0x0047
+continue_timer_array_004e = 0x004e
+
 * 2 values, 1 for each player
 player_active_array_0077 = 0x0077		| 0: not active, 1: active
 * shape:
@@ -274,10 +276,10 @@ coin_counters_3C00 = 0x3C00
 	.endm
 
 	.macro SET_I_FLAG
-	jbsr	osd_disable_vblank_interrupt
+	jbsr	osd_disable_interrupts
 	.endm
 	.macro CLR_I_FLAG
-	jbsr	osd_enable_vblank_interrupt
+	jbsr	osd_enable_interrupts
 	.endm
 	.ifdef	MC68020
 	.macro PUSH_SR
@@ -1660,7 +1662,6 @@ l_44ee:
 	GET_ADDRESS	0x0c57                     	| [$450d: sta	$0c57, x]
     move.b	d0,(a0,d1.w)                 	| [$450d: sta	$0c57, x]
 	
-	WPSET	0x202
 	* this is called as frequently as main irq
 	GET_ADDRESS	0x0c61                     	| [$4510: lda	$0c61, x]
 	move.b	(a0,d1.w),d0                    	| [$4510: lda	$0c61, x]
@@ -2992,8 +2993,11 @@ l_4b22:
 	move.b	(a0),d0                         	| [$4b27: lda	$0e50]
 	GET_ADDRESS	0x0e54                     	| [$4b2a: and	$0e54]
 	and.b	(a0),d0                          	| [$4b2a: and	$0e54]
-	move.b	#0x08,d2                        	| [$4b2d: ldy #$08]
 	
+	* write to control register
+	* writing $50 means fall noisy sound
+	* normally it's $78 (16-bit channels, no noise)
+	move.b	#0x08,d2                        	| [$4b2d: ldy #$08]
 	jbsr	write_to_pokey_00ce_y                    	| [$4b2f: sta ($ce), y]
 
 	
@@ -7849,7 +7853,7 @@ l_9d0a:
 	GET_ADDRESS	0x0078                     	| [$9d12: sta	$0078]
 	move.b	d0,(a0)                         	| [$9d12: sta	$0078]
 	move.b	#0x0c,d0                        	| [$9d14: lda #$0c]
-	GET_ADDRESS	0x004e                     	| [$9d16: sta	$004e]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$9d16: sta	$004e]
 	move.b	d0,(a0)                         	| [$9d16: sta	$004e]
 	GET_ADDRESS	0x004f                     	| [$9d18: sta	$004f]
 	move.b	d0,(a0)                         	| [$9d18: sta	$004f]
@@ -7857,8 +7861,19 @@ l_9d1a:
 	clr.b	d0                               	| [$9d1a: lda #$00]
 	GET_ADDRESS	player_active_array_0077                     	| [$9d1c: sta	$0077, x]
     move.b	d0,(a0,d1.w)                 	| [$9d1c: sta	$0077, x]
+	* sets 12 to continue timer array at the game over moment
+	* the time that continue timer appears, it will be 9!
 	move.b	#0x0c,d0                        	| [$9d1e: lda #$0c]
-	GET_ADDRESS	0x004e                     	| [$9d20: sta	$004e, x]
+	
+	* jotd: if no more credits, lower timer
+	* (lower than 5 => some fireworks are trashed in the highscore
+	* screen, so it's probably not designed for that)
+	GET_ADDRESS	number_of_credits_00c1
+	tst.b	(a0)
+	jne		0f
+	move.b	#0x05,d0
+0:
+	GET_ADDRESS	continue_timer_array_004e                     	| [$9d20: sta	$004e, x]
     move.b	d0,(a0,d1.w)                 	| [$9d20: sta	$004e, x]
 	cmp.b	#0x01,d1                         	| [$9d22: cpx #$01]
 	bne	l_9d36                             	| [$9d24: bne	$9d36]
@@ -9449,11 +9464,11 @@ l_a4e2:
 	move.b	(a0),d0                         	| [$a4e5: lda	$000f]
 	and.b	#0x3f,d0                         	| [$a4e7: and #$3f]
 	bne	l_a4ee                             	| [$a4e9: bne	$a4ee]
-	jbsr	l_a52d                            	| [$a4eb: jsr	$a52d]
+	jbsr	handle_continue_timer_a52d                            	| [$a4eb: jsr	$a52d]
 l_a4ee:
 	GET_ADDRESS	0x0650                     	| [$a4ee: ldx	$0650]
 	move.b	(a0),d1                         	| [$a4ee: ldx	$0650]
-	GET_ADDRESS	0x004e                     	| [$a4f1: lda	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a4f1: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$a4f1: lda	$004e, x]
 	beq	l_a527                             	| [$a4f3: beq	$a527]
 	GET_ADDRESS	0x0618                     	| [$a4f5: lda	$0618]
@@ -9465,7 +9480,7 @@ l_a4ee:
 	GET_ADDRESS	0x0050                     	| [$a4fc: sta	$0050]
 	move.b	d0,(a0)                         	| [$a4fc: sta	$0050]
 	POP_SR
-	GET_ADDRESS	0x004e                     	| [$a4fe: lda	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a4fe: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$a4fe: lda	$004e, x]
 	cmp.b	#0x09,d0                         	| [$a500: cmp #$09]
 	* bcc=>bcs
@@ -9473,10 +9488,10 @@ l_a4ee:
 	jbsr	l_a4c3                            	| [$a504: jsr	$a4c3]
 l_a507:
 	move.b	#0x09,d2                        	| [$a507: ldy #$09]
-	GET_ADDRESS	0x004e                     	| [$a509: lda	$004e]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a509: lda	$004e]
 	move.b	(a0),d0                         	| [$a509: lda	$004e]
 	beq	l_a50f                             	| [$a50b: beq	$a50f]
-	GET_ADDRESS	0x004e                     	| [$a50d: sty	$004e]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a50d: sty	$004e]
 	move.b	d2,(a0)                         	| [$a50d: sty	$004e]
 l_a50f:
 	GET_ADDRESS	0x004f                     	| [$a50f: lda	$004f]
@@ -9488,7 +9503,7 @@ l_a515:
 	GET_ADDRESS	number_of_credits_00c1     	| [$a515: lda number_of_credits_00c1]
 	move.b	(a0),d0                         	| [$a515: lda number_of_credits_00c1]
 	beq	l_a527                             	| [$a518: beq	$a527]
-	GET_ADDRESS	0x004e                     	| [$a51a: lda	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a51a: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$a51a: lda	$004e, x]
 	cmp.b	#0x0a,d0                         	| [$a51c: cmp #$0a]
 	* bcs=>bcc
@@ -9503,14 +9518,15 @@ l_a527:
 	* bcc=>bcs
 	bcs	l_a4e2                             	| [$a52a: bcc	$a4e2]
 	rts                                    	| [$a52c: rts]
-l_a52d:
-	GET_ADDRESS	0x004e                     	| [$a52d: ldy	$004e, x]
+	
+handle_continue_timer_a52d:
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a52d: ldy	$004e, x]
 	move.b	(a0,d1.w),d2                    	| [$a52d: ldy	$004e, x]
 	cmp.b	#0x01,d2                         	| [$a52f: cpy #$01]
 	* bcc=>bcs
 	bcs	l_a5ac                             	| [$a531: bcc	$a5ac]
 	subq.b	#1,d2                           	| [$a533: dey]
-	GET_ADDRESS	0x004e                     	| [$a534: sty	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a534: sty	$004e, x]
     move.b	d2,(a0,d1.w)                 	| [$a534: sty	$004e, x]
 	GET_ADDRESS	0x064d                     	| [$a536: stx	$064d]
 	move.b	d1,(a0)                         	| [$a536: stx	$064d]
@@ -9520,7 +9536,7 @@ l_a52d:
 l_a540:
 	GET_ADDRESS	0x064d                     	| [$a540: ldx	$064d]
 	move.b	(a0),d1                         	| [$a540: ldx	$064d]
-	GET_ADDRESS	0x004e                     	| [$a543: lda	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a543: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$a543: lda	$004e, x]
 	cmp.b	#0x0a,d0                         	| [$a545: cmp #$0a]
 	* bcs=>bcc
@@ -9540,9 +9556,10 @@ l_a553:
 	move.b	d0,(a0)                         	| [$a557: sta	$0003]
 	clr.b	d2                               	| [$a559: ldy #$00]
 	                           	| [$a55b: clc]
-	GET_ADDRESS	0x004e                     	| [$a55c: lda	$004e, x]
+	* continue timer
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a55c: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$a55c: lda	$004e, x]
-	add.b	#0x30,d0	| [$a55e: adc #$30]
+	add.b	#0x30,d0	| [$a55e: adc #$30] add '0'
 	
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$a560: sta ($02), y]
 	jbsr	osd_w_videoram                    	| [$a560: sta ($02), y]
@@ -9554,7 +9571,7 @@ l_a553:
 	                          	| [$a568: clc]
 	add.b	#0x3b,d0                        	| [$a569: adc #$3b]
 	jbsr	l_d670                            	| [$a56b: jsr	$d670]
-	GET_ADDRESS	0x004e                     	| [$a56e: lda	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a56e: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$a56e: lda	$004e, x]
 	bne	l_a5ac                             	| [$a570: bne	$a5ac]
 	                           	| [$a572: clc]
@@ -9574,7 +9591,7 @@ l_a58a:
 	GET_ADDRESS	0x0078                     	| [$a58c: ora	$0078]
 	or.b	(a0),d0                           	| [$a58c: ora	$0078]
 	bne	l_a5ac                             	| [$a58e: bne	$a5ac]
-	GET_ADDRESS	0x004e                     	| [$a590: lda	$004e]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$a590: lda	$004e]
 	move.b	(a0),d0                         	| [$a590: lda	$004e]
 	GET_ADDRESS	0x004f                     	| [$a592: ora	$004f]
 	or.b	(a0),d0                           	| [$a592: ora	$004f]
@@ -10644,7 +10661,7 @@ l_aad8:
 	GET_ADDRESS	player_active_array_0077                     	| [$aae6: lda	$0077]
 	move.b	(a0),d0                         	| [$aae6: lda	$0077]
 	bne	l_aaf3                             	| [$aae8: bne	$aaf3]
-	GET_ADDRESS	0x004e                     	| [$aaea: lda	$004e]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$aaea: lda	$004e]
 	move.b	(a0),d0                         	| [$aaea: lda	$004e]
 	bne	l_aaf3                             	| [$aaec: bne	$aaf3]
 	clr.b	d1                               	| [$aaee: ldx #$00]
@@ -10778,13 +10795,13 @@ l_ab82:
 	jbsr	l_abc0                            	| [$ab8e: jsr	$abc0]
 l_ab91:
 	clr.b	d1                               	| [$ab91: ldx #$00]
-	GET_ADDRESS	0x004e                     	| [$ab93: lda	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$ab93: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$ab93: lda	$004e, x]
 	bne	l_ab9a                             	| [$ab95: bne	$ab9a]
 	jbsr	l_bcd3                            	| [$ab97: jsr	$bcd3]
 l_ab9a:
 	move.b	#0x01,d1                        	| [$ab9a: ldx #$01]
-	GET_ADDRESS	0x004e                     	| [$ab9c: lda	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$ab9c: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$ab9c: lda	$004e, x]
 	bne	l_aba3                             	| [$ab9e: bne	$aba3]
 	jbsr	l_bcd3                            	| [$aba0: jsr	$bcd3]
@@ -15071,7 +15088,7 @@ l_c268:
 	GET_ADDRESS	player_active_array_0077                     	| [$c268: lda	$0077, x]
 	move.b	(a0,d1.w),d0                    	| [$c268: lda	$0077, x]
 	bne	l_c2a0                             	| [$c26a: bne	$c2a0]
-	GET_ADDRESS	0x004e                     	| [$c26c: lda	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$c26c: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$c26c: lda	$004e, x]
 	bne	l_c2a0                             	| [$c26e: bne	$c2a0]
 	GET_ADDRESS	current_player_control_status_001b                     	| [$c270: stx	$001b]
@@ -15130,7 +15147,7 @@ l_c2a7:
 	GET_ADDRESS	0x0078                     	| [$c2b9: ora	$0078]
 	or.b	(a0),d0                           	| [$c2b9: ora	$0078]
 	bne	l_c2d9                             	| [$c2bb: bne	$c2d9]
-	GET_ADDRESS	0x004e                     	| [$c2bd: lda	$004e]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$c2bd: lda	$004e]
 	move.b	(a0),d0                         	| [$c2bd: lda	$004e]
 	GET_ADDRESS	0x004f                     	| [$c2bf: ora	$004f]
 	or.b	(a0),d0                           	| [$c2bf: ora	$004f]
@@ -15156,7 +15173,7 @@ l_c2d9:
 	* bcc=>bcs
 	bcs	l_c2a7                             	| [$c2dc: bcc	$c2a7]
 	jbsr	l_c2eb                            	| [$c2de: jsr	$c2eb]
-	GET_ADDRESS	0x004e                     	| [$c2e1: lda	$004e]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$c2e1: lda	$004e]
 	move.b	(a0),d0                         	| [$c2e1: lda	$004e]
 	GET_ADDRESS	0x004f                     	| [$c2e3: ora	$004f]
 	or.b	(a0),d0                           	| [$c2e3: ora	$004f]
@@ -15173,7 +15190,7 @@ l_c2ed:
 	GET_ADDRESS	0x0663                     	| [$c2f1: lda	$0663, x]
 	move.b	(a0,d1.w),d0                    	| [$c2f1: lda	$0663, x]
 	bpl	l_c30a                             	| [$c2f4: bpl	$c30a]
-	GET_ADDRESS	0x004e                     	| [$c2f6: lda	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$c2f6: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$c2f6: lda	$004e, x]
 	cmp.b	#0x0a,d0                         	| [$c2f8: cmp #$0a]
 	* bcs=>bcc
@@ -15246,7 +15263,7 @@ l_c34d:
 	add.b	(a0),d0	| [$c352: adc	$001c]
 	jbsr	l_d670                            	| [$c354: jsr	$d670]
 	jbsr	l_bcd3                            	| [$c357: jsr	$bcd3]
-	GET_ADDRESS	0x004e                     	| [$c35a: lda	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$c35a: lda	$004e, x]
 	move.b	(a0,d1.w),d0                    	| [$c35a: lda	$004e, x]
 	bne	l_c382                             	| [$c35c: bne	$c382]
 	move.b	d1,d0                           	| [$c35e: txa]
@@ -15280,7 +15297,7 @@ l_c382:
 	GET_ADDRESS	0x0075                     	| [$c384: sta	$0075, x]
     move.b	d0,(a0,d1.w)                 	| [$c384: sta	$0075, x]
 	clr.b	d0                               	| [$c386: lda #$00]
-	GET_ADDRESS	0x004e                     	| [$c388: sta	$004e, x]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$c388: sta	$004e, x]
     move.b	d0,(a0,d1.w)                 	| [$c388: sta	$004e, x]
 	
 	jbsr	l_ad62                            	| [$c38a: jsr	$ad62]
@@ -16683,7 +16700,7 @@ l_caa9:
 	move.b	d0,(a0)                         	| [$cae5: sta	$0095]
 	GET_ADDRESS	0x0096                     	| [$cae7: sta	$0096]
 	move.b	d0,(a0)                         	| [$cae7: sta	$0096]
-	GET_ADDRESS	0x004e                     	| [$cae9: sta	$004e]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$cae9: sta	$004e]
 	move.b	d0,(a0)                         	| [$cae9: sta	$004e]
 	GET_ADDRESS	0x004f                     	| [$caeb: sta	$004f]
 	move.b	d0,(a0)                         	| [$caeb: sta	$004f]
@@ -17316,7 +17333,7 @@ l_d598:
 	move.b	(a0,d2.w),d0                    	| [$d5a7: lda	$cb3a, y]
 	GET_ADDRESS	0x000b                     	| [$d5aa: sta	$000b]
 	move.b	d0,(a0)                         	| [$d5aa: sta	$000b]
-	GET_ADDRESS	0x004e                     	| [$d5ac: lda	$004e]
+	GET_ADDRESS	continue_timer_array_004e                     	| [$d5ac: lda	$004e]
 	move.b	(a0),d0                         	| [$d5ac: lda	$004e]
 	GET_ADDRESS	0x004f                     	| [$d5ae: ora	$004f]
 	or.b	(a0),d0                           	| [$d5ae: ora	$004f]
@@ -17669,7 +17686,6 @@ l_d6db:
 * main IRQ
 tetris_irq:
 periodic_interrupt_D70E:
-	WPSET	0x201
 * save registers
 	move.w	d0,-(sp)                        	| [$d70e: pha]
 	                           	| [$d70f: txa]
@@ -17685,7 +17701,7 @@ periodic_interrupt_D70E:
 	GET_ADDRESS	first_byte_of_bank_000d      	| [$d716: sta first_byte_of_bank_000d]
 	move.b	d0,(a0)                         	| [$d716: sta first_byte_of_bank_000d]
 	
-	*jbsr	osd_read_pokey1						| [$d718: cld]
+	jbsr	osd_read_pokey1						| [$d718: cld]
 	*PUSH_SR
 	*GET_ADDRESS	potgo_280b                     	| [$d719: sta	$280b]
 	*move.b	d0,(a0)                         	| [$d719: sta	$280b]
@@ -17694,8 +17710,12 @@ periodic_interrupt_D70E:
 	*move.b	(a0),d0                         	| [$d71c: lda	$2808]
 	
 	* periodically get pokey state and copy it to 0x700
-	* disabled, pokey 1 reads are not useful as soon as credits are managed some other way
-	moveq	#0,d0
+	* the only inreresting thing here is VBLANK flag
+	* because there's only one IRQ vector for both IRQ interupts
+	*
+	* "fast" IRQ 250 times/second
+	* vblank IRQ 60 times/second
+	*
 	GET_ADDRESS	pokey1_state_copy_0700                     	| [$d71f: sta	$0700]
 	move.b	d0,(a0)                         	| [$d71f: sta	$0700]
 	bpl	l_d745                             	| [$d722: bpl	$d745]
@@ -17723,10 +17743,8 @@ l_d738:
 	GET_ADDRESS	0x000f                     	| [$d738: lda	$000f]
 	move.b	(a0),d0                         	| [$d738: lda	$000f]
 	and.b	#0x07,d0                         	| [$d73a: and #$07]
-	PUSH_SR
 	GET_ADDRESS	0x0012                     	| [$d73c: sta	$0012]
 	move.b	d0,(a0)                         	| [$d73c: sta	$0012]
-	POP_SR
 	and.b	#0x03,d0                         	| [$d73e: and #$03]
 	GET_ADDRESS	0x0011                     	| [$d740: sta	$0011]
 	move.b	d0,(a0)                         	| [$d740: sta	$0011]
@@ -17737,9 +17755,14 @@ l_d745:
 	and.b	#0x40,d0                         	| [$d745: and #$40]
 	bne	l_d76c                             	| [$d747: bne	$d76c]
 	
+	* reached one out of 4 times. One out of 4 times VBLANK is NOT set
+	* this is actually the slower interrupt, which should be VBLANK for us
+	
 	GET_ADDRESS	0x0009                     	| [$d749: lda	$0009]
 	move.b	(a0),d0                         	| [$d749: lda	$0009]
 	bpl	l_d750                             	| [$d74b: bpl	$d750]
+	* sanity check to see if the game can cope with the framerate
+	* never reached!
 	jbsr	osd_break
 	nop
 	nop
@@ -17750,7 +17773,7 @@ l_d750:
 	
                                          | [$d750: sta watchdog_3000]
                                          | [$d750: sta watchdog_3000]
-	GET_ADDRESS	0x0009                     	| [$d753: inc	$0009]
+*	GET_ADDRESS	0x0009                     	| [$d753: inc	$0009]
 	addq.b	#1,(a0)                         	| [$d753: inc	$0009]
 	jbsr	l_d810                            	| [$d755: jsr	$d810]
 	GET_ADDRESS	0x0013                     	| [$d758: inc	$0013]

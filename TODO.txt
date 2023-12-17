@@ -1,5 +1,11 @@
 - 50Hz => 60Hz
-- amiga replay speed is a several times slower!
+- write to pokey audio control to stop sound between stages
+  write 0: stop sound, store control value
+- ignore channel 4/use for sfx/drums
+- remove/simulate "drums" in some tunes (disable channel 4?)
+- find play sample shape falling/line done
+- wrong notes in tunes
+
 - advancing lines: random not so good/similar to POKEY random (one almost filled line each time)
   ASLR generators temp 128k already generated & test. If works then code it to save memory
   => ok but should pick numbers in irq to make generator faster
@@ -12,7 +18,8 @@ low pri:
 
 - insert coin timer when continue screen should be 0
 - log used tiles to reduce memory size
-- simulate service mode to allow some settings: difficulty is the only interesting setting
+- check what service mode sets in EEPROM
+  to allow some settings: difficulty is the only interesting setting
 
 converter:
 
