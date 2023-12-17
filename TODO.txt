@@ -1,10 +1,11 @@
 - 50Hz => 60Hz
-- write to pokey audio control to stop sound between stages
+- write to pokey audio control to stop sound between stages: doesn't work see how game
+  cuts sound
   write 0: stop sound, store control value
 - ignore channel 4/use for sfx/drums
 - remove/simulate "drums" in some tunes (disable channel 4?)
 - find play sample shape falling/line done
-- wrong notes in tunes
+- wrong notes in tunes: sounds much better
 
 - advancing lines: random not so good/similar to POKEY random (one almost filled line each time)
   ASLR generators temp 128k already generated & test. If works then code it to save memory

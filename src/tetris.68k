@@ -170,12 +170,12 @@ empty_row_3_tiles_each_side_aec3 = 0xaec3
 * only has 10 entries
 palette_address_table_ce4e = 0xce4e
 delay_array_table_b5c5 = 0xb5c5
+default_highscore_table_f2fa = 0xf2fa
 * pokey 0
 allpot_2808 = 0x2808
 potgo_280b = 0x280b
 random_280a = 0x280A
 random_281a = 0x281A
-
 
 * misc
 eeprom_write_enable_3400 = 0x3400
@@ -19181,15 +19181,12 @@ continue_startup_e661:
 	move.b	#0x30,d0                        	| [$e67e: lda #$30]
 * put	$0030 ('0' ?) in	$0600-$617
 l_e680:
-	PUSH_SR
 	GET_ADDRESS	score_digit_1_0600                     	| [$e680: sta	$0600, y]
     move.b	d0,(a0,d2.w)                 	| [$e680: sta	$0600, y]
-	POP_SR
 	subq.b	#1,d2                           	| [$e683: dey]
 	bpl	l_e680                             	| [$e684: bpl	$e680]
 * put	$0020 in a lot of RAM locations
 	move.b	#0x20,d0                        	| [$e686: lda #$20]
-	PUSH_SR
 	GET_ADDRESS	0x065b                     	| [$e688: sta	$065b]
 	move.b	d0,(a0)                         	| [$e688: sta	$065b]
 	GET_ADDRESS	0x065c                     	| [$e68b: sta	$065c]
@@ -19206,12 +19203,9 @@ l_e680:
 	move.b	d0,(a0)                         	| [$e69a: sta	$0661]
 	GET_ADDRESS	0x0662                     	| [$e69d: sta	$0662]
 	move.b	d0,(a0)                         	| [$e69d: sta	$0662]
-	POP_SR
 	addq.b	#1,d1                           	| [$e6a0: inx] X=1
-	PUSH_SR
 	GET_ADDRESS	0x0017                     	| [$e6a1: stx	$0017] store 1 in	$0017
 	move.b	d1,(a0)                         	| [$e6a1: stx	$0017] store 1 in	$0017
-	POP_SR
 	jbsr	l_eece                            	| [$e6a3: jsr	$eece]
 	jbsr	l_e6ad                            	| [$e6a6: jsr	$e6ad]
 	CLR_I_FLAG                             	| [$e6a9: cli]
@@ -19279,35 +19273,27 @@ l_e6f9:
 	jbsr	l_f1d4                            	| [$e6fb: jsr	$f1d4]
 	clr.b	d2                               	| [$e6fe: ldy #$00]
 l_e700:
-	PUSH_SR
 	GET_ADDRESS	unknown_001d                     	| [$e700: sty	$001d]
 	move.b	d2,(a0)                         	| [$e700: sty	$001d]
-	POP_SR
 	GET_ADDRESS	unknown_001d                     	| [$e702: ldx	$001d]
 	move.b	(a0),d1                         	| [$e702: ldx	$001d]
 	move.b	#0x03,d0                        	| [$e704: lda #$03]
-	PUSH_SR
 	GET_ADDRESS	current_player_control_status_001b                     	| [$e706: sta	$001b]
 	move.b	d0,(a0)                         	| [$e706: sta	$001b]
-	POP_SR
 l_e708:
-	GET_ADDRESS	0xf2fa                     	| [$e708: lda	$f2fa, y]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$e708: lda	$f2fa, y]
 	move.b	(a0,d2.w),d0                    	| [$e708: lda	$f2fa, y]
 	lsr.b	#4,d0                            	| [$e70b: lsr a] * 4
 	or.b	#0x30,d0                          	| [$e70f: ora #$30]
-	PUSH_SR
 	GET_ADDRESS	0x0979                     	| [$e711: sta	$0979, x]
     move.b	d0,(a0,d1.w)                 	| [$e711: sta	$0979, x]
-	POP_SR
 	addq.b	#1,d1                           	| [$e714: inx]
-	GET_ADDRESS	0xf2fa                     	| [$e715: lda	$f2fa, y]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$e715: lda	$f2fa, y]
 	move.b	(a0,d2.w),d0                    	| [$e715: lda	$f2fa, y]
 	and.b	#0x0f,d0                         	| [$e718: and #$0f]
 	or.b	#0x30,d0                          	| [$e71a: ora #$30]
-	PUSH_SR
 	GET_ADDRESS	0x0979                     	| [$e71c: sta	$0979, x]
     move.b	d0,(a0,d1.w)                 	| [$e71c: sta	$0979, x]
-	POP_SR
 	addq.b	#1,d1                           	| [$e71f: inx]
 	addq.b	#1,d2                           	| [$e720: iny]
 	GET_ADDRESS	current_player_control_status_001b                     	| [$e721: dec	$001b]
@@ -19317,28 +19303,22 @@ l_e708:
 	move.b	(a0),d0                         	| [$e725: lda	$001d]
 	lsr.b	#1,d0                            	| [$e727: lsr a]
 	move.b	d0,d1                           	| [$e728: tax]
-	GET_ADDRESS	0xf2fa                     	| [$e729: lda	$f2fa, y]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$e729: lda	$f2fa, y]
 	move.b	(a0,d2.w),d0                    	| [$e729: lda	$f2fa, y]
-	PUSH_SR
 	GET_ADDRESS	0x09d9                     	| [$e72c: sta	$09d9, x]
     move.b	d0,(a0,d1.w)                 	| [$e72c: sta	$09d9, x]
-	POP_SR
 	addq.b	#1,d2                           	| [$e72f: iny]
 	addq.b	#1,d1                           	| [$e730: inx]
-	GET_ADDRESS	0xf2fa                     	| [$e731: lda	$f2fa, y]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$e731: lda	$f2fa, y]
 	move.b	(a0,d2.w),d0                    	| [$e731: lda	$f2fa, y]
-	PUSH_SR
 	GET_ADDRESS	0x09d9                     	| [$e734: sta	$09d9, x]
     move.b	d0,(a0,d1.w)                 	| [$e734: sta	$09d9, x]
-	POP_SR
 	addq.b	#1,d2                           	| [$e737: iny]
 	addq.b	#1,d1                           	| [$e738: inx]
-	GET_ADDRESS	0xf2fa                     	| [$e739: lda	$f2fa, y]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$e739: lda	$f2fa, y]
 	move.b	(a0,d2.w),d0                    	| [$e739: lda	$f2fa, y]
-	PUSH_SR
 	GET_ADDRESS	0x09d9                     	| [$e73c: sta	$09d9, x]
     move.b	d0,(a0,d1.w)                 	| [$e73c: sta	$09d9, x]
-	POP_SR
 	addq.b	#1,d2                           	| [$e73f: iny]
 	addq.b	#1,d1                           	| [$e740: inx]
 	cmp.b	#0x60,d2                         	| [$e741: cpy #$60]
@@ -21728,25 +21708,25 @@ l_f277:
 	clr.b	d1                               	| [$f281: ldx #$00]
 	clr.b	d2                               	| [$f283: ldy #$00]
 l_f285:
-	GET_ADDRESS	0xf2fa                     	| [$f285: lda	$f2fa, x]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$f285: lda	$f2fa, x]
 	move.b	(a0,d1.w),d0                    	| [$f285: lda	$f2fa, x]
 	addq.b	#1,d1                           	| [$f288: inx]
 	jbsr	l_f2cf                            	| [$f289: jsr	$f2cf]
-	GET_ADDRESS	0xf2fa                     	| [$f28c: lda	$f2fa, x]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$f28c: lda	$f2fa, x]
 	move.b	(a0,d1.w),d0                    	| [$f28c: lda	$f2fa, x]
 	addq.b	#1,d1                           	| [$f28f: inx]
 	jbsr	l_f2cf                            	| [$f290: jsr	$f2cf]
-	GET_ADDRESS	0xf2fa                     	| [$f293: lda	$f2fa, x]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$f293: lda	$f2fa, x]
 	move.b	(a0,d1.w),d0                    	| [$f293: lda	$f2fa, x]
 	addq.b	#1,d1                           	| [$f296: inx]
 	jbsr	l_f2cf                            	| [$f297: jsr	$f2cf]
-	GET_ADDRESS	0xf2fa                     	| [$f29a: lda	$f2fa, x]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$f29a: lda	$f2fa, x]
 	move.b	(a0,d1.w),d0                    	| [$f29a: lda	$f2fa, x]
 	addq.b	#1,d1                           	| [$f29d: inx]
 	jbsr	l_f0ed                            	| [$f29e: jsr	$f0ed]
 	GET_ADDRESS	0x0061                     	| [$f2a1: sta	$0061]
 	move.b	d0,(a0)                         	| [$f2a1: sta	$0061]
-	GET_ADDRESS	0xf2fa                     	| [$f2a3: lda	$f2fa, x]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$f2a3: lda	$f2fa, x]
 	move.b	(a0,d1.w),d0                    	| [$f2a3: lda	$f2fa, x]
 	addq.b	#1,d1                           	| [$f2a6: inx]
 	jbsr	l_f0ed                            	| [$f2a7: jsr	$f0ed]
@@ -21762,7 +21742,7 @@ l_f285:
 	move.b	d4,(a0)	| [$f2b1: rol	$0061]
 	GET_ADDRESS	0x0062                     	| [$f2b3: sta	$0062]
 	move.b	d0,(a0)                         	| [$f2b3: sta	$0062]
-	GET_ADDRESS	0xf2fa                     	| [$f2b5: lda	$f2fa, x]
+	GET_ADDRESS	default_highscore_table_f2fa                     	| [$f2b5: lda	$f2fa, x]
 	move.b	(a0,d1.w),d0                    	| [$f2b5: lda	$f2fa, x]
 	addq.b	#1,d1                           	| [$f2b8: inx]
 	jbsr	l_f0ed                            	| [$f2b9: jsr	$f0ed]

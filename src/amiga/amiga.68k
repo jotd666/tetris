@@ -507,7 +507,6 @@ _nmi:
 	rts
 			
 _int1:
-	move.w	#0,0x200
     movem.l d0-d7/a0-a6,-(a7)
 	lea		_custom,a5	
 	move.w	#0x2700,SR		| don't let any other interrupt, as there is one shared irq routine
@@ -691,22 +690,25 @@ osd_set_palette_entry:
 	move.w	(sp)+,d0
 	rts
 	
-
+* < D0: value to write
+* < A0: address (minus 0x2800)
 osd_write_audio_pokey:
 	movem.l	d0-d5/a0/a1/a6,-(a7)
 	lea		_custom,a6
 	moveq	#0,d4
 	move.w	a0,d1
-	lsr	#1,d1
-	jcs	0f
-	btst	#3,d1
+
+	btst	#4,d1
 	beq.b	1f
 	* second pokey
-	bclr	#3,d1
+	bclr	#4,d1
 	st.b	d4
 1:
+	
+	lsr	#1,d1
+	jcs	4f		| channel AUDC
 	cmp.w	#4,d1
-	jcc	0f		| audio control 28x8 => skip
+	jcc	5f		| main audio control 28x8
 	moveq	#0,d2
 	* was even, now d1 is the channel number
 	* stop previous sound on that channel
@@ -723,6 +725,9 @@ osd_write_audio_pokey:
 	addq.w	#4,a0
 	addq	#2,d5
 1:
+	cmp.b	#3,d5
+	beq.b	0f		| 4th channel is managed some other way, not music!
+	
 	* store freq nibble
 	bchg	#0,d1
 	cmp.b	(a0,d1.w),d2
@@ -747,7 +752,7 @@ osd_write_audio_pokey:
 	bcc.b	1f
 	* switch to very high
 	lea		very_high_channel_table(pc),a1
-	move.b	#65,d1		| wrong
+	move.b	#65/2,d1
 
 1:
 	move.w	d2,d0		| save it
@@ -779,6 +784,25 @@ osd_write_audio_pokey:
 3:
 	move.b	d5,d0		| channel
 	jsr		_mt_stopfx
+	bra.b	0b
+4:
+	* channel control: D1 contains channel 0-1
+	* d4 set: second pokey
+	bra.b	0b
+	tst.b	d0
+	bne.b	0b
+	tst.b	d4
+	beq.b	41f
+	addq	#2,d1
+41:
+	* write 0 into channel control: stop sound on that channel
+	moveq	#0,d0
+	move.b	d1,d0
+	jsr		_mt_stopfx
+	bra.b	0b
+5:
+	* main control
+	
 	bra.b	0b
 	
 	* the only inreresting thing here is VBLANK flag
