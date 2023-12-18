@@ -1,4 +1,5 @@
-- 50Hz => 60Hz
+- check VBR?
+- crash on A1200 floppy
 - write to pokey audio control to stop sound between stages: doesn't work see how game
   cuts sound
   write 0: stop sound, store control value

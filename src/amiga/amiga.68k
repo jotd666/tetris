@@ -129,6 +129,7 @@ start:
 		.global	osd_get_random
 		.global	osd_wait
 		.global	osd_set_palette_entry
+		.global	osd_get_palette_entry
 		.global	osd_write_audio_pokey
 		.global	osd_read_pokey1
 		.global	osd_read_pokey2
@@ -661,6 +662,31 @@ osd_set_palette_entry:
 	move.w	(a1,d0.w),(a0)
 	movem.l	(sp)+,a0/a1
 	move.w	(sp)+,d0
+	rts
+	
+* < A0.W: palette index
+* > D0: new palette value
+*  xxxxxxxx    Palette RAM
+*  xxx----        (red component)
+*  ---xxx--       (green component)
+*  ------xx       (blue component)
+
+osd_get_palette_entry:
+	.ifndef	RELEASE
+	cmp.w	#0x100,a0
+	bcs.b	0f
+	move.l	a0,a1
+	lea		read_palette_out_of_range_error(pc),a0
+	jbsr	osd_break
+	.endif
+0:
+	movem.l	a0/a1,-(sp)
+	* get raw palette color value (maybe re-read later?)
+	lea		palette_entries,a1
+	move.b	(a1,a0.w),d0
+	
+	movem.l	(sp)+,a0/a1
+	tst.b	d0
 	rts
 	
 osd_get_random:
@@ -1805,6 +1831,8 @@ write_videoram_out_of_range_error:
 	.asciz	"write videoram out of range"
 write_palette_out_of_range_error:
 	.asciz	"write palette out of range"
+read_palette_out_of_range_error:
+	.asciz	"read palette out of range"
 write_colorram_called_on_even_address:
 	.asciz	"write colorram on even address"
 
