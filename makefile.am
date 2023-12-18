@@ -32,8 +32,7 @@ WHDASM = vasmm68k_mot -DDATETIME -I$(HDBASE)/amiga39_JFF_OS/include -I$(WHDBASE)
 
 
 # leave MAIN_OBJ first
-#OBJS =  sounds.o $(PROGNAME).o vbr.o ReadJoyPad.o ptplayer.o 
-OBJS = $(MAIN_OBJ) $(PROGNAME).o eeprom_2400.o vbr.o tetris_rom.o graphics.o tetris_ram.o ReadJoyPad.o ptplayer.o 
+OBJS = $(MAIN_OBJ) pokey.o $(PROGNAME).o eeprom_2400.o vbr.o tetris_rom.o graphics.o tetris_ram.o ReadJoyPad.o ptplayer.o 
 #all: $(AMIGASRC)/graphics.68k $(AMIGASRC)/sounds.68k $(MAIN) $(WHDLOADER) $(WHDLOADER_CHIP)
 all: $(AMIGASRC)/graphics.68k $(MAIN) $(WHDLOADER) $(WHDLOADER_CHIP)
 
@@ -64,6 +63,8 @@ vbr.o: $(AMIGASRC)/vbr.68k
 	$(ASM_020) -Iamiga $(AMIGASRC)/vbr.68k -o vbr.o
 ptplayer.o: $(AMIGASRC)/ptplayer.68k
 	$(ASM) -I$(AMIGASRC) $(AMIGASRC)/ptplayer.68k -o ptplayer.o
+pokey.o: $(AMIGASRC)/pokey.68k
+	$(ASM) -I$(AMIGASRC) $(AMIGASRC)/pokey.68k -o pokey.o
 sounds.o: $(AMIGASRC)/sounds.68k
 	$(ASM) -I$(AMIGASRC) $(AMIGASRC)/sounds.68k -o sounds.o
 ReadJoyPad.o: $(AMIGASRC)/ReadJoyPad.68k amiga/ReadJoyPad.i
