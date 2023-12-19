@@ -1,22 +1,22 @@
 * original source code from PokeyNoise-SAP
 * by Achim Haertel AKA Harry
-* adapted by JOTD to 68k as
+* adapted by JOTD to just evaluate contents of pokey(s)
+* and play
 *
 * only pokey emulation & sound replay was kept,
 * 6502 code and exe load was removed
 
 	.include	"custom.i"
-
+	.global		evaluate_pokey_registers
+	.global		update_sound
 *!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 *here sound evaluation from 8-bit to amiga
 
-EVAL:
-	*MOVE.L	AREA(PC),A5
-	*MOVE.L	#0xD200,D0
-*in a5 begin pokeychip 0xd200(atari)
-	LEA.L	0(A5,D0.L),A5
+* < A5: pokey registers
+
+evaluate_pokey_registers:
 *in a4 channeladress
 	MOVE.L	A5,A4
 
@@ -1817,7 +1817,7 @@ PCSTORE:
 *  will be >15 ms it will be entered instantly, .else there will be 
 *  waited for the audio int, this reduces the clicks significantly
 *  (and keeps the real bass sound eg on Draconus, Storm)
-SND:
+update_sound:
 1:
 	LEA.L	CH0SMPL(PC),A0
 	LEA.L	0xDFF0A0,A1

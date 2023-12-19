@@ -695,6 +695,7 @@ osd_get_random:
 	and.l	#0xFF,d0
 	rts
 	
+
 * < D0: value to write
 * < A0: address (minus 0x2800)
 osd_write_audio_pokey:
@@ -1952,6 +1953,7 @@ floppy_file:
 	.byte	0
 temp_filename_buffer:
 	ds.b	255
+	
 	
 pokey_master_control:
 	.byte	0,0

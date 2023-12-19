@@ -1,5 +1,5 @@
 # tetris
-transcode of Atari Tetris arcade version for 68000/amiga
+transcode of Atari Tetris arcade version for 68020/AGA amiga
 
 Credits:
 
