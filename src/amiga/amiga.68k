@@ -519,7 +519,9 @@ _int1:
 	clr.b	is_vblank
 	* call IRQ for music (250 calls/second)
 	jsr		tetris_irq
-	
+
+	lea		_custom,a5		
+	move.w	#0x4,(intreq,a5)		| ack
 	move.w	#0x4,(intreq,a5)		| ack
     movem.l (a7)+,d0-d7/a0-a6
 	rte
@@ -664,30 +666,6 @@ osd_set_palette_entry:
 	move.w	(sp)+,d0
 	rts
 	
-* < A0.W: palette index
-* > D0: new palette value
-*  xxxxxxxx    Palette RAM
-*  xxx----        (red component)
-*  ---xxx--       (green component)
-*  ------xx       (blue component)
-
-osd_get_palette_entry:
-	.ifndef	RELEASE
-	cmp.w	#0x100,a0
-	bcs.b	0f
-	move.l	a0,a1
-	lea		read_palette_out_of_range_error(pc),a0
-	jbsr	osd_break
-	.endif
-0:
-	movem.l	a0/a1,-(sp)
-	* get raw palette color value (maybe re-read later?)
-	lea		palette_entries,a1
-	move.b	(a1,a0.w),d0
-	
-	movem.l	(sp)+,a0/a1
-	tst.b	d0
-	rts
 	
 osd_get_random:
 	movem.l	d1-d3,-(a7)
@@ -720,7 +698,7 @@ osd_get_random:
 * < D0: value to write
 * < A0: address (minus 0x2800)
 osd_write_audio_pokey:
-	movem.l	d0-d5/a0/a1/a6,-(a7)
+	movem.l	d0-d5/a0/a1/a5/a6,-(a7)
 	lea		_custom,a6
 	moveq	#0,d4
 	move.w	a0,d1
@@ -807,7 +785,7 @@ osd_write_audio_pokey:
 	jsr		_mt_loopfx
 	
 0:
-	movem.l	(a7)+,d0-d5/a0/a1/a6
+	movem.l	(a7)+,d0-d5/a0/a1/a5/a6
 	rts
 3:
 	move.b	d5,d0		| channel

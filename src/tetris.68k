@@ -338,19 +338,19 @@ coin_counters_3C00 = 0x3C00
 
 	* doesn't check anything, but osd_w_colorram will
 	.macro GET_SCREEN_ADDRESS_Y	offset
-	lea	game_ram+\offset,a0
+	lea	(a5,\offset),a0
 	READ_LE_WORD	a0
 	add.w	d2,a0
 	.endm
 	
 	.macro GET_UNCHECKED_ADDRESS_Y	offset
-	lea	game_ram+\offset,a0
+	lea	(a5,\offset),a0
 	READ_LE_WORD	a0
 	.endm
 	
 	* doesn't check anything, but osd_set_palette_entry will
 	.macro GET_PALETTE_ADDRESS_Y	offset
-	lea	game_ram+\offset,a0
+	lea	(a5,\offset),a0
 	READ_LE_WORD	a0
 	* read some address between 0x2000 and 0x2100, center on 0-0x100
 	sub.w	#0x2000,a0
@@ -366,11 +366,8 @@ cpu_init:
 	moveq	#0,d0
 	moveq	#0,d1
 	moveq	#0,d2
-	moveq	#0,d3
-	moveq	#0,d4
-	moveq	#0,d5
-	moveq	#0,d6
-	moveq	#0,d7
+	lea		rom_8000-0X8000,a6
+	lea		game_ram,a5
 	rts
 
 * < A0: offset
@@ -380,7 +377,7 @@ get_address:
 	cmp.w	#0x1000,a0
 	bcc.b	0f
 	* RAM
-	add.l	#game_ram,a0
+	add.l	a5,a0
 	POP_SR
 	rts
 0:
@@ -431,7 +428,7 @@ get_address:
 	rts
 1:
 	* above 0x8000: ROM
-	add.l	#rom_8000-0X8000,a0
+	add.l	a6,a0
 	POP_SR
 	rts
 
@@ -17613,14 +17610,16 @@ l_d6db:
 tetris_irq:
 periodic_interrupt_D70E:
 * save registers
-	move.w	d0,-(sp)                        	| [$d70e: pha]
-	                           	| [$d70f: txa]
-	move.w	d1,-(sp)                        	| [$d710: pha]
-	                           	| [$d711: tya]
-	move.w	d2,-(sp)                        	| [$d712: pha]
-	* we have to clear the X,Y registers as they're used for indexing
-	clr.w	d1
-	clr.w	d2
+	* no need to save registers, OS part has to do it anyway
+	*move.w	d0,-(sp)                        	| [$d70e: pha]
+	*                           	| [$d70f: txa]
+	*move.w	d1,-(sp)                        	| [$d710: pha]
+	*                           	| [$d711: tya]
+	*move.w	d2,-(sp)                        	| [$d712: pha]
+	* we have to clear the X,Y registers as they're used for indexing,
+	* and also set address pointers
+	jbsr		cpu_init
+
 * copy first byte of rom bank in first_byte_of_bank_000d
 	GET_ADDRESS	0x4000                     	| [$d713: lda	$4000]
 	move.b	(a0),d0                         	| [$d713: lda	$4000]
@@ -17846,11 +17845,11 @@ l_d7fb:
 	        	| [$d807: sta	$3800]
 	
 * restore registers, end of interrupt
-	move.w	(sp)+,d2                        	| [$d80a: pla]
-                          	| [$d80b: tay]
-	move.w	(sp)+,d1                        	| [$d80c: pla]
-                           	| [$d80d: tax]
-	move.w	(sp)+,d0                        	| [$d80e: pla]
+	*move.w	(sp)+,d2                        	| [$d80a: pla]
+    *                      	| [$d80b: tay]
+	*move.w	(sp)+,d1                        	| [$d80c: pla]
+    *                       	| [$d80d: tax]
+	*move.w	(sp)+,d0                        	| [$d80e: pla]
 	rts
 
 * switch to bank 1 (not sure but probably, yes)
