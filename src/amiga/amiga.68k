@@ -767,11 +767,17 @@ osd_write_audio_pokey:
 	
 	divu	d1,d2
 
-
-	* stop sfx now
-	move.w	d0,-(a7)
-	jsr		_mt_stopfx
-	move.w	(a7)+,d0
+	* don't stop loop now it only makes things worse
+	
+	* if pokey_master_control is not 0x78 don't play tune
+	
+*	lea	pokey_master_control(pc),a0
+*	tst.b	d4
+*	beq.b	11f
+*	addq	#1,a0		| second pokey
+*11:
+*	cmp.b	#0x78,(a0)
+*	jne		0f
 	
 	move.l	(a1,d3.w*4),a0
 	* set full frequency
@@ -817,7 +823,7 @@ osd_write_audio_pokey:
 	lea	pokey_master_control(pc),a0
 	tst.b	d4
 	beq.b	6f
-	addq	#1,a0
+	addq	#1,a0		| second pokey
 6:
 	move.b	d0,(a0)
 	bra.b	0b
