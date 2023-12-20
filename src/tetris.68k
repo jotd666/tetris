@@ -785,16 +785,22 @@ l_413e:
 * < D0: enumerate to send a "play music" or "play sfx" order
 * tunes can be listened to at https://vgmrips.net/packs/pack/tetris-atari-arcade
 * 0x00: stop all sounds
-* 0x03: "pokey" tune
-* 0x04: "pokey" tune
+* 0x03: "pokey" tune (not possible during game!)
+* 0x04: "pokey" tune ("")
 * 0x05: Loginska tune
 * 0x06: Bradinsky tune
+* 0x07: Kalinka tune
+* 0x08: Troika tune
 * 0x09: stop sound!
 * 0x0D: game over
+* 0x0F: hopiak (round 9 dance)
 * 0x12: shape hits floor (crunch sound)
 * 0x13: credit inserted
+* 0x15: "ping" when selecting start level
 * 0x16: line completed
-* 
+* 0x19/0x1B: sound when computing puzzle height at end of round
+* 0x1A: "completed" music?
+
 set_sound_event_4141:
 	PUSH_SR                                	| [$4141: php]
 	SET_I_FLAG                             	| [$4142: sei]	handled
@@ -811,21 +817,118 @@ l_414d:
 	GET_ADDRESS	fallen_shape_counter_prev_0c10                     	| [$4150: cpy	$0c10]
 	cmp.b	(a0),d2                          	| [$4150: cpy	$0c10]
 	bne	l_4159                             	| [$4153: bne	$4159]
+0:
 	st.b	d0                                	| [$4155: lda #$ff]
 	POP_SR                                 	| [$4157: plp]
 	CLR_I_FLAG
 	rts                                    	| [$4158: rts]
 l_4159:
+	lea 	extra_sound_event_table(pc),a0
+	move.b	d0,d4
+	add.b	d0,d0
+	add.b	d0,d0
+	move.l	(a0,d0.w),a0
+	jsr		(a0)
+	*tst.b	d0
+	*bne.b	0f
+	* stored to set a new sound event only if d0=0
 	GET_ADDRESS	sound_event_0c00                     	| [$4159: sta	$0c00, y]
-    move.b	d0,(a0,d2.w)                 	| [$4159: sta	$0c00, y]
-	cmp.b	#9,d0
-	bne.b	0f
-	jbsr	osd_sound_stop
+    move.b	d4,(a0,d2.w)                 	| [$4159: sta	$0c00, y]
 0:
 	clr.b	d0                               	| [$415c: lda #$00]
 	POP_SR                                 	| [$415e: plp]
 	CLR_I_FLAG
 	rts                                    	| [$415f: rts]
+	* I hope there are enough entries :)
+extra_sound_event_table:
+	.long	do_stop_sound		                | 00: stop
+	.long	do_rts				                | 01
+	.long	do_rts				                | 02
+	.long	do_rts                              | 03
+	.long	do_rts                              | 04
+	.long	do_rts                              | 05
+	.long	do_rts                              | 06
+	.long	do_rts                              | 07
+	.long	do_rts                              | 08
+	.long	do_stop_sound                      | 09: stop
+	.long	do_rts                              | 0A
+	.long	do_rts                              | 0B
+	.long	do_rts                              | 0C
+	.long	do_rts                              | 0D
+	.long	do_rts                              | 0E
+	.long	do_rts                              | 0F
+	.long	do_rts                              | 10
+	.long	do_rts                              | 11
+	.long	play_shape_hits_floor_sound         | 12
+	.long	play_credit_inserted_sound          | 13
+	.long	do_rts                              | 14
+	.long	play_level_select_sound             | 15
+	.long	play_line_completed                 | 16
+	.long	do_rts                              | 17
+	.long	do_rts                              | 18
+	.long	do_rts                              | 19
+	.long	do_rts                              | 1A
+	.long	do_rts                              | 1B
+	.long	do_rts                              | 1C
+	.long	do_rts                              | 1D
+	.long	do_rts                              | 1E
+	.long	do_rts                              | 1F
+	.long	do_rts                              | 
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts                              |
+	.long	do_rts
+	.long	do_rts
+	.long	do_rts
+	.long	do_rts
+	.long	do_rts
+	.long	do_rts
+	.long	do_rts
+	.long	do_rts
+	.long	do_rts
+	.long	do_rts
+	.long	do_rts
+	.long	do_rts
 	
 * plays crunch sound when shape has fallen, but also stops music if
 * level complete and plays level complete sound/music
@@ -852,6 +955,25 @@ handle_new_shape_fallen_sound_4160:
 l_4178:
 	rts                                    	| [$4178: rts]
 	
+do_stop_sound:
+	jbsr	osd_sound_stop
+	moveq	#0,d0
+	rts
+do_rts:
+	moveq	#0,d0
+	rts
+play_level_select_sound:
+	moveq	#1,d0
+	rts
+play_line_completed:
+	moveq	#1,d0
+	rts
+play_shape_hits_floor_sound:
+	moveq	#1,d0
+	rts
+play_credit_inserted_sound:
+	moveq	#1,d0
+	rts
 	
 jump_table_44ac:
 	.long	l_4179

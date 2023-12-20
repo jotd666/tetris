@@ -786,6 +786,12 @@ osd_write_audio_pokey:
 	bcc.b	2f
 	move.b	#1,0x200
 2:
+	lea	pokey_channel_control(pc),a1
+	move.b	(a1,d5.w),d1
+	and.w	#0xF,d1
+	beq.b	0f
+	lsl.w	#2,d1	| amp from 16 to 64 max
+	move.w	d1,(se_soundvol.w,a0)
 	move.w	d2,(se_soundfreq.w,a0)
 	moveq	#0,d0
 	move.b	d5,d0		| channel
@@ -811,12 +817,7 @@ osd_write_audio_pokey:
 	bcc.b	0b
 	lea	pokey_channel_control(pc),a0
 	move.b	d0,(a0,d1.w)
-	lsl.w	#4,d1
-	add.w	#aud+ac_vol,d1
-	and.w	#0xF,d0
-	lsl.w	#2,d0
-	beq.b	0b
-	move.w	d0,(a5,d1.w)		| change volume
+
 	bra.b	0b
 5:
 	* main control
