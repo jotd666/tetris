@@ -823,6 +823,10 @@ l_414d:
 	CLR_I_FLAG
 	rts                                    	| [$4158: rts]
 l_4159:
+* break and play "pokey" test song
+*	jbsr	osd_break
+*	move.b	#3,d4		| temp
+*	bra.b	2f
 	lea 	extra_sound_event_table(pc),a0
 	move.b	d0,d4
 	add.b	d0,d0
@@ -831,6 +835,8 @@ l_4159:
 	jsr		(a0)
 	tst.b	d0
 	bne.b	1f
+	
+2:	
 	* stored to set a new sound event only if d0=0
 	GET_ADDRESS	sound_event_0c00                     	| [$4159: sta	$0c00, y]
     move.b	d4,(a0,d2.w)                 	| [$4159: sta	$0c00, y]
@@ -2886,7 +2892,7 @@ l_49cc:
 	bpl	l_49da                             	| [$49d3: bpl	$49da]
 	not.b	d0                               	| [$49d5: eor #$ff]
 	                           	| [$49d7: clc]
-	add.b	#0x01,d0                        	| [$49d8: adc #$01]
+	addq.b	#0x01,d0                        	| [$49d8: adc #$01]
 l_49da:
 	jbsr	l_4cca                            	| [$49da: jsr	$4cca]
 	st.b	d2                                	| [$49dd: ldy #$ff]
