@@ -46,29 +46,10 @@
 * sound ordinals
 
 
-
-	.equ	GUARD_KILLED_SND,                     0
-	.equ	PICKAXE_SND,                          1
-	.equ	PLAYER_CLIMB_SND,                     2
-	.equ	PLAYER_WALK_SND,                      3
-	.equ	PLAYER_KILLED_TALK_SND,               4
-	.equ	REWARD_TALK_SND,                      5
-	.equ	FALL_IN_WAGON_SND,                    6
-	.equ	PLAYER_GRABS_HANDLE_SND,              7
-	.equ	BOMB_SND,                             8
-	.equ	SHOT_SND,                             9
-	.equ	CREDIT_SND,                           10
-	.equ	TIME_WARN_SND,                        11
-	.equ	TAKE_BAG_SND,                         12
-	.equ	REWARD_TUNE_SND,                      13
-	.equ	PLAYER_KILLED_TUNE_SND,     		  14
-	.equ	TUNE1_SND,			                  15
-	.equ	TUNE2_SND,			                  16
-	* same as player climb/walk only less loud
-	.equ	GUARD_CLIMB_SND,                      17
-	.equ	GUARD_WALK_SND,                       18
-	* same as player climb sound
-	.equ	TYPING_SND,                      19
+	.equ	FALL_SND,                     0
+	.equ	LINE_SND,                          1
+	.equ	PING_SND,                     2
+	.equ	START_SND,                      3
 
 
 

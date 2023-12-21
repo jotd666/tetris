@@ -790,7 +790,7 @@ osd_write_audio_pokey:
 	move.b	(a1,d5.w),d1
 	and.w	#0xF,d1
 	beq.b	0f
-	lsl.w	#2,d1	| amp from 16 to 64 max
+	lsl.w	#1,d1	| amp from 16 to 32 max
 	move.w	d1,(se_soundvol.w,a0)
 	move.w	d2,(se_soundfreq.w,a0)
 	moveq	#0,d0
@@ -927,14 +927,12 @@ osd_read_pokey2:
 	
 osd_sound_start:
 	movem.l	d0/d1/a0/a6,-(a7)
-	tst.b	d0
-	jmi	7f		| should stop the sound
 	and.w	#0xFF,d0
 	lea		_custom,a6
 	
 	
 	lsl.w	#3,d0
-	*lea		sound_table,a0
+	lea		sound_table,a0
 
 	move.w	(a0,d0.w),d1	| sound type
 	beq.b	0f		| no sound
@@ -959,12 +957,6 @@ osd_sound_start:
 	bra.b	1b
 	* music
 4:
-	* don't play if game not in play
-	* could have been handled at generic tetris.68k level
-	* but it's way simpler here. I suppose than the real game
-	* just turns music volume off to get away with it
-	*tst.b	game_playing_8817
-	*beq.b	1b
 	
 	* don't play if already playing
 	* (music_tick value is not important for looped tunes
@@ -1660,7 +1652,9 @@ sound_test_xx:
 	blitz
 	rts
 	
-    .macro    SOUND_ENTRY    sound_name,size,channel,soundfreq,volume,priority
+	.include	"sound_entries.68k"
+	
+    .macro    WAVEFORM_ENTRY    sound_name,size,channel,soundfreq,volume,priority
 \sound_name\()_sound_\channel:
     .long    \sound_name
     .word   \size/2
@@ -1669,18 +1663,18 @@ sound_test_xx:
     .byte    \priority
     .endm
 	
-	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,0,400,64,1
-	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,1,400,64,1
-	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,2,400,64,1
-	SOUND_ENTRY		TRI_WFORM_MEDIUM,28,3,400,64,1
-	SOUND_ENTRY		TRI_WFORM_HIGH,16,0,400,64,1
-	SOUND_ENTRY		TRI_WFORM_HIGH,16,1,400,64,1
-	SOUND_ENTRY		TRI_WFORM_HIGH,16,2,400,64,1
-	SOUND_ENTRY		TRI_WFORM_HIGH,16,3,400,64,1
-	SOUND_ENTRY		TRI_WFORM_VERYHIGH,10,0,400,64,1
-	SOUND_ENTRY		TRI_WFORM_VERYHIGH,10,1,400,64,1
-	SOUND_ENTRY		TRI_WFORM_VERYHIGH,10,2,400,64,1
-	SOUND_ENTRY		TRI_WFORM_VERYHIGH,10,3,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_MEDIUM,28,0,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_MEDIUM,28,1,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_MEDIUM,28,2,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_MEDIUM,28,3,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_HIGH,16,0,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_HIGH,16,1,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_HIGH,16,2,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_HIGH,16,3,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_VERYHIGH,10,0,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_VERYHIGH,10,1,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_VERYHIGH,10,2,400,64,1
+	WAVEFORM_ENTRY		TRI_WFORM_VERYHIGH,10,3,400,64,1
 
 medium_channel_table:
 	.long	TRI_WFORM_MEDIUM_sound_0

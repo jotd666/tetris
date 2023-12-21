@@ -153,8 +153,8 @@ zero_to_seven_palette_index_counter_0642 = 0x0642
 pokey1_state_copy_0700 = 0x0700
 
 sound_event_0c00 = 0x0C00
-fallen_shape_counter_prev_0c10 = 0x0C10
-fallen_shape_counter_0c11 = 0x0C11
+sound_event_counter_prev_0c10 = 0x0C10
+sound_event_counter_0c11 = 0x0C11
 
 music_pointers_lsb_0c2f = 0xc2f
 music_pointers_msb_0c39 = 0x0c39
@@ -487,9 +487,9 @@ handle_music_4004:
 	* values as before...
 	GET_ADDRESS	0x00ca                     	| [$4004: inc	$00ca]
 	addq.b	#1,(a0)                         	| [$4004: inc	$00ca]
-	GET_ADDRESS	fallen_shape_counter_prev_0c10                     	| [$4006: ldx	$0c10]
+	GET_ADDRESS	sound_event_counter_prev_0c10                     	| [$4006: ldx	$0c10]
 	move.b	(a0),d1                         	| [$4006: ldx	$0c10]
-	GET_ADDRESS	fallen_shape_counter_0c11                     	| [$4009: cpx	$0c11]
+	GET_ADDRESS	sound_event_counter_0c11                     	| [$4009: cpx	$0c11]
 	cmp.b	(a0),d1                            	| [$4009: cpx	$0c11]
 	beq	l_401e                             	| [$400c: beq	$401e]
 	addq.b	#1,d1                           	| [$400e: inx]
@@ -498,13 +498,13 @@ handle_music_4004:
 	bcs	l_4015                             	| [$4011: bcc	$4015]
 	clr.b	d1                               	| [$4013: ldx #$00]
 l_4015:
-	* counters go from 0 to F when a shape falls
+	* counters go from 0 to F when a sound is played
 	* numbers are different: play sound then equalize them
-	GET_ADDRESS	fallen_shape_counter_prev_0c10                     	| [$4015: stx	$0c10]
+	GET_ADDRESS	sound_event_counter_prev_0c10                     	| [$4015: stx	$0c10]
 	move.b	d1,(a0)                         	| [$4015: stx	$0c10]
 	GET_ADDRESS	sound_event_0c00                     	| [$4018: ldy	$0c00, x]
 	move.b	(a0,d1.w),d2                    	| [$4018: ldy	$0c00, x]
-	jbsr	handle_new_shape_fallen_sound_4160             	| [$401b: jsr	$4160]
+	jbsr	handle_new_sound_4160             	| [$401b: jsr	$4160]
 l_401e:
 	GET_ADDRESS	0x00ca                     	| [$401e: lda	$00ca]
 	move.b	(a0),d0                         	| [$401e: lda	$00ca]
@@ -527,9 +527,9 @@ l_402d:
 	move.b	d0,(a0)                         	| [$4037: sta	$0c23]
 	GET_ADDRESS	0x0c24                     	| [$403a: sta	$0c24]
 	move.b	d0,(a0)                         	| [$403a: sta	$0c24]
-	GET_ADDRESS	fallen_shape_counter_prev_0c10                     	| [$403d: sta	$0c10]
+	GET_ADDRESS	sound_event_counter_prev_0c10                     	| [$403d: sta	$0c10]
 	move.b	d0,(a0)                         	| [$403d: sta	$0c10]
-	GET_ADDRESS	fallen_shape_counter_0c11                     	| [$4040: sta	$0c11]
+	GET_ADDRESS	sound_event_counter_0c11                     	| [$4040: sta	$0c11]
 	move.b	d0,(a0)                         	| [$4040: sta	$0c11]
 	
 	move.b	#0x11,d1                        	| [$4043: ldx #$11]
@@ -804,7 +804,7 @@ l_413e:
 set_sound_event_4141:
 	PUSH_SR                                	| [$4141: php]
 	SET_I_FLAG                             	| [$4142: sei]	handled
-	GET_ADDRESS	fallen_shape_counter_0c11                     	| [$4143: ldy	$0c11]
+	GET_ADDRESS	sound_event_counter_0c11                     	| [$4143: ldy	$0c11]
 	move.b	(a0),d2                         	| [$4143: ldy	$0c11]
 	addq.b	#1,d2                           	| [$4146: iny]
 	cmp.b	#0x10,d2                         	| [$4147: cpy #$10]
@@ -812,9 +812,9 @@ set_sound_event_4141:
 	bcs	l_414d                             	| [$4149: bcc	$414d]
 	clr.b	d2                               	| [$414b: ldy #$00]
 l_414d:
-	GET_ADDRESS	fallen_shape_counter_0c11                     	| [$414d: sty	$0c11]
+	GET_ADDRESS	sound_event_counter_0c11                     	| [$414d: sty	$0c11]
 	move.b	d2,(a0)                         	| [$414d: sty	$0c11]
-	GET_ADDRESS	fallen_shape_counter_prev_0c10                     	| [$4150: cpy	$0c10]
+	GET_ADDRESS	sound_event_counter_prev_0c10                     	| [$4150: cpy	$0c10]
 	cmp.b	(a0),d2                          	| [$4150: cpy	$0c10]
 	bne	l_4159                             	| [$4153: bne	$4159]
 0:
@@ -829,16 +829,24 @@ l_4159:
 	add.b	d0,d0
 	move.l	(a0,d0.w),a0
 	jsr		(a0)
-	*tst.b	d0
-	*bne.b	0f
+	tst.b	d0
+	bne.b	1f
 	* stored to set a new sound event only if d0=0
 	GET_ADDRESS	sound_event_0c00                     	| [$4159: sta	$0c00, y]
     move.b	d4,(a0,d2.w)                 	| [$4159: sta	$0c00, y]
-0:
 	clr.b	d0                               	| [$415c: lda #$00]
 	POP_SR                                 	| [$415e: plp]
 	CLR_I_FLAG
 	rts                                    	| [$415f: rts]
+1:
+	* equalize values but don't play sound as far as the original
+	* sound engine is concerned
+	GET_ADDRESS	sound_event_counter_0c11       
+	move.b	(a0),d4
+	GET_ADDRESS	sound_event_counter_prev_0c10  
+	move.b	d4,(a0)                          	
+	jra	0b
+	
 	* I hope there are enough entries :)
 extra_sound_event_table:
 	.long	do_stop_sound		                | 00: stop
@@ -932,7 +940,7 @@ extra_sound_event_table:
 	
 * plays crunch sound when shape has fallen, but also stops music if
 * level complete and plays level complete sound/music
-handle_new_shape_fallen_sound_4160:
+handle_new_sound_4160:
 	cmp.b	#0x1d,d2                         	| [$4160: cpy #$1d]
 	* bcs=>bcc
 	bcc	l_4178                             	| [$4162: bcs	$4178]
@@ -963,15 +971,23 @@ do_rts:
 	moveq	#0,d0
 	rts
 play_level_select_sound:
+	move.w	#PING_SND,d0
+	jbsr	osd_sound_start
 	moveq	#1,d0
 	rts
 play_line_completed:
+	move.w	#LINE_SND,d0
+	jbsr	osd_sound_start
 	moveq	#1,d0
 	rts
 play_shape_hits_floor_sound:
+	move.w	#FALL_SND,d0
+	jbsr	osd_sound_start
 	moveq	#1,d0
 	rts
 play_credit_inserted_sound:
+	move.w	#START_SND,d0
+	jbsr	osd_sound_start
 	moveq	#1,d0
 	rts
 	
