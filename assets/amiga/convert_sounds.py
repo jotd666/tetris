@@ -119,7 +119,7 @@ with open(sndfile,"w") as fst,open(outfile,"w") as fw:
             maxsigned = max(signed_data)
             minsigned = min(signed_data)
 
-            amp_ratio = max(maxsigned,abs(minsigned))/50
+            amp_ratio = max(maxsigned,abs(minsigned))/25
 
             wav = os.path.splitext(wav_name)[0]
             sound_table[sound_index] = "    SOUND_ENTRY {},{},{},{},{},{}\n".format(wav,len(signed_data)//2,channel,used_sampling_rate,int(64*amp_ratio),used_priority)

@@ -2,12 +2,12 @@
 - repeated notes sometimes not played: remove freq compare/reset freq if control changed?
 - D5 not zeroed else volume is bogus (ATM forced volume)
 - simulate "drums" in a tune: currently not played
-- save highscores
+- save highscores: to test
 - don't decrease a credit in "continue" with infinite credits!!
+- sfx not loud enough / music?
 
 low pri:
 
-- log used tiles to reduce memory size
 - check what service mode sets in EEPROM
   to allow some settings: difficulty is the only interesting setting
 

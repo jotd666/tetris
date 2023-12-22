@@ -152,6 +152,9 @@ zero_to_seven_palette_index_counter_0642 = 0x0642
 
 pokey1_state_copy_0700 = 0x0700
 
+current_highscore_table_0979 = 0x979
+current_highscore_names_09d9 = 0x9d9
+
 sound_event_0c00 = 0x0C00
 sound_event_counter_prev_0c10 = 0x0C10
 sound_event_counter_0c11 = 0x0C11
@@ -9864,7 +9867,7 @@ l_a637:
 	GET_ADDRESS	0x001e                     	| [$a640: sta	$001e]
 	move.b	d0,(a0)                         	| [$a640: sta	$001e]
 l_a642:
-	GET_ADDRESS	0x0979                     	| [$a642: lda	$0979, x]
+	GET_ADDRESS	current_highscore_table_0979                     	| [$a642: lda	$0979, x]
 	move.b	(a0,d1.w),d0                    	| [$a642: lda	$0979, x]
 	cmp.b	#0x30,d0                         	| [$a645: cmp #$30]
 	beq	l_a64d                             	| [$a647: beq	$a64d]
@@ -9904,7 +9907,7 @@ l_a657:
 	move.b	d0,(a0)                         	| [$a66e: sta	$001e]
 
 l_a670:
-	GET_ADDRESS	0x09d9                     	| [$a670: lda	$09d9, x]
+	GET_ADDRESS	current_highscore_names_09d9                     	| [$a670: lda	$09d9, x]
 	move.b	(a0,d1.w),d0                    	| [$a670: lda	$09d9, x]
 
 	GET_SCREEN_ADDRESS_Y	screen_address_lsb_0002                     	| [$a673: sta ($02), y]
@@ -15252,7 +15255,7 @@ l_c2a7:
 	GET_ADDRESS	0x0663                     	| [$c2a7: lda	$0663, x]
 	move.b	(a0,d1.w),d0                    	| [$c2a7: lda	$0663, x]
 	bmi	l_c2d9                             	| [$c2aa: bmi	$c2d9]
-	jbsr	l_e7e4                            	| [$c2ac: jsr	$e7e4]
+	jbsr	enter_highscore_e7e4                            	| [$c2ac: jsr	$e7e4]
 	GET_ADDRESS	0x0663                     	| [$c2af: lda	$0663, x]
 	move.b	(a0,d1.w),d0                    	| [$c2af: lda	$0663, x]
 	bpl	l_c2d9                             	| [$c2b2: bpl	$c2d9]
@@ -15273,14 +15276,12 @@ l_c2a7:
 	move.b	(a0,d2.w),d0                    	| [$c2c6: lda	$0663, y]
 	bpl	l_c2d9                             	| [$c2c9: bpl	$c2d9]
 	clr.b	d0                               	| [$c2cb: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x066d                     	| [$c2cd: sta	$066d]
 	move.b	d0,(a0)                         	| [$c2cd: sta	$066d]
 	GET_ADDRESS	number_of_inserted_coins_00c2	| [$c2d0: sta number_of_inserted_coins_00c2]
 	move.b	d0,(a0)                         	| [$c2d0: sta number_of_inserted_coins_00c2]
 	GET_ADDRESS	0x00c3                     	| [$c2d3: sta	$00c3]
 	move.b	d0,(a0)                         	| [$c2d3: sta	$00c3]
-	POP_SR
 	jra	l_a5ad                             	| [$c2d6: jmp	$a5ad]
 l_c2d9:
 	addq.b	#1,d1                           	| [$c2d9: inx]
@@ -15295,6 +15296,10 @@ l_c2d9:
 	beq	l_c2ea                             	| [$c2e5: beq	$c2ea]
 	jbsr	l_a4e0                            	| [$c2e7: jsr	$a4e0]
 l_c2ea:
+	* now is a good time to save highscores
+	GET_ADDRESS	current_highscore_table_0979
+	jbsr	osd_write_high_scores
+
 	rts                                    	| [$c2ea: rts]
 l_c2eb:
 	clr.b	d1                               	| [$c2eb: ldx #$00]
@@ -19275,14 +19280,14 @@ l_e680:
 	GET_ADDRESS	0x0017                     	| [$e6a1: stx	$0017] store 1 in	$0017
 	move.b	d1,(a0)                         	| [$e6a1: stx	$0017] store 1 in	$0017
 	jbsr	l_eece                            	| [$e6a3: jsr	$eece]
-	jbsr	l_e6ad                            	| [$e6a6: jsr	$e6ad]
+	jbsr	install_highscores_e6ad                            	| [$e6a6: jsr	$e6ad]
 	CLR_I_FLAG                             	| [$e6a9: cli]
 	jmp	continue_startup_9a45              	| [$e6aa: jmp continue_startup_9a45]
 
-l_e6ad:
+install_highscores_e6ad:
 	clr.b	d2                               	| [$e6ad: ldy #$00]
 l_e6af:
-	GET_ADDRESS	0x0979                     	| [$e6af: lda	$0979, y]
+	GET_ADDRESS	current_highscore_table_0979                     	| [$e6af: lda	$0979, y]
 	move.b	(a0,d2.w),d0                    	| [$e6af: lda	$0979, y]
 	cmp.b	#0x30,d0                         	| [$e6b2: cmp #$30]
 	* bcc=>bcs
@@ -19296,7 +19301,7 @@ l_e6af:
 	bcs	l_e6af                             	| [$e6bd: bcc	$e6af]
 	clr.b	d2                               	| [$e6bf: ldy #$00]
 l_e6c1:
-	GET_ADDRESS	0x0979                     	| [$e6c1: lda	$0979, y]
+	GET_ADDRESS	current_highscore_table_0979                     	| [$e6c1: lda	$0979, y]
 	move.b	(a0,d2.w),d0                    	| [$e6c1: lda	$0979, y]
 	cmp.b	#0x30,d0                         	| [$e6c4: cmp #$30]
 	bne	l_e6d6                             	| [$e6c6: bne	$e6d6]
@@ -19319,7 +19324,7 @@ l_e6d6:
 	bcs	l_e6c1                             	| [$e6dd: bcc	$e6c1]
 	clr.b	d2                               	| [$e6df: ldy #$00]
 l_e6e1:
-	GET_ADDRESS	0x09d9                     	| [$e6e1: lda	$09d9, y]
+	GET_ADDRESS	current_highscore_names_09d9                     	| [$e6e1: lda	$09d9, y]
 	move.b	(a0,d2.w),d0                    	| [$e6e1: lda	$09d9, y]
 	cmp.b	#0x20,d0                         	| [$e6e4: cmp #$20]
 	beq	l_e6f0                             	| [$e6e6: beq	$e6f0]
@@ -19353,14 +19358,14 @@ l_e708:
 	move.b	(a0,d2.w),d0                    	| [$e708: lda	$f2fa, y]
 	lsr.b	#4,d0                            	| [$e70b: lsr a] * 4
 	or.b	#0x30,d0                          	| [$e70f: ora #$30]
-	GET_ADDRESS	0x0979                     	| [$e711: sta	$0979, x]
+	GET_ADDRESS	current_highscore_table_0979                     	| [$e711: sta	$0979, x]
     move.b	d0,(a0,d1.w)                 	| [$e711: sta	$0979, x]
 	addq.b	#1,d1                           	| [$e714: inx]
 	GET_ADDRESS	default_highscore_table_f2fa                     	| [$e715: lda	$f2fa, y]
 	move.b	(a0,d2.w),d0                    	| [$e715: lda	$f2fa, y]
 	and.b	#0x0f,d0                         	| [$e718: and #$0f]
 	or.b	#0x30,d0                          	| [$e71a: ora #$30]
-	GET_ADDRESS	0x0979                     	| [$e71c: sta	$0979, x]
+	GET_ADDRESS	current_highscore_table_0979                     	| [$e71c: sta	$0979, x]
     move.b	d0,(a0,d1.w)                 	| [$e71c: sta	$0979, x]
 	addq.b	#1,d1                           	| [$e71f: inx]
 	addq.b	#1,d2                           	| [$e720: iny]
@@ -19373,32 +19378,35 @@ l_e708:
 	move.b	d0,d1                           	| [$e728: tax]
 	GET_ADDRESS	default_highscore_table_f2fa                     	| [$e729: lda	$f2fa, y]
 	move.b	(a0,d2.w),d0                    	| [$e729: lda	$f2fa, y]
-	GET_ADDRESS	0x09d9                     	| [$e72c: sta	$09d9, x]
+	GET_ADDRESS	current_highscore_names_09d9                     	| [$e72c: sta	$09d9, x]
     move.b	d0,(a0,d1.w)                 	| [$e72c: sta	$09d9, x]
 	addq.b	#1,d2                           	| [$e72f: iny]
 	addq.b	#1,d1                           	| [$e730: inx]
 	GET_ADDRESS	default_highscore_table_f2fa                     	| [$e731: lda	$f2fa, y]
 	move.b	(a0,d2.w),d0                    	| [$e731: lda	$f2fa, y]
-	GET_ADDRESS	0x09d9                     	| [$e734: sta	$09d9, x]
+	GET_ADDRESS	current_highscore_names_09d9                     	| [$e734: sta	$09d9, x]
     move.b	d0,(a0,d1.w)                 	| [$e734: sta	$09d9, x]
 	addq.b	#1,d2                           	| [$e737: iny]
 	addq.b	#1,d1                           	| [$e738: inx]
 	GET_ADDRESS	default_highscore_table_f2fa                     	| [$e739: lda	$f2fa, y]
 	move.b	(a0,d2.w),d0                    	| [$e739: lda	$f2fa, y]
-	GET_ADDRESS	0x09d9                     	| [$e73c: sta	$09d9, x]
+	GET_ADDRESS	current_highscore_names_09d9                     	| [$e73c: sta	$09d9, x]
     move.b	d0,(a0,d1.w)                 	| [$e73c: sta	$09d9, x]
 	addq.b	#1,d2                           	| [$e73f: iny]
 	addq.b	#1,d1                           	| [$e740: inx]
 	cmp.b	#0x60,d2                         	| [$e741: cpy #$60]
 	* bcc=>bcs
 	bcs	l_e700                             	| [$e743: bcc	$e700]
+	* now is a good time to load highscores that were saved to disk
+
+	GET_ADDRESS	current_highscore_table_0979
+	jbsr	osd_read_high_scores
+	
 	move.b	#0x80,d0                        	| [$e745: lda #$80]
-	PUSH_SR
 	GET_ADDRESS	0x0663                     	| [$e747: sta	$0663]
 	move.b	d0,(a0)                         	| [$e747: sta	$0663]
 	GET_ADDRESS	0x0664                     	| [$e74a: sta	$0664]
 	move.b	d0,(a0)                         	| [$e74a: sta	$0664]
-	POP_SR
 	rts                                    	| [$e74d: rts]
 
 l_e77e:
@@ -19474,7 +19482,7 @@ l_e7c3:
 	move.b	#0x0d,d0                        	| [$e7de: lda #$0d]
 	jbsr	set_sound_event_e659                            	| [$e7e0: jsr	$e659]
 	rts                                    	| [$e7e3: rts]
-l_e7e4:
+enter_highscore_e7e4:
 	GET_ADDRESS	current_player_control_status_001b                     	| [$e7e4: stx	$001b]
 	move.b	d1,(a0)                         	| [$e7e4: stx	$001b]
 	GET_ADDRESS	0x066b                     	| [$e7e6: lda	$066b, x]
@@ -19803,7 +19811,7 @@ l_e97c:
     move.b	d0,(a0,d1.w)                 	| [$e98a: sta	$065b, x]
 	POP_SR
 l_e98d:
-	GET_ADDRESS	0x09d9                     	| [$e98d: sta	$09d9, y]
+	GET_ADDRESS	current_highscore_names_09d9                     	| [$e98d: sta	$09d9, y]
     move.b	d0,(a0,d2.w)                 	| [$e98d: sta	$09d9, y]
 	GET_ADDRESS	0x0803                     	| [$e990: sta	$0803]
 	move.b	d0,(a0)                         	| [$e990: sta	$0803]
@@ -19962,7 +19970,7 @@ l_ea40:
 	SBC_X	0x097a                     	| [$ea5b: sbc	$097a, x]
 	GET_ADDRESS	score_digit_1_0600                     	| [$ea5e: lda	$0600, y]
 	move.b	(a0,d2.w),d0                    	| [$ea5e: lda	$0600, y]
-	SBC_X	0x0979                     	| [$ea61: sbc	$0979, x]
+	SBC_X	current_highscore_table_0979                     	| [$ea61: sbc	$0979, x]
 	bcc	l_ea6c                             	| [$ea64: bcc	$ea6c]
 	move.b	d1,d0                           	| [$ea66: txa]
 	SBC_IMM	0x06	| [$ea67: sbc #$06]
@@ -19983,7 +19991,7 @@ l_ea6c:
 	beq	l_ea9c                             	| [$ea7a: beq	$ea9c]
 l_ea7c:
 	subq.b	#1,d1                           	| [$ea7c: dex]
-	GET_ADDRESS	0x0979                     	| [$ea7d: lda	$0979, x]
+	GET_ADDRESS	current_highscore_table_0979                     	| [$ea7d: lda	$0979, x]
 	move.b	(a0,d1.w),d0                    	| [$ea7d: lda	$0979, x]
 	GET_ADDRESS	0x097f                     	| [$ea80: sta	$097f, x]
     move.b	d0,(a0,d1.w)                 	| [$ea80: sta	$097f, x]
@@ -19998,7 +20006,7 @@ l_ea7c:
 	move.b	#0x2d,d1                        	| [$ea8c: ldx #$2d]
 l_ea8e:
 	subq.b	#1,d1                           	| [$ea8e: dex]
-	GET_ADDRESS	0x09d9                     	| [$ea8f: lda	$09d9, x]
+	GET_ADDRESS	current_highscore_names_09d9                     	| [$ea8f: lda	$09d9, x]
 	move.b	(a0,d1.w),d0                    	| [$ea8f: lda	$09d9, x]
 	GET_ADDRESS	0x09dc                     	| [$ea92: sta	$09dc, x]
     move.b	d0,(a0,d1.w)                 	| [$ea92: sta	$09dc, x]
@@ -20031,7 +20039,7 @@ l_ea9c:
     move.b	d0,(a0,d1.w)                 	| [$eab7: sta	$097a, x]
 	GET_ADDRESS	score_digit_1_0600                     	| [$eaba: lda	$0600, y]
 	move.b	(a0,d2.w),d0                    	| [$eaba: lda	$0600, y]
-	GET_ADDRESS	0x0979                     	| [$eabd: sta	$0979, x]
+	GET_ADDRESS	current_highscore_table_0979                     	| [$eabd: sta	$0979, x]
     move.b	d0,(a0,d1.w)                 	| [$eabd: sta	$0979, x]
 	move.b	d1,d0                           	| [$eac0: txa]
 	lsr.b	#1,d0                            	| [$eac1: lsr a]
@@ -20078,7 +20086,7 @@ l_eada:
 	SBC_X	0x097a                     	| [$eaf5: sbc	$097a, x]
 	GET_ADDRESS	score_digit_1_0600                     	| [$eaf8: lda	$0600, y]
 	move.b	(a0,d2.w),d0                    	| [$eaf8: lda	$0600, y]
-	SBC_X	0x0979                     	| [$eafb: sbc	$0979, x]
+	SBC_X	current_highscore_table_0979                     	| [$eafb: sbc	$0979, x]
 	bcc	l_eb06                             	| [$eafe: bcc	$eb06]
 	move.b	d1,d0                           	| [$eb00: txa]
 	SBC_IMM	0x06	| [$eb01: sbc #$06]
@@ -21336,14 +21344,14 @@ l_f095:
 	move.b	(a0,d1.w),d0                    	| [$f095: lda	$0866, x]
 	lsr.b	#4,d0                            	| [$f098: lsr a] * 4
 	or.b	#0x30,d0                          	| [$f09c: ora #$30]
-	GET_ADDRESS	0x0979                     	| [$f09e: sta	$0979, y]
+	GET_ADDRESS	current_highscore_table_0979                     	| [$f09e: sta	$0979, y]
     move.b	d0,(a0,d2.w)                 	| [$f09e: sta	$0979, y]
 	addq.b	#1,d2                           	| [$f0a1: iny]
 	GET_ADDRESS	0x0866                     	| [$f0a2: lda	$0866, x]
 	move.b	(a0,d1.w),d0                    	| [$f0a2: lda	$0866, x]
 	and.b	#0x0f,d0                         	| [$f0a5: and #$0f]
 	or.b	#0x30,d0                          	| [$f0a7: ora #$30]
-	GET_ADDRESS	0x0979                     	| [$f0a9: sta	$0979, y]
+	GET_ADDRESS	current_highscore_table_0979                     	| [$f0a9: sta	$0979, y]
     move.b	d0,(a0,d2.w)                 	| [$f0a9: sta	$0979, y]
 	clr.b	d0                               	| [$f0ac: lda #$00]
 	GET_ADDRESS	0x0866                     	| [$f0ae: sta	$0866, x]
@@ -21391,7 +21399,7 @@ l_f095:
 	GET_ADDRESS	0x0866                     	| [$f0dc: lda	$0866, x]
 	move.b	(a0,d1.w),d0                    	| [$f0dc: lda	$0866, x]
 	jbsr	l_f0f9                            	| [$f0df: jsr	$f0f9]
-	GET_ADDRESS	0x09d9                     	| [$f0e2: sta	$09d9, y]
+	GET_ADDRESS	current_highscore_names_09d9                     	| [$f0e2: sta	$09d9, y]
     move.b	d0,(a0,d2.w)                 	| [$f0e2: sta	$09d9, y]
 	GET_ADDRESS	0x0063                     	| [$f0e5: dec	$0063]
 	subq.b	#1,(a0)                         	| [$f0e5: dec	$0063]
