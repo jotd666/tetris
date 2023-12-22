@@ -1,17 +1,9 @@
-- when play sound, use channel info for volume. If bit 5 is set, SFX! don't play (for now)
-- log pokey writes compare to VGM commands?
-- hook on sound play: 4158
 
-- write to pokey audio control to stop sound between stages: doesn't work see how game
-  cuts sound
-  write 0: stop sound, store control value
-- ignore channel 4/use for sfx/drums
-- remove/simulate "drums" in some tunes (disable channel 4?)
-
-
-
+- repeated notes sometimes not played: remove freq compare/reset freq if control changed?
+- D5 not zeroed else volume is bogus (ATM forced volume)
+- simulate "drums" in a tune: currently not played
 - save highscores
-
+- don't decrease a credit in "continue" with infinite credits!!
 
 low pri:
 

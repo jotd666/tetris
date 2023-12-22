@@ -699,30 +699,31 @@ osd_get_random:
 * < D0: value to write
 * < A0: address (minus 0x2800)
 osd_write_audio_pokey:
-	st.b	0x100
 	movem.l	d0-d5/a0/a1/a5/a6,-(a7)
 	lea		_custom,a6
+	moveq	#0,d5
 	moveq	#0,d4
-	move.w	a0,d1
+	move.w	a0,d1		| pokey offset
 
 	btst	#4,d1
 	beq.b	1f
 	* second pokey
-	bclr	#4,d1
-	st.b	d4
+	bclr	#4,d1		| nullify bit 4 all is (28)0x now
+	st.b	d4			| second pokey flag
 1:
-	
+	* separate AUDF from AUDC now
+	* AUDF addresses are even, AUDC addresses are odd
 	lsr	#1,d1
-	jcs	4f		| channel AUDC
+	* now D1 is the channel number (0-3) or 4 (aud master ctl (28)x8)
+	jcs	4f		| channel AUDC audio control for channel
 	cmp.w	#4,d1
-	jcc	5f		| main audio control 28x8
+	jcc	5f		| main audio control (28)x8
 	moveq	#0,d2
-	* was even, now d1 is the channel number
-	* stop previous sound on that channel
+
 	move.b	d0,d2	| save frequency nibble
 	move.w	d1,d3	| save channel
 	lsr.w	#1,d3	| 16 bit channels: 2 channels per pokey
-	move.b	d3,d5
+	move.b	d3,d5	| amiga channel 0-1
 	moveq	#0,d0
 	move.w	d1,d0		| channel
 	
@@ -730,7 +731,7 @@ osd_write_audio_pokey:
 	tst.b	d4
 	beq.b	1f
 	addq.w	#4,a0
-	addq	#2,d5
+	addq	#2,d5		| amiga channel 0-3
 1:
 	cmp.b	#3,d5
 	beq.b	0f		| 4th channel is managed some other way, not music!
@@ -744,7 +745,7 @@ osd_write_audio_pokey:
 	
 	* read full freq
 	lea		pokey_frequencies(pc),a0
-	move.w	(a0,d3.w*2),d2
+	move.w	(a0,d5.w*2),d2
 	beq.b	3f
 	
 	moveq	#0,d1
@@ -780,7 +781,7 @@ osd_write_audio_pokey:
 *	cmp.b	#0x78,(a0)
 *	jne		0f
 	
-	move.l	(a1,d3.w*4),a0
+	move.l	(a1,d5.w*4),a0
 	* set full frequency
 	
 	cmp.w	#124,d2
@@ -788,10 +789,11 @@ osd_write_audio_pokey:
 	move.b	#1,0x200
 2:
 	lea	pokey_channel_control(pc),a1
-	move.b	(a1,d5.w),d1
-	and.w	#0xF,d1
-	beq.b	0f
-	lsl.w	#1,d1	| amp from 16 to 32 max
+*	move.b	(a1,d5.w),d1
+*	and.w	#0xF,d1
+*	beq.b	0f
+*	lsl.w	#1,d1	| amp from 16 to 32 max
+	move.w	#32,d1	| temp
 	move.w	d1,(se_soundvol.w,a0)
 	move.w	d2,(se_soundfreq.w,a0)
 	moveq	#0,d0
@@ -802,23 +804,30 @@ osd_write_audio_pokey:
 	movem.l	(a7)+,d0-d5/a0/a1/a5/a6
 	rts
 3:
-	move.b	d5,d0		| channel
+	move.b	d5,d0		| amiga channel
 	jsr		_mt_stopfx
 	bra.b	0b
 4:
-	* channel control: D1 contains channel 0-1
+	* channel control: D1 contains channel 0-3
+	* but channels are joint so merge controls
+	* actually, in-game only addresses 2803, 2807, 2813 contain
+	* something or 0, rest is 0.
+	lsr	#1,d1
+	bcc.b	0b		| even address: no need to consider
 	* d4 set: second pokey
 	tst.b	d4
 	beq.b	41f
 	addq	#2,d1
 41:
-	bra.b	0b
 	and.w	#0xFF,d1
-	cmp.w	#4,d1
-	bcc.b	0b
+	cmp.w	#3,d1
+	bcc.b	0b		| 4th channel is SFX don't touch
 	lea	pokey_channel_control(pc),a0
 	move.b	d0,(a0,d1.w)
-
+	bne.b	7f
+	move.b	d1,d0		| amiga channel
+	jsr		_mt_stopfx	
+7:
 	bra.b	0b
 5:
 	* main control
