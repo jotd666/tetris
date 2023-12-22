@@ -1,10 +1,9 @@
-
-- repeated notes sometimes not played: remove freq compare/reset freq if control changed?
-- D5 not zeroed else volume is bogus (ATM forced volume)
-- simulate "drums" in a tune: currently not played
-- save highscores: to test
-- don't decrease a credit in "continue" with infinite credits!!
+- ATM forced volume for music
+- add sfx for random block / random lines
+- simulate "drums" in 2 tunes: currently not played
+- don't decrease a credit in "continue" with infinite credits
 - sfx not loud enough / music?
+- check if freq limit reached
 
 low pri:
 

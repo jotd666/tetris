@@ -129,7 +129,6 @@ start:
 		.global	osd_get_random
 		.global	osd_wait
 		.global	osd_set_palette_entry
-		.global	osd_get_palette_entry
 		.global	osd_write_audio_pokey
 		.global	osd_read_pokey1
 		.global	osd_read_pokey2
@@ -721,9 +720,8 @@ osd_write_audio_pokey:
 	moveq	#0,d2
 
 	move.b	d0,d2	| save frequency nibble
-	move.w	d1,d3	| save channel
-	lsr.w	#1,d3	| 16 bit channels: 2 channels per pokey
-	move.b	d3,d5	| amiga channel 0-1
+	move.w	d1,d5	| save channel
+	lsr.w	#1,d5	| 16 bit channels: 2 channels per pokey
 	moveq	#0,d0
 	move.w	d1,d0		| channel
 	
@@ -742,7 +740,7 @@ osd_write_audio_pokey:
 	beq.b	0f			| same value as before, don't do anything
 	move.b	d2,(a0,d1.w)
 
-	
+55:	
 	* read full freq
 	lea		pokey_frequencies(pc),a0
 	move.w	(a0,d5.w*2),d2
@@ -788,11 +786,11 @@ osd_write_audio_pokey:
 	bcc.b	2f
 	move.b	#1,0x200
 2:
-	lea	pokey_channel_control(pc),a1
-*	move.b	(a1,d5.w),d1
-*	and.w	#0xF,d1
-*	beq.b	0f
-*	lsl.w	#1,d1	| amp from 16 to 32 max
+	*lea	pokey_channel_control(pc),a1
+	*move.b	(a1,d5.w),d1
+	*and.w	#0xF,d1
+	*beq.b	0f
+	*lsl.w	#1,d1	| amp from 16 to 32 max
 	move.w	#32,d1	| temp
 	move.w	d1,(se_soundvol.w,a0)
 	move.w	d2,(se_soundfreq.w,a0)
@@ -822,12 +820,19 @@ osd_write_audio_pokey:
 	and.w	#0xFF,d1
 	cmp.w	#3,d1
 	bcc.b	0b		| 4th channel is SFX don't touch
+	move.w	d1,d5
 	lea	pokey_channel_control(pc),a0
-	move.b	d0,(a0,d1.w)
+	move.b	(a0,d5.w),d2		| save old value
+	move.b	d0,(a0,d5.w)
 	bne.b	7f
+	* channel control to 0: stop sound
 	move.b	d1,d0		| amiga channel
-	jsr		_mt_stopfx	
+	jsr		_mt_stopfx
+	bra.b	0b
 7:
+	cmp.b	d2,d0
+	* if old value is not new value, play note again
+	jne	55b
 	bra.b	0b
 5:
 	* main control
