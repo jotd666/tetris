@@ -15,6 +15,7 @@ AFB_68010 = 0
 AFB_68020 = 1
 
 
+DIRECT_DRAW = 1
 
 SCREEN_ADDRESS = 0x1000
 PALETTE_ADDRESS = 0x2000
@@ -50,6 +51,7 @@ LOGICAL_NB_BYTES_PER_ROW = 42
 NB_BYTES_PER_ROW = 48
 NB_LINES = 240
 NB_PLAYFIELD_LINES = NB_LINES
+NB_ROWS = NB_LINES/8
 
 BG_SCREEN_PLANE_SIZE = NB_BYTES_PER_ROW*NB_PLAYFIELD_LINES
 BG_SCREEN_SIZE =  BG_SCREEN_PLANE_SIZE*NB_PLAYFIELD_PLANES
@@ -571,6 +573,12 @@ _vblank:
 	move.w	#0x10,(intreq,a5)
 	move.w	#0x10,(intreq,a5)
 	
+	* update screen
+	.ifeq	DIRECT_DRAW
+	jbsr		update_screen
+	lea		_custom,a5
+	.endif
+	
 	moveq	#ONE_TICK,d1
     move.w  vbl_counter(pc),d0
     addq.w  #1,d0
@@ -771,16 +779,16 @@ osd_write_audio_pokey:
 	
 	* if pokey_master_control is not 0x78 don't play tune
 	
-	lea	pokey_master_control(pc),a0
-	tst.b	d4
-	beq.b	11f
-	addq	#1,a0		| second pokey
-11:
+*	lea	pokey_master_control(pc),a0
+*	tst.b	d4
+*	beq.b	11f
+*	addq	#1,a0		| second pokey
+*11:
 *	cmp.b	#0x78,(a0)
 *	jeq		12f			| normal 16-bit musical sound
-	* noise: drum, not supported ATM
-	cmp.b	#0x50,(a0)
-	jeq	0f
+*	* noise: drum, not supported ATM
+*	cmp.b	#0x50,(a0)
+*	jeq	0f
 
 	move.l	(a1,d5.w*4),a0
 	* set full frequency
@@ -1256,10 +1264,6 @@ osd_disable_interrupts:
 	move.w	#0x0034,_custom+intena
 	rts
 
-
-
-	
-
 	
 * < A0=screen address (preserved)
 * (A0 starts at 0x1000 and ends at 0x1FFF)
@@ -1293,7 +1297,56 @@ osd_r_videoram:
 	movem.l	(a7)+,a0-a1
 	tst.b	d0	| very important as it replaces a lda
 	rts
+
+	.ifeq	DIRECT_DRAW
+* called once in bottom of frame so dirty tiles are rewritten there and
+* not directly, to avoid tearing (possible double buffering too with that method)
+*
+* relies on the fact that update_tile doesn't destroy
+* "high" address & data registers, no register save is required
+* for faster operation
+update_screen:
+	lea		dirty_line_list(pc),a6
+	move.w	#0,d7
+0:
+	tst.b	(a6,d7.w)
+	beq.b	5f
+	* ack line
+	clr.b	(a6,d7.w)
 	
+	lea		bg_videoram,a4
+	lea		dirty_rows_array(pc),a5
+	move.w	d7,d4
+	lsl.w	#6,d4		| times 64
+	add.w	d4,a5
+	add.w	d4,a4
+	add.w	d4,a4		| times 128
+	moveq	#0,d6		| column index
+1:
+	tst.b	(a5)+
+	beq.b	2f
+	* needs update
+	clr.b	(-1,a5)		| ack tile
+	* get 16-bit word for tile&color
+	move.w	(a4),d0
+	move.w	d4,d1		| line offset
+	add.w	d6,d1		| column offset
+	jbsr		update_tile
+2:
+	addq	#2,a4
+	addq	#1,d6
+	cmp.w	#LOGICAL_NB_BYTES_PER_ROW,d6
+	bne.b	1b
+5:
+	* next row
+	addq	#1,d7
+	cmp.w	#NB_ROWS,d7
+	bne.b	0b
+	
+	rts
+
+	.endif
+
 * < A0=screen address (preserved)
 * (A0 starts at 0x1000 and ends at 0x1FFF)
 * < D0: code
@@ -1331,14 +1384,31 @@ osd_w_colorram:
 	bra.b	0f
 1:
 	.endif
+	
+	move.w	a0,d1		| address offset
+	lsr.w	#1,d1		| offset /= 2
+
+	.ifne	DIRECT_DRAW
+	* draw tile now (induces tearing on slow machines)
 	bclr	#0,d0
 	move.l	d0,a1
 	* get 16-bit word for tile&color
 	move.w	(a1),d0
 
-	move.w	a0,d1
-	lsr.w	#1,d1
 	jbsr		update_tile
+	.else	
+	* mirrors video RAM layout (only 1 byte per tile, not 2)
+	lea		dirty_rows_array(pc),a0
+	move.b	#1,(a0,d1.w)
+	
+	* just mark row & col as dirty so lookup will be faster
+	* only test row if row flag is set
+	lea		dirty_line_list(pc),a0
+	lsr.w	#6,d1			| 64 bytes per row
+	move.b	#1,(a0,d1.w)
+	
+	.endif
+	
 0:
 	movem.l	(a7)+,d0-d3/d6/a0-a2
 	rts
@@ -1370,7 +1440,7 @@ osd_w_videoram:
 	movem.l	(a7)+,d0-d3/d6/a0-a2
 	rts
 
-
+	
 * < D0.W: tile+color 
 * < D1.W: screen offset
 update_tile:
@@ -1925,6 +1995,11 @@ pokey_frequencies:
 _end_of_ng_code:
 		
 	.align 2
+dirty_line_list:
+	ds.b	NB_ROWS
+dirty_rows_array:
+	ds.b	0x40*NB_ROWS
+
 color_copper_pointers:
 	ds.l	256
 
