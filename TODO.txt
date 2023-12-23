@@ -1,5 +1,4 @@
 - delayed tile write: mark dirty and refresh during vblank only
-- don't decrease a credit in "continue" with infinite credits
 
 low pri:
 
@@ -7,13 +6,6 @@ low pri:
 - ATM forced volume for music
 - check what service mode sets in EEPROM
   to allow some settings: difficulty is the only interesting setting
+- don't decrease a credit in "continue" with infinite credits (5->4 but it's
+  only on screen)
 
-converter:
-
-- subx: replace by one of SBC macros!
-- cmp: add a FIX_CMP_CARRY after each one: INVERT_C + SET_X_FROM_C
-- cmp + bmi??
-- after a subx: add INVERT_XC_FLAGS
-- sec/clc + dex/dec + adc/sbc sandwich
-- php+sei => review
-- grouping of simple shifts from 68k code

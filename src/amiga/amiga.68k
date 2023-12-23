@@ -771,14 +771,17 @@ osd_write_audio_pokey:
 	
 	* if pokey_master_control is not 0x78 don't play tune
 	
-*	lea	pokey_master_control(pc),a0
-*	tst.b	d4
-*	beq.b	11f
-*	addq	#1,a0		| second pokey
-*11:
+	lea	pokey_master_control(pc),a0
+	tst.b	d4
+	beq.b	11f
+	addq	#1,a0		| second pokey
+11:
 *	cmp.b	#0x78,(a0)
-*	jne		0f
-	
+*	jeq		12f			| normal 16-bit musical sound
+	* noise: drum, not supported ATM
+	cmp.b	#0x50,(a0)
+	jeq	0f
+
 	move.l	(a1,d5.w*4),a0
 	* set full frequency
 	
@@ -804,6 +807,7 @@ osd_write_audio_pokey:
 	move.b	d5,d0		| amiga channel
 	jsr		_mt_stopfx
 	bra.b	0b
+
 4:
 	* channel control: D1 contains channel 0-3
 	* but channels are joint so merge controls
@@ -840,7 +844,7 @@ osd_write_audio_pokey:
 	beq.b	6f
 	addq	#1,a0		| second pokey
 6:
-	move.b	d0,(a0)
+	move.b	d0,(a0)		| new value update
 	bra.b	0b
 	
 	* the only inreresting thing here is VBLANK flag
