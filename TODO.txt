@@ -1,12 +1,10 @@
-- ATM forced volume for music
-- add sfx for random block / random lines
-- simulate "drums" in 2 tunes: currently not played
+- delayed tile write: mark dirty and refresh during vblank only
 - don't decrease a credit in "continue" with infinite credits
-- sfx not loud enough / music?
-- check if freq limit reached
 
 low pri:
 
+- simulate "drums" in 2 tunes: currently not played
+- ATM forced volume for music
 - check what service mode sets in EEPROM
   to allow some settings: difficulty is the only interesting setting
 

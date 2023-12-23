@@ -795,12 +795,15 @@ l_413e:
 * 0x07: Kalinka tune
 * 0x08: Troika tune
 * 0x09: stop sound!
+* 0x0B: ?
 * 0x0D: game over
 * 0x0F: hopiak (round 9 dance)
 * 0x12: shape hits floor (crunch sound)
 * 0x13: credit inserted
 * 0x15: "ping" when selecting start level
 * 0x16: line completed
+* 0x17: random block appears
+* 0x18: advancing line
 * 0x19/0x1B: sound when computing puzzle height at end of round
 * 0x1A: "completed" music?
 
@@ -826,10 +829,6 @@ l_414d:
 	CLR_I_FLAG
 	rts                                    	| [$4158: rts]
 l_4159:
-* break and play "pokey" test song
-*	jbsr	osd_break
-*	move.b	#3,d4		| temp
-*	bra.b	2f
 	lea 	extra_sound_event_table(pc),a0
 	move.b	d0,d4
 	add.b	d0,d0
@@ -841,6 +840,12 @@ l_4159:
 	
 2:	
 	* stored to set a new sound event only if d0=0
+	* to play another sound, set a breakpoint here in MAME, wait for a sound
+	* to be played, and change A to something else
+	* ex: bpset 4159,A!=$12
+	* will break only if sound != from block falling
+	* stop the music by setting A to 9
+	
 	GET_ADDRESS	sound_event_0c00                     	| [$4159: sta	$0c00, y]
     move.b	d4,(a0,d2.w)                 	| [$4159: sta	$0c00, y]
 	clr.b	d0                               	| [$415c: lda #$00]
@@ -881,8 +886,8 @@ extra_sound_event_table:
 	.long	do_rts                              | 14
 	.long	play_level_select_sound             | 15
 	.long	play_line_completed                 | 16
-	.long	do_rts                              | 17
-	.long	do_rts                              | 18
+	.long	play_random_block                   | 17
+	.long	play_advancing_line                 | 18
 	.long	do_rts                              | 19
 	.long	do_rts                              | 1A
 	.long	do_rts                              | 1B
@@ -978,6 +983,16 @@ do_stop_sound:
 	rts
 do_rts:
 	moveq	#0,d0
+	rts
+play_random_block:
+	move.w	#RANDOM_BLOCK_SND,d0
+	jbsr	osd_sound_start
+	moveq	#1,d0
+	rts
+play_advancing_line:
+	move.w	#ADVANCING_LINE_SND,d0
+	jbsr	osd_sound_start
+	moveq	#1,d0
 	rts
 play_level_select_sound:
 	move.w	#PING_SND,d0
@@ -6273,6 +6288,7 @@ l_8baf:
 	move.b	(a0),d0                         	| [$8baf: lda	$00b5]
 	and.b	#0x22,d0                         	| [$8bb1: and #$22]
 	beq	l_8bba                             	| [$8bb3: beq	$8bba]
+	* stop all sounds
 	clr.b	d0                               	| [$8bb5: lda #$00]
 	jbsr	set_sound_event_e659                            	| [$8bb7: jsr	$e659]
 l_8bba:
@@ -7878,6 +7894,7 @@ l_9c50:
 	jbsr	l_9cf3                            	| [$9c72: jsr	$9cf3]
 	jra	l_9c8f                             	| [$9c75: jmp	$9c8f]
 l_9c78:
+	* shape hits floor
 	move.b	#0x12,d0                        	| [$9c78: lda #$12]
 	jbsr	set_sound_event_e659                            	| [$9c7a: jsr	$e659]
 	GET_ADDRESS	0x0099                     	| [$9c7d: lda	$0099]
@@ -8080,6 +8097,7 @@ l_9d51:
 	GET_ADDRESS	0x0078                     	| [$9d53: ora	$0078]
 	or.b	(a0),d0                           	| [$9d53: ora	$0078]
 	bne	l_9d5f                             	| [$9d55: bne	$9d5f]
+	* stop music
 	move.b	#0x09,d0                        	| [$9d57: lda #$09]
 	jbsr	set_sound_event_e659                            	| [$9d59: jsr	$e659]
 * clv+bvc => jra
@@ -8113,6 +8131,7 @@ l_9d66:
 	GET_ADDRESS	0x064d                     	| [$9d82: adc	$064d]
 	add.b	(a0),d0	| [$9d82: adc	$064d]
 	jbsr	l_d670                            	| [$9d85: jsr	$d670]
+	* which sound?
 	move.b	#0x0b,d0                        	| [$9d88: lda #$0b]
 	jbsr	set_sound_event_e659                            	| [$9d8a: jsr	$e659]
 	rts                                    	| [$9d8d: rts]
@@ -10124,6 +10143,7 @@ l_a763:
 	* bcc=>bcs
 	bcs	l_a74d                             	| [$a766: bcc	$a74d]
 l_a768:
+	* line completed sound
 	move.b	#0x16,d0                        	| [$a768: lda #$16]
 	jra	set_sound_event_e659                             	| [$a76a: jmp	$e659]
 
@@ -10296,7 +10316,7 @@ l_a864:
 	
 	GET_ADDRESS	0x0658                     	| [$a879: sta	$0658]
 	move.b	d0,(a0)                         	| [$a879: sta	$0658]
-	
+	* which sound?
 	move.b	#0x01,d0                        	| [$a87c: lda #$01]
 	jbsr	set_sound_event_e659                            	| [$a87e: jsr	$e659]
 	jbsr	l_aa4b                            	| [$a881: jsr	$aa4b]
@@ -10942,6 +10962,7 @@ l_ab6a:
 	move.b	d0,(a0)                         	| [$ab80: sta	$0045]
 l_ab82:
 	move.b	#0x0e,d0                        	| [$ab82: lda #$0e]
+	* which sound?
 	jbsr	set_sound_event_e659                            	| [$ab84: jsr	$e659]
 	GET_ADDRESS	0x0045                     	| [$ab87: lda	$0045]
 	move.b	(a0),d0                         	| [$ab87: lda	$0045]
@@ -12225,6 +12246,7 @@ l_b1a3:
 	move.b	d0,(a0)                         	| [$b1ff: sta	$0101]
 	move.b	#0x01,d0                        	| [$b202: lda #$01]
 	jbsr	copy_data_to_screen_d633                            	| [$b204: jsr	$d633]
+	* random block appears
 	move.b	#0x17,d0                        	| [$b207: lda #$17]
 	jbsr	set_sound_event_e659                            	| [$b209: jsr	$e659]
 	rts                                    	| [$b20c: rts]
@@ -12358,24 +12380,21 @@ l_b28a:
 l_b294:
 	rts                                    	| [$b294: rts]
 l_b295:
-	PUSH_SR
 	GET_ADDRESS	0x001c                     	| [$b295: sta	$001c]
 	move.b	d0,(a0)                         	| [$b295: sta	$001c]
-	POP_SR
 	clr.b	d2                               	| [$b297: ldy #$00]
 l_b299:
 	GET_ADDRESS	0x001c                     	| [$b299: lsr	$001c]
 	move.b	(a0),d4	| [$b299: lsr	$001c]
 	lsr.b	#1,d4                          	| [$b299: lsr	$001c]
-	PUSH_SR
+	PUSH_SR		| required
 	move.b	d4,(a0)	| [$b299: lsr	$001c]
-	POP_SR
+	POP_SR		| required
 	bcc	l_b2a4                             	| [$b29b: bcc	$b2a4]
 	move.b	d2,d0                           	| [$b29d: tya]
-	CLR_XC_FLAGS                           	| [$b29e: clc]
+	                           	| [$b29e: clc]
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b29f: adc	$001b]
-	move.b	(a0),d4	| [$b29f: adc	$001b]
-	addx.b	d4,d0                         	| [$b29f: adc	$001b]
+	add.b	(a0),d0	| [$b29f: adc	$001b]
 	bcs	l_b2b2                             	| [$b2a1: bcs	$b2b2]
 	move.b	d0,d2                           	| [$b2a3: tay]
 l_b2a4:
@@ -12385,9 +12404,9 @@ l_b2a4:
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b2a8: asl	$001b]
 	move.b	(a0),d4	| [$b2a8: asl	$001b]
 	asl.b	#1,d4                          	| [$b2a8: asl	$001b]
-	PUSH_SR
+	PUSH_SR		| required
 	move.b	d4,(a0)	| [$b2a8: asl	$001b]
-	POP_SR
+	POP_SR		| required
 	bcc	l_b299                             	| [$b2aa: bcc	$b299]
 	* bcs=>bra (manual) as bcc handled above
 	bra	l_b2b2                             	| [$b2ac: bcs	$b2b2]
@@ -12399,12 +12418,10 @@ l_b2b2:
 	move.b	#0xfa,d2                        	| [$b2b2: ldy #$fa]
 l_b2b4:
 	clr.b	d0                               	| [$b2b4: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	current_player_control_status_001b                     	| [$b2b6: sta	$001b]
 	move.b	d0,(a0)                         	| [$b2b6: sta	$001b]
 	GET_ADDRESS	0x001c                     	| [$b2b8: sta	$001c]
 	move.b	d0,(a0)                         	| [$b2b8: sta	$001c]
-	POP_SR
 	move.b	d2,d0                           	| [$b2ba: tya]
 l_b2bb:
 	cmp.b	#0x64,d0                         	| [$b2bb: cmp #$64]
@@ -13421,6 +13438,7 @@ l_b7fb:
 	jbsr	l_89b7                            	| [$b818: jsr	$89b7]
 	rts                                    	| [$b81b: rts]
 l_b81c:
+	* play corresponding level tune
 	GET_ADDRESS	0x002f                     	| [$b81c: lda	$002f]
 	move.b	(a0),d0                         	| [$b81c: lda	$002f]
 	and.b	#0x03,d0                         	| [$b81e: and #$03]
@@ -13441,7 +13459,7 @@ l_b830:
 * clv+bvc => jra
 	jra	l_b83b                             	| [$b837: jra	$b83b]
 l_b839:
-	move.b	#0x08,d0                        	| [$b839: lda #$08]
+	move.b	#0x08,d0                        	| [$b839: lda #$08] troika
 l_b83b:
 	jbsr	set_sound_event_e659                            	| [$b83b: jsr	$e659]
 	rts                                    	| [$b83e: rts]
@@ -13478,6 +13496,7 @@ l_b83f:
 	move.b	(a0,d2.w),d0                    	| [$b856: lda	$b7c5, y]
 	GET_ADDRESS	remaining_rows_units_0031                     	| [$b859: sta	$0031]
 	move.b	d0,(a0)                         	| [$b859: sta	$0031]
+	* level completed music
 	move.b	#0x1a,d0                        	| [$b85b: lda #$1a]
 	jbsr	set_sound_event_e659                            	| [$b85d: jsr	$e659]
 	move.b	#0x01,d0                        	| [$b860: lda #$01]
@@ -13497,55 +13516,39 @@ l_b83f:
 	bne	l_b89d                             	| [$b86d: bne	$b89d]
 l_b86f:
 	move.b	#0x04,d0                        	| [$b86f: lda #$04]
-	PUSH_SR
 	GET_ADDRESS	0x003c                     	| [$b871: sta	$003c]
 	move.b	d0,(a0)                         	| [$b871: sta	$003c]
-	POP_SR
 	move.b	#0x63,d0                        	| [$b873: lda #$63]
-	PUSH_SR
 	GET_ADDRESS	0x003b                     	| [$b875: sta	$003b]
 	move.b	d0,(a0)                         	| [$b875: sta	$003b]
-	POP_SR
 	move.b	#0xb8,d0                        	| [$b877: lda #$b8]
-	PUSH_SR
 	GET_ADDRESS	0x003f                     	| [$b879: sta	$003f]
 	move.b	d0,(a0)                         	| [$b879: sta	$003f]
-	POP_SR
 	move.b	#0x12,d0                        	| [$b87b: lda #$12]
-	PUSH_SR
 	GET_ADDRESS	0x0040                     	| [$b87d: sta	$0040]
 	move.b	d0,(a0)                         	| [$b87d: sta	$0040]
-	POP_SR
 	GET_ADDRESS	0x002f                     	| [$b87f: ldy	$002f]
 	move.b	(a0),d2                         	| [$b87f: ldy	$002f]
 	GET_ADDRESS	0xb7aa                     	| [$b881: lda	$b7aa, y]
 	move.b	(a0,d2.w),d0                    	| [$b881: lda	$b7aa, y]
-	PUSH_SR
 	GET_ADDRESS	0x0032                     	| [$b884: sta	$0032]
 	move.b	d0,(a0)                         	| [$b884: sta	$0032]
-	POP_SR
 	GET_ADDRESS	0xb7c5                     	| [$b886: lda	$b7c5, y]
 	move.b	(a0,d2.w),d0                    	| [$b886: lda	$b7c5, y]
-	PUSH_SR
 	GET_ADDRESS	0x0033                     	| [$b889: sta	$0033]
 	move.b	d0,(a0)                         	| [$b889: sta	$0033]
-	POP_SR
 	move.b	#0x1a,d0                        	| [$b88b: lda #$1a]
 	jbsr	set_sound_event_e659                            	| [$b88d: jsr	$e659]
 	move.b	#0x01,d0                        	| [$b890: lda #$01]
-	PUSH_SR
 	GET_ADDRESS	0x0036                     	| [$b892: sta	$0036]
 	move.b	d0,(a0)                         	| [$b892: sta	$0036]
 	GET_ADDRESS	0x0037                     	| [$b894: sta	$0037]
 	move.b	d0,(a0)                         	| [$b894: sta	$0037]
-	POP_SR
 	move.b	#0x78,d0                        	| [$b896: lda #$78]
-	PUSH_SR
 	GET_ADDRESS	0x0672                     	| [$b898: sta	$0672]
 	move.b	d0,(a0)                         	| [$b898: sta	$0672]
 	GET_ADDRESS	0x0042                     	| [$b89b: sta	$0042]
 	move.b	d0,(a0)                         	| [$b89b: sta	$0042]
-	POP_SR
 l_b89d:
 	GET_ADDRESS	0xba76                     	| [$b89d: ldy	$ba76, x]
 	move.b	(a0,d1.w),d2                    	| [$b89d: ldy	$ba76, x]
@@ -13902,6 +13905,7 @@ l_ba80:
 * clv+bvc => jra
 	jra	l_baa5                             	| [$ba98: jra	$baa5]
 l_ba9a:
+	* select "hopiak" tunes
 	cmp.b	#0x01,d0                         	| [$ba9a: cmp #$01]
 	bne	l_baa3                             	| [$ba9c: bne	$baa3]
 	move.b	#0x11,d0                        	| [$ba9e: lda #$11]
@@ -14090,6 +14094,7 @@ l_bb7f:
 	GET_ADDRESS	0x069f                     	| [$bb87: sta	$069f, x]
     move.b	d0,(a0,d1.w)                 	| [$bb87: sta	$069f, x]
 l_bb8a:
+	* which sound?
 	move.b	#0x1b,d0                        	| [$bb8a: lda #$1b]
 	jbsr	set_sound_event_e659                            	| [$bb8c: jsr	$e659]
 	rts                                    	| [$bb8f: rts]
@@ -14128,6 +14133,7 @@ l_bbac:
 	GET_ADDRESS	unknown_001d                     	| [$bbb3: sta	$001d]
 	move.b	d0,(a0)                         	| [$bbb3: sta	$001d]
 	jbsr	update_player_score_b53f                            	| [$bbb5: jsr	$b53f]
+	* computes height of puzzle sound
 	move.b	#0x19,d0                        	| [$bbb8: lda #$19]
 	jbsr	set_sound_event_e659                            	| [$bbba: jsr	$e659]
 	* from now on using decimal mode        | [$bbbd: sed]
@@ -14783,33 +14789,25 @@ l_bf11:
 	* bcc=>bcs
 	bcs	l_bf18                             	| [$bf11: bcc	$bf18]
 	move.b	#0x01,d0                        	| [$bf13: lda #$01]
-	PUSH_SR
 	GET_ADDRESS	0x06bf                     	| [$bf15: sta	$06bf]
 	move.b	d0,(a0)                         	| [$bf15: sta	$06bf]
-	POP_SR
 l_bf18:
 	GET_ADDRESS	0x06bf                     	| [$bf18: lda	$06bf]
 	move.b	(a0),d0                         	| [$bf18: lda	$06bf]
 	beq	l_bf40                             	| [$bf1b: beq	$bf40]
 	clr.b	d0                               	| [$bf1d: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x06a5                     	| [$bf1f: sta	$06a5]
 	move.b	d0,(a0)                         	| [$bf1f: sta	$06a5]
-	POP_SR
 	move.b	#0x1e,d0                        	| [$bf22: lda #$1e]
-	PUSH_SR
 	GET_ADDRESS	0x0043                     	| [$bf24: sta	$0043]
 	move.b	d0,(a0)                         	| [$bf24: sta	$0043]
-	POP_SR
 	clr.b	d0                               	| [$bf26: lda #$00]
 	jbsr	set_sound_event_e659                            	| [$bf28: jsr	$e659]
 	clr.b	d0                               	| [$bf2b: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x0035                     	| [$bf2d: sta	$0035]
 	move.b	d0,(a0)                         	| [$bf2d: sta	$0035]
 	GET_ADDRESS	0x0036                     	| [$bf2f: sta	$0036]
 	move.b	d0,(a0)                         	| [$bf2f: sta	$0036]
-	POP_SR
 	GET_ADDRESS	0x06a7                     	| [$bf31: inc	$06a7]
 	addq.b	#1,(a0)                         	| [...]
                      	| [$bf34: lda	$06a7]
@@ -15330,6 +15328,7 @@ l_c30a:
 	bcs	l_c2ed                             	| [$c30d: bcc	$c2ed]
 	rts                                    	| [$c30f: rts]
 l_c310:
+	* line completed sound
 	move.b	#0x16,d0                        	| [$c310: lda #$16]
 	jbsr	set_sound_event_e659                            	| [$c312: jsr	$e659]
 	GET_ADDRESS	0x0618                     	| [$c315: lda	$0618]
@@ -15340,6 +15339,7 @@ l_c310:
 	cmp.b	#0x30,d0                         	| [$c31c: cmp #$30]
 	* bcs=>bcc
 	bcc	l_c325                             	| [$c31e: bcs	$c325]
+	* which sound?
 	move.b	#0x14,d0                        	| [$c320: lda #$14]
 	jra	set_sound_event_e659                             	| [$c322: jmp	$e659]
 l_c325:
@@ -16766,6 +16766,7 @@ l_ca8c:
 	move.b	(a0),d0                         	| [$ca99: lda	$06a8]
 	and.b	#0x03,d0                         	| [$ca9c: and #$03]
 	bne	l_caa5                             	| [$ca9e: bne	$caa5]
+	* which sound ?
 	move.b	#0x0a,d0                        	| [$caa0: lda #$0a]
 	jbsr	set_sound_event_e659                            	| [$caa2: jsr	$e659]
 l_caa5:
@@ -16846,21 +16847,15 @@ l_cb05:
 	GET_ADDRESS	game_state_0008                     	| [$cb07: sta	$0008]
 	move.b	d0,(a0)                         	| [$cb07: sta	$0008]
 	clr.b	d0                               	| [$cb09: lda #$00]
-	PUSH_SR
 	GET_ADDRESS	0x0046                     	| [$cb0b: sta	$0046]
 	move.b	d0,(a0)                         	| [$cb0b: sta	$0046]
-	POP_SR
 	jbsr	set_sound_event_e659                            	| [$cb0d: jsr	$e659]
 	move.b	#0x14,d0                        	| [$cb10: lda #$14]
-	PUSH_SR
 	GET_ADDRESS	0x06b4                     	| [$cb12: sta	$06b4]
 	move.b	d0,(a0)                         	| [$cb12: sta	$06b4]
-	POP_SR
 	move.b	#0x06,d0                        	| [$cb15: lda #$06]
-	PUSH_SR
 	GET_ADDRESS	0x0007                     	| [$cb17: sta	$0007]
 	move.b	d0,(a0)                         	| [$cb17: sta	$0007]
-	POP_SR
 	move.b	#0x06,d0                        	| [$cb19: lda #$06]
 	jbsr	display_screen_and_other_stuff_8818	| [$cb1b: jsr display_screen_and_other_stuff_8818]
 	move.b	#0x3e,d0                        	| [$cb1e: lda #$3e]
@@ -16870,12 +16865,10 @@ l_cb05:
 	move.b	(a0),d2                         	| [$cb25: ldy	$0619]
 	GET_ADDRESS	0xcb3a                     	| [$cb28: lda	$cb3a, y]
 	move.b	(a0,d2.w),d0                    	| [$cb28: lda	$cb3a, y]
-	PUSH_SR
 	GET_ADDRESS	0x000b                     	| [$cb2b: sta	$000b]
 	move.b	d0,(a0)                         	| [$cb2b: sta	$000b]
 	GET_ADDRESS	fall_timeout_timer_0091                     	| [$cb2d: sta	$0091]
 	move.b	d0,(a0)                         	| [$cb2d: sta	$0091]
-	POP_SR
 	move.b	#0x02,d0                        	| [$cb2f: lda #$02]
 	jbsr	set_sound_event_e659                            	| [$cb31: jsr	$e659]
 	move.b	#0x3f,d0                        	| [$cb34: lda #$3f]
@@ -16916,6 +16909,7 @@ l_cb65:
 	and.b	#0x0e,d0                         	| [$cb65: and #$0e]
 	beq	l_cb71                             	| [$cb67: beq	$cb71]
 	jbsr	l_cb98                            	| [$cb69: jsr	$cb98]
+	* ping sound
 	move.b	#0x15,d0                        	| [$cb6c: lda #$15]
 	jbsr	set_sound_event_e659                            	| [$cb6e: jsr	$e659]
 l_cb71:
@@ -16948,6 +16942,7 @@ l_cb81:
 	move.b	#0x04,d2                        	| [$cb8b: ldy #$04]
 	jbsr	l_f14c                            	| [$cb8d: jsr	$f14c]
 l_cb90:
+	* line complete sound
 	move.b	#0x16,d0                        	| [$cb90: lda #$16]
 	jbsr	set_sound_event_e659                            	| [$cb92: jsr	$e659]
 	jra	l_a8e9                             	| [$cb95: jmp	$a8e9]
@@ -19479,6 +19474,7 @@ l_e7c3:
 	                           	| [$e7d8: clc]
 	add.b	#0x52,d0                        	| [$e7d9: adc #$52]
 	jbsr	l_d670                            	| [$e7db: jsr	$d670]
+	* which sound?
 	move.b	#0x0d,d0                        	| [$e7de: lda #$0d]
 	jbsr	set_sound_event_e659                            	| [$e7e0: jsr	$e659]
 	rts                                    	| [$e7e3: rts]

@@ -783,15 +783,14 @@ osd_write_audio_pokey:
 	* set full frequency
 	
 	cmp.w	#124,d2
-	bcc.b	2f
-	move.b	#1,0x200
+	bcs.b	0f			| bogus frequency, skip
 2:
 	*lea	pokey_channel_control(pc),a1
 	*move.b	(a1,d5.w),d1
 	*and.w	#0xF,d1
 	*beq.b	0f
 	*lsl.w	#1,d1	| amp from 16 to 32 max
-	move.w	#32,d1	| temp
+	move.w	#28,d1	| fixed for if no sound if I use channel control value
 	move.w	d1,(se_soundvol.w,a0)
 	move.w	d2,(se_soundfreq.w,a0)
 	moveq	#0,d0

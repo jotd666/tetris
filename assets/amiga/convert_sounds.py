@@ -31,6 +31,8 @@ sound_dict = {
 "LINE_SND"             :{"index":1,"channel":noise,"sample_rate":hq_sample_rate,"priority":1},
 "PING_SND"             :{"index":2,"channel":noise,"sample_rate":hq_sample_rate,"priority":1},
 "START_SND"             :{"index":3,"channel":noise,"sample_rate":hq_sample_rate,"priority":1},
+"RANDOM_BLOCK_SND"             :{"index":4,"channel":noise,"sample_rate":hq_sample_rate,"priority":10},
+"ADVANCING_LINE_SND"             :{"index":5,"channel":noise,"sample_rate":hq_sample_rate,"priority":10},
 
 }
 

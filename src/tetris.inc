@@ -50,6 +50,10 @@
 	.equ	LINE_SND,                          1
 	.equ	PING_SND,                     2
 	.equ	START_SND,                      3
+	.equ	RANDOM_BLOCK_SND,                      4
+	.equ	ADVANCING_LINE_SND,                      5
+
+
 
 
 
