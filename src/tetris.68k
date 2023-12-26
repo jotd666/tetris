@@ -1859,7 +1859,7 @@ l_44ee:
 	* fiddling with the values when game is running desyncs channels
 	* and the music plays with some channels being late
 	*
-	* supposed to be called each 20ms (each 13 irq at 60Hz)
+	* supposed to be called each 5 ms (each 13 irq at 240Hz)
 	GET_ADDRESS	next_note_timer_array_0c6b                     	| [$451b: dec	$0c6b, x]
     subq.b	#1,(a0,d1.w)                 	| [$451b: dec	$0c6b, x]
 	bpl	l_4523                             	| [$451e: bpl	$4523]
@@ -1957,6 +1957,7 @@ l_458d:
 	cmp.b	#0x01,d2                         	| [$4592: cpy #$01]
 	beq	change_music_note_45b4                             	| [$4594: beq	$45b4]
 l_4596:
+	* sfx or drum
 	move.w	d0,-(sp)                        	| [$4596: pha]
 	                           	| [$4597: sec]
 	GET_ADDRESS	0x0c43                     	| [$4598: sbc	$0c43, x]
@@ -1969,14 +1970,23 @@ l_4596:
 	               	| [$45a1: bcs	$45a5]
 	                     	| [$45a3: lda #$00]
 l_45a5:
+	* A != 0: this is a sfx like shape falling
+	* A = 0: this is possibly a drum
+	tst.b	d0
+	bne.b	0f
+	move.l	d0,d4
+	move.l	#DRUM_SND,d0
+	**jbsr	osd_sound_start
+	move.l	d4,d0
+0:	
 	GET_ADDRESS	0x0dbf                     	| [$45a5: sta	$0dbf, x]
     move.b	d0,(a0,d1.w)                 	| [$45a5: sta	$0dbf, x]
 	move.w	(sp)+,d0                        	| [$45a8: pla]
 	GET_ADDRESS	0x0c43                     	| [$45a9: sta	$0c43, x]
     move.b	d0,(a0,d1.w)                 	| [$45a9: sta	$0c43, x]
-	clr.b	d0                               	| [$45ac: lda #$00]
+	                               	| [$45ac: lda #$00]
 	GET_ADDRESS	0x0c4d                     	| [$45ae: sta	$0c4d, x]
-    move.b	d0,(a0,d1.w)                 	| [$45ae: sta	$0c4d, x]
+    clr.b	(a0,d1.w)                 	| [$45ae: sta	$0c4d, x]
 	jra	l_45d5                             	| [$45b1: jmp	$45d5]
 	
 	* here it sets music notes when it changes (as opposed to POKEY registers

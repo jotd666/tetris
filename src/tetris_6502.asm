@@ -29,24 +29,25 @@
 ; this is bank 1
 4000: 20 2D 40 jsr	$402d
 4003: 58       cli
+handle_music_4004:
 4004: E6 CA    inc	$00ca
-4006: AE 10 0C ldx	$0c10
-4009: EC 11 0C cpx	$0c11
+4006: AE 10 0C ldx	sound_event_counter_prev_0c10
+4009: EC 11 0C cpx	sound_event_counter_0c11
 400C: F0 10    beq	$401e
 400E: E8       inx
 400F: E0 10    cpx #$10
 4011: 90 02    bcc	$4015
 4013: A2 00    ldx #$00
-4015: 8E 10 0C stx	$0c10
-4018: BC 00 0C ldy	$0c00, x
-401B: 20 60 41 jsr	$4160
+4015: 8E 10 0C stx	sound_event_counter_prev_0c10
+4018: BC 00 0C ldy	sound_event_0c00, x
+401B: 20 60 41 jsr	handle_new_sound_4160
 401E: A5 CA    lda	$00ca
 4020: 4A       lsr a
 4021: 90 05    bcc	$4028
 4023: A2 00    ldx #$00
-4025: 4C 4D 4B jmp	$4b4d
+4025: 4C 4D 4B jmp	music_tick_4b4d
 4028: A2 01    ldx #$01
-402A: 4C 4D 4B jmp	$4b4d
+402A: 4C 4D 4B jmp	music_tick_4b4d
 402D: 08       php
 402E: 78       sei
 402F: 20 A8 40 jsr	$40a8
@@ -54,8 +55,8 @@
 4034: 8D 22 0C sta	$0c22
 4037: 8D 23 0C sta	$0c23
 403A: 8D 24 0C sta	$0c24
-403D: 8D 10 0C sta	$0c10
-4040: 8D 11 0C sta	$0c11
+403D: 8D 10 0C sta	sound_event_counter_prev_0c10
+4040: 8D 11 0C sta	sound_event_counter_0c11
 4043: A2 11    ldx #$11
 4045: 9D 2D 0E sta	$0e2d, x
 4048: CA       dex
@@ -190,23 +191,27 @@
 413E: 68       pla
 413F: A8       tay
 4140: 60       rts
+
+set_sound_event_4141:
 4141: 08       php
 4142: 78       sei
-4143: AC 11 0C ldy	$0c11
+4143: AC 11 0C ldy	sound_event_counter_0c11
 4146: C8       iny
 4147: C0 10    cpy #$10
 4149: 90 02    bcc	$414d
 414B: A0 00    ldy #$00
-414D: 8C 11 0C sty	$0c11
-4150: CC 10 0C cpy	$0c10
+414D: 8C 11 0C sty	sound_event_counter_0c11
+4150: CC 10 0C cpy	sound_event_counter_prev_0c10
 4153: D0 04    bne	$4159
 4155: A9 FF    lda #$ff
 4157: 28       plp
 4158: 60       rts
-4159: 99 00 0C sta	$0c00, y
+4159: 99 00 0C sta	sound_event_0c00, y
 415C: A9 00    lda #$00
 415E: 28       plp
 415F: 60       rts
+
+handle_new_sound_4160:
 4160: C0 1D    cpy #$1d
 4162: B0 14    bcs	$4178
 4164: B9 52 52 lda	$5252, y
@@ -216,7 +221,7 @@
 416C: AA       tax
 416D: BD AD 44 lda	$44ad, x
 4170: 48       pha
-4171: BD AC 44 lda	$44ac, x
+4171: BD AC 44 lda	jump_table_44ac, x
 4174: 48       pha
 4175: B9 6F 52 lda	$526f, y
 4178: 60       rts
@@ -531,10 +536,10 @@
 43B1: 65 D3    adc	$00d3
 43B3: 85 D3    sta	$00d3
 43B5: B1 D2    lda ($d2), y
-43B7: 9D 2F 0C sta	$0c2f, x
+43B7: 9D 2F 0C sta	music_pointers_lsb_0c2f, x
 43BA: C8       iny
 43BB: B1 D2    lda ($d2), y
-43BD: 9D 39 0C sta	$0c39, x
+43BD: 9D 39 0C sta	music_pointers_msb_0c39, x
 43C0: A4 D4    ldy	$00d4
 43C2: 08       php
 43C3: 78       sei
@@ -587,10 +592,12 @@
 4419: 85 D0    sta	$00d0
 441B: C8       iny
 441C: 11 D2    ora ($d2), y
-441E: F0 07    beq	$4427
+441E: F0 07    beq	do_nothing_4427
 4420: B1 D2    lda ($d2), y
 4422: 85 D1    sta	$00d1
 4424: 4C 22 43 jmp	$4322
+
+do_nothing_4427:
 4427: 60       rts
 4428: A9 07    lda #$07
 442A: 9D D9 0C sta	$0cd9, x
@@ -607,7 +614,7 @@
 4447: 9D 83 0D sta	$0d83, x
 444A: 9D 57 0C sta	$0c57, x
 444D: 9D 61 0C sta	$0c61, x
-4450: 9D 6B 0C sta	$0c6b, x
+4450: 9D 6B 0C sta	next_note_timer_array_0c6b, x
 4453: 9D AB 0D sta	$0dab, x
 4456: 9D DD 0D sta	$0ddd, x
 4459: 9D B5 0D sta	$0db5, x
@@ -657,9 +664,9 @@
 44F5: A8       tay
 44F6: BD B1 0C lda	$0cb1, x
 44F9: 99 40 0E sta	$0e40, y
-44FC: BD 2F 0C lda	$0c2f, x
-44FF: 85 CC    sta	$00cc
-4501: BD 39 0C lda	$0c39, x
+44FC: BD 2F 0C lda	music_pointers_lsb_0c2f, x
+44FF: 85 CC    sta	music_command_pointer_00cc
+4501: BD 39 0C lda	music_pointers_msb_0c39, x
 4504: 85 CD    sta	$00cd
 4506: BD 57 0C lda	$0c57, x
 4509: 38       sec
@@ -669,9 +676,9 @@
 4513: FD 79 0D sbc	$0d79, x
 4516: 9D 61 0C sta	$0c61, x
 4519: B0 08    bcs	$4523
-451B: DE 6B 0C dec	$0c6b, x
+451B: DE 6B 0C dec	next_note_timer_array_0c6b, x
 451E: 10 03    bpl	$4523
-4520: 4C 4D 45 jmp	$454d
+4520: 4C 4D 45 jmp	next_music_note_454d
 4523: BD 89 0C lda	$0c89, x
 4526: 30 1A    bmi	$4542
 4528: BD 75 0C lda	$0c75, x
@@ -688,28 +695,32 @@
 4545: F0 03    beq	$454a
 4547: 4C 24 49 jmp	$4924
 454A: 4C 78 47 jmp	$4778
-454D: BD 2F 0C lda	$0c2f, x
+
+next_music_note_454d:
+454D: BD 2F 0C lda	music_pointers_lsb_0c2f, x
 4550: 18       clc
 4551: 69 02    adc #$02
-4553: 9D 2F 0C sta	$0c2f, x
+4553: 9D 2F 0C sta	music_pointers_lsb_0c2f, x
 4556: 90 03    bcc	$455b
-4558: FE 39 0C inc	$0c39, x
+4558: FE 39 0C inc	music_pointers_msb_0c39, x
 455B: A0 00    ldy #$00
 455D: B1 CC    lda ($cc), y
-455F: 10 1F    bpl	$4580
+455F: 10 1F    bpl	handle_all_sound_4580
 4561: 20 60 4B jsr	$4b60
 4564: 90 0C    bcc	$4572
-4566: BD 39 0C lda	$0c39, x
+4566: BD 39 0C lda	music_pointers_msb_0c39, x
 4569: 85 CD    sta	$00cd
-456B: BD 2F 0C lda	$0c2f, x
-456E: 85 CC    sta	$00cc
-4570: B0 DB    bcs	$454d
+456B: BD 2F 0C lda	music_pointers_lsb_0c2f, x
+456E: 85 CC    sta	music_command_pointer_00cc
+4570: B0 DB    bcs	next_music_note_454d
 4572: AD 42 0E lda	$0e42
 4575: 29 01    and #$01
 4577: A8       tay
 4578: A9 00    lda #$00
 457A: 99 40 0E sta	$0e40, y
 457D: 4C 41 49 jmp	$4941
+
+handle_all_sound_4580:
 4580: AC 42 0E ldy	$0e42
 4583: F0 04    beq	$4589
 4585: C9 00    cmp #$00
@@ -719,7 +730,7 @@
 458D: AC 42 0E ldy	$0e42
 4590: F0 04    beq	$4596
 4592: C0 01    cpy #$01
-4594: F0 1E    beq	$45b4
+4594: F0 1E    beq	change_music_note_45b4
 4596: 48       pha
 4597: 38       sec
 4598: FD 43 0C sbc	$0c43, x
@@ -734,6 +745,8 @@
 45AC: A9 00    lda #$00
 45AE: 9D 4D 0C sta	$0c4d, x
 45B1: 4C D5 45 jmp	$45d5
+
+change_music_note_45b4:
 45B4: 0A       asl a
 45B5: A8       tay
 45B6: 38       sec
@@ -765,13 +778,13 @@
 45F5: 85 DC    sta	$00dc
 45F7: C8       iny
 45F8: B1 DD    lda ($dd), y
-45FA: 9D 2F 0C sta	$0c2f, x
-45FD: 85 CC    sta	$00cc
+45FA: 9D 2F 0C sta	music_pointers_lsb_0c2f, x
+45FD: 85 CC    sta	music_command_pointer_00cc
 45FF: C8       iny
 4600: B1 DD    lda ($dd), y
-4602: 9D 39 0C sta	$0c39, x
+4602: 9D 39 0C sta	music_pointers_msb_0c39, x
 4605: 85 CD    sta	$00cd
-4607: 4C 4D 45 jmp	$454d
+4607: 4C 4D 45 jmp	next_music_note_454d
 460A: 9D B1 0C sta	$0cb1, x
 460D: 9D D9 0C sta	$0cd9, x
 4610: 9D 93 0C sta	$0c93, x
@@ -797,8 +810,8 @@
 463F: 7D 61 0C adc	$0c61, x
 4642: 9D 61 0C sta	$0c61, x
 4645: B9 A3 51 lda	$51a3, y
-4648: 7D 6B 0C adc	$0c6b, x
-464B: 9D 6B 0C sta	$0c6b, x
+4648: 7D 6B 0C adc	next_note_timer_array_0c6b, x
+464B: 9D 6B 0C sta	next_note_timer_array_0c6b, x
 464E: A5 D9    lda	$00d9
 4650: 29 40    and #$40
 4652: F0 17    beq	$466b
@@ -811,8 +824,8 @@
 465E: 7D 61 0C adc	$0c61, x
 4661: 9D 61 0C sta	$0c61, x
 4664: 68       pla
-4665: 7D 6B 0C adc	$0c6b, x
-4668: 9D 6B 0C sta	$0c6b, x
+4665: 7D 6B 0C adc	next_note_timer_array_0c6b, x
+4668: 9D 6B 0C sta	next_note_timer_array_0c6b, x
 466B: A9 7F    lda #$7f
 466D: 9D 89 0C sta	$0c89, x
 4670: A5 D9    lda	$00d9
@@ -833,7 +846,7 @@
 4690: BD 61 0C lda	$0c61, x
 4693: E5 D7    sbc	$00d7
 4695: 9D 7F 0C sta	$0c7f, x
-4698: BD 6B 0C lda	$0c6b, x
+4698: BD 6B 0C lda	next_note_timer_array_0c6b, x
 469B: E5 D8    sbc	$00d8
 469D: 9D 89 0C sta	$0c89, x
 46A0: A5 D9    lda	$00d9
@@ -875,8 +888,8 @@
 46EF: 7D 61 0C adc	$0c61, x
 46F2: 9D 61 0C sta	$0c61, x
 46F5: 68       pla
-46F6: 7D 6B 0C adc	$0c6b, x
-46F9: 9D 6B 0C sta	$0c6b, x
+46F6: 7D 6B 0C adc	next_note_timer_array_0c6b, x
+46F9: 9D 6B 0C sta	next_note_timer_array_0c6b, x
 46FC: B1 CC    lda ($cc), y
 46FE: 85 D9    sta	$00d9
 4700: 9D 93 0C sta	$0c93, x
@@ -902,7 +915,7 @@
 4730: 9D 5B 0D sta	$0d5b, x
 4733: 9D 65 0D sta	$0d65, x
 4736: BD F7 0C lda	$0cf7, x
-4739: 85 CC    sta	$00cc
+4739: 85 CC    sta	music_command_pointer_00cc
 473B: BD 01 0D lda	$0d01, x
 473E: 85 CD    sta	$00cd
 4740: B1 CC    lda ($cc), y
@@ -920,7 +933,7 @@
 4757: 9D 1F 0D sta	$0d1f, x
 475A: 9D 29 0D sta	$0d29, x
 475D: BD E3 0C lda	$0ce3, x
-4760: 85 CC    sta	$00cc
+4760: 85 CC    sta	music_command_pointer_00cc
 4762: BD ED 0C lda	$0ced, x
 4765: 85 CD    sta	$00cd
 4767: B1 CC    lda ($cc), y
@@ -945,7 +958,7 @@
 4792: 7E BF 0D ror	$0dbf, x
 4795: 7E B5 0D ror	$0db5, x
 4798: BD F7 0C lda	$0cf7, x
-479B: 85 CC    sta	$00cc
+479B: 85 CC    sta	music_command_pointer_00cc
 479D: BD 01 0D lda	$0d01, x
 47A0: 85 CD    sta	$00cd
 47A2: BC 33 0D ldy	$0d33, x
@@ -971,9 +984,9 @@
 47CB: 9D 65 0D sta	$0d65, x
 47CE: C8       iny
 47CF: 38       sec
-47D0: A5 CC    lda	$00cc
+47D0: A5 CC    lda	music_command_pointer_00cc
 47D2: F1 CC    sbc ($cc), y
-47D4: 85 CC    sta	$00cc
+47D4: 85 CC    sta	music_command_pointer_00cc
 47D6: 9D F7 0C sta	$0cf7, x
 47D9: B0 D6    bcs	$47b1
 47DB: C6 CD    dec	$00cd
@@ -1042,14 +1055,14 @@
 485B: 85 D9    sta	$00d9
 485D: 98       tya
 485E: 7D BF 0D adc	$0dbf, x
-4861: 8D 4A 0E sta	$0e4a
+4861: 8D 4A 0E sta	music_channel_msb_value_0e4a
 4864: AD 42 0E lda	$0e42
 4867: 29 01    and #$01
 4869: A8       tay
 486A: A5 D9    lda	$00d9
 486C: 99 48 0E sta	$0e48, y
 486F: BD E3 0C lda	$0ce3, x
-4872: 85 CC    sta	$00cc
+4872: 85 CC    sta	music_command_pointer_00cc
 4874: BD ED 0C lda	$0ced, x
 4877: 85 CD    sta	$00cd
 4879: BC 0B 0D ldy	$0d0b, x
@@ -1074,9 +1087,9 @@
 48A3: 9D 29 0D sta	$0d29, x
 48A6: C8       iny
 48A7: 38       sec
-48A8: A5 CC    lda	$00cc
+48A8: A5 CC    lda	music_command_pointer_00cc
 48AA: F1 CC    sbc ($cc), y
-48AC: 85 CC    sta	$00cc
+48AC: 85 CC    sta	music_command_pointer_00cc
 48AE: 9D E3 0C sta	$0ce3, x
 48B1: B0 D6    bcs	$4889
 48B3: C6 CD    dec	$00cd
@@ -1225,6 +1238,8 @@
 49DF: 68       pla
 49E0: 85 D9    sta	$00d9
 49E2: 60       rts
+
+l_tests_c_49e3:
 49E3: 98       tya
 49E4: 48       pha
 49E5: C8       iny
@@ -1309,9 +1324,9 @@
 4AB5: 0D 50 0E ora	$0e50
 4AB8: 60       rts
 4AB9: AD 45 0E lda	$0e45
-4ABC: 8D 4A 0E sta	$0e4a
+4ABC: 8D 4A 0E sta	music_channel_msb_value_0e4a
 4ABF: AD 48 0E lda	$0e48
-4AC2: 8D 49 0E sta	$0e49
+4AC2: 8D 49 0E sta	music_channel_lsb_value_0e49
 4AC5: AD 44 0E lda	$0e44
 4AC8: 8D 47 0E sta	$0e47
 4ACB: AD 51 0E lda	$0e51
@@ -1322,6 +1337,8 @@
 4ADA: 0D 4F 0E ora	$0e4f
 4ADD: 0D 50 0E ora	$0e50
 4AE0: 60       rts
+
+music_tick_4ae1:
 4AE1: A9 00    lda #$00
 4AE3: 8D 50 0E sta	$0e50
 4AE6: A9 FF    lda #$ff
@@ -1333,16 +1350,16 @@
 4AF1: A8       tay
 4AF2: C8       iny
 4AF3: C8       iny
-4AF4: 20 E3 49 jsr	$49e3
+4AF4: 20 E3 49 jsr	l_tests_c_49e3
 4AF7: 90 02    bcc	$4afb
 4AF9: 09 28    ora #$28
 4AFB: 8D 50 0E sta	$0e50
 4AFE: A0 04    ldy #$04
-4B00: AD 49 0E lda	$0e49
+4B00: AD 49 0E lda	music_channel_lsb_value_0e49
 4B03: 91 CE    sta (pokey_pointer_00ce), y
 4B05: C8       iny
 4B06: C8       iny
-4B07: AD 4A 0E lda	$0e4a
+4B07: AD 4A 0E lda	music_channel_msb_value_0e4a
 4B0A: 91 CE    sta (pokey_pointer_00ce), y
 4B0C: 88       dey
 4B0D: AD 46 0E lda	$0e46
@@ -1353,7 +1370,7 @@
 4B17: 91 CE    sta (pokey_pointer_00ce), y
 4B19: 68       pla
 4B1A: A8       tay
-4B1B: 20 E3 49 jsr	$49e3
+4B1B: 20 E3 49 jsr	l_tests_c_49e3
 4B1E: 90 02    bcc	$4b22
 4B20: 09 50    ora #$50
 4B22: 8D 50 0E sta	$0e50
@@ -1364,11 +1381,11 @@
 4B2D: A0 08    ldy #$08
 4B2F: 91 CE    sta (pokey_pointer_00ce), y
 4B31: A0 00    ldy #$00
-4B33: AD 49 0E lda	$0e49
+4B33: AD 49 0E lda	music_channel_lsb_value_0e49
 4B36: 91 CE    sta (pokey_pointer_00ce), y
 4B38: C8       iny
 4B39: C8       iny
-4B3A: AD 4A 0E lda	$0e4a
+4B3A: AD 4A 0E lda	music_channel_msb_value_0e4a
 4B3D: 91 CE    sta (pokey_pointer_00ce), y
 4B3F: 88       dey
 4B40: AD 46 0E lda	$0e46
@@ -1378,13 +1395,15 @@
 4B47: AD 47 0E lda	$0e47
 4B4A: 91 CE    sta (pokey_pointer_00ce), y
 4B4C: 60       rts
+
+music_tick_4b4d:
 4B4D: BD 08 50 lda	$5008, x
 4B50: 85 CE    sta	pokey_pointer_00ce
 4B52: BD 0A 50 lda	$500a, x
 4B55: 85 CF    sta	$00cf
 4B57: BD 0C 50 lda	$500c, x
 4B5A: 8D 4C 0E sta	$0e4c
-4B5D: 4C E1 4A jmp	$4ae1
+4B5D: 4C E1 4A jmp	music_tick_4ae1
 4B60: C9 BB    cmp #$bb
 4B62: 90 07    bcc	$4b6b
 4B64: A9 FF    lda #$ff
@@ -1397,18 +1416,18 @@
 4B6F: AA       tax
 4B70: BD B3 4B lda	$4bb3, x
 4B73: 48       pha
-4B74: BD B2 4B lda	$4bb2, x
+4B74: BD B2 4B lda	jump_table_4bb2, x
 4B77: 48       pha
 4B78: A6 D9    ldx	$00d9
 4B7A: B1 CC    lda ($cc), y
 4B7C: 38       sec
 4B7D: 60       rts
-4B7E: BD 2F 0C lda	$0c2f, x
+4B7E: BD 2F 0C lda	music_pointers_lsb_0c2f, x
 4B81: 18       clc
 4B82: 69 01    adc #$01
-4B84: 9D 2F 0C sta	$0c2f, x
+4B84: 9D 2F 0C sta	music_pointers_lsb_0c2f, x
 4B87: 90 03    bcc	$4b8c
-4B89: FE 39 0C inc	$0c39, x
+4B89: FE 39 0C inc	music_pointers_msb_0c39, x
 4B8C: C8       iny
 4B8D: B1 CC    lda ($cc), y
 4B8F: 60       rts
@@ -1426,7 +1445,7 @@
 4BA5: 60       rts
 4BA6: B9 B3 4B lda	$4bb3, y
 4BA9: 48       pha
-4BAA: B9 B2 4B lda	$4bb2, y
+4BAA: B9 B2 4B lda	jump_table_4bb2, y
 4BAD: 48       pha
 4BAE: AD 56 0E lda	$0e56
 4BB1: 60       rts
@@ -1450,29 +1469,29 @@ jump_table_4bb2:
 	.word	$4d7d
 	.word	$4fb2
 	.word	$4fce
-	.word	$454d
-	.word	$454d
-	.word	$454d
-	.word	$454d
-	.word	$454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
 	.word	$4fdd
-	.word	$454d
+	.word	next_music_note_454d
 	.word	$4ff9
-	.word	$454d
+	.word	next_music_note_454d
 	.word	$4d09
 	.word	$4f94
-	.word	$454d
-	.word	$454d
-	.word	$454d
-	.word	$454d
-	.word	$454d
-	.word	$454d
-	.word	$454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
 	.word	$4daf
-	.word	$454d
-	.word	$454d
-	.word	$454d
-	.word	$454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
+	.word	next_music_note_454d
 	.word	$4ddc
 	.word	$4de8
 	.word	$4df2
@@ -1495,7 +1514,7 @@ jump_table_4bb2:
 4C28: A9 00    lda #$00
 4C2A: 9D 57 0C sta	$0c57, x
 4C2D: 9D 61 0C sta	$0c61, x
-4C30: 9D 6B 0C sta	$0c6b, x
+4C30: 9D 6B 0C sta	next_note_timer_array_0c6b, x
 4C33: BC 8D 0D ldy	$0d8d, x
 4C36: F0 08    beq	$4c40
 4C38: C8       iny
@@ -1525,12 +1544,12 @@ jump_table_4bb2:
 4C6D: 10 F0    bpl	$4c5f
 4C6F: A9 00    lda #$00
 4C71: F0 C8    beq	$4c3b
-4C73: BD 2F 0C lda	$0c2f, x
+4C73: BD 2F 0C lda	music_pointers_lsb_0c2f, x
 4C76: C9 02    cmp #$02
 4C78: B0 03    bcs	$4c7d
-4C7A: DE 39 0C dec	$0c39, x
-4C7D: DE 2F 0C dec	$0c2f, x
-4C80: DE 2F 0C dec	$0c2f, x
+4C7A: DE 39 0C dec	music_pointers_msb_0c39, x
+4C7D: DE 2F 0C dec	music_pointers_lsb_0c2f, x
+4C80: DE 2F 0C dec	music_pointers_lsb_0c2f, x
 4C83: 18       clc
 4C84: 60       rts
 4C85: 9D 97 0D sta	$0d97, x
@@ -1619,15 +1638,15 @@ jump_table_4bb2:
 4D36: 68       pla
 4D37: 9D C9 0D sta	$0dc9, x
 4D3A: C8       iny
-4D3B: BD 2F 0C lda	$0c2f, x
+4D3B: BD 2F 0C lda	music_pointers_lsb_0c2f, x
 4D3E: 91 DD    sta ($dd), y
 4D40: C8       iny
-4D41: BD 39 0C lda	$0c39, x
+4D41: BD 39 0C lda	music_pointers_msb_0c39, x
 4D44: 91 DD    sta ($dd), y
 4D46: A5 D9    lda	$00d9
-4D48: 9D 2F 0C sta	$0c2f, x
+4D48: 9D 2F 0C sta	music_pointers_lsb_0c2f, x
 4D4B: A5 DA    lda	$00da
-4D4D: 9D 39 0C sta	$0c39, x
+4D4D: 9D 39 0C sta	music_pointers_msb_0c39, x
 4D50: 38       sec
 4D51: 60       rts
 4D52: 48       pha
@@ -1639,10 +1658,10 @@ jump_table_4bb2:
 4D5E: 68       pla
 4D5F: 9D D3 0D sta	$0dd3, x
 4D62: C8       iny
-4D63: BD 2F 0C lda	$0c2f, x
+4D63: BD 2F 0C lda	music_pointers_lsb_0c2f, x
 4D66: 91 DD    sta ($dd), y
 4D68: C8       iny
-4D69: BD 39 0C lda	$0c39, x
+4D69: BD 39 0C lda	music_pointers_msb_0c39, x
 4D6C: 91 DD    sta ($dd), y
 4D6E: C8       iny
 4D6F: BD DD 0D lda	$0ddd, x
@@ -1661,10 +1680,10 @@ jump_table_4bb2:
 4D88: F0 0E    beq	$4d98
 4D8A: C8       iny
 4D8B: B1 DD    lda ($dd), y
-4D8D: 9D 2F 0C sta	$0c2f, x
+4D8D: 9D 2F 0C sta	music_pointers_lsb_0c2f, x
 4D90: C8       iny
 4D91: B1 DD    lda ($dd), y
-4D93: 9D 39 0C sta	$0c39, x
+4D93: 9D 39 0C sta	music_pointers_msb_0c39, x
 4D96: 38       sec
 4D97: 60       rts
 4D98: 48       pha
@@ -1788,9 +1807,9 @@ jump_table_4bb2:
 4E74: C6 D8    dec	$00d8
 4E76: D0 F4    bne	$4e6c
 4E78: 20 7E 4B jsr	$4b7e
-4E7B: 9D 39 0C sta	$0c39, x
+4E7B: 9D 39 0C sta	music_pointers_msb_0c39, x
 4E7E: A5 D9    lda	$00d9
-4E80: 9D 2F 0C sta	$0c2f, x
+4E80: 9D 2F 0C sta	music_pointers_lsb_0c2f, x
 4E83: 38       sec
 4E84: 60       rts
 4E85: 85 D9    sta	$00d9
@@ -1805,9 +1824,9 @@ jump_table_4bb2:
 4E9B: C6 D8    dec	$00d8
 4E9D: D0 F4    bne	$4e93
 4E9F: 20 7E 4B jsr	$4b7e
-4EA2: 9D 39 0C sta	$0c39, x
+4EA2: 9D 39 0C sta	music_pointers_msb_0c39, x
 4EA5: A5 D9    lda	$00d9
-4EA7: 9D 2F 0C sta	$0c2f, x
+4EA7: 9D 2F 0C sta	music_pointers_lsb_0c2f, x
 4EAA: FE 19 0E inc	$0e19, x
 4EAD: BD 19 0E lda	$0e19, x
 4EB0: 4C E0 4D jmp	$4de0
@@ -1878,9 +1897,9 @@ jump_table_4bb2:
 4F3B: 20 7E 4B jsr	$4b7e
 4F3E: 85 D9    sta	$00d9
 4F40: 20 7E 4B jsr	$4b7e
-4F43: 9D 39 0C sta	$0c39, x
+4F43: 9D 39 0C sta	music_pointers_msb_0c39, x
 4F46: A5 D9    lda	$00d9
-4F48: 9D 2F 0C sta	$0c2f, x
+4F48: 9D 2F 0C sta	music_pointers_lsb_0c2f, x
 4F4B: 38       sec
 4F4C: 60       rts
 4F4D: 84 D9    sty	$00d9
@@ -1966,9 +1985,9 @@ jump_table_4bb2:
 4FF8: 60       rts
 4FF9: 85 D9    sta	$00d9
 4FFB: 20 7E 4B jsr	$4b7e
-4FFE: 9D 39 0C sta	$0c39, x
+4FFE: 9D 39 0C sta	music_pointers_msb_0c39, x
 5001: A5 D9    lda	$00d9
-5003: 9D 2F 0C sta	$0c2f, x
+5003: 9D 2F 0C sta	music_pointers_lsb_0c2f, x
 5006: 38       sec
 5007: 60       rts
 
@@ -2007,13 +2026,13 @@ startup_8000:
 803A: 9D 00 03 sta	$0300, x
 803D: 9D 00 04 sta	$0400, x
 8040: 9D 00 05 sta	$0500, x
-8043: 9D 00 06 sta	$0600, x
-8046: 9D 00 07 sta	$0700, x
+8043: 9D 00 06 sta	score_digit_1_0600, x
+8046: 9D 00 07 sta	pokey1_state_copy_0700, x
 8049: 9D 00 08 sta	$0800, x
 804C: 9D 00 09 sta	$0900, x
 804F: 9D 00 0A sta	$0a00, x
 8052: 9D 00 0B sta	$0b00, x
-8055: 9D 00 0C sta	$0c00, x
+8055: 9D 00 0C sta	sound_event_0c00, x
 8058: 9D 00 0D sta	$0d00, x
 805B: 9D 00 0E sta	$0e00, x
 805E: 9D 00 0F sta	$0f00, x
@@ -2038,12 +2057,13 @@ startup_8000:
 8097: E8       inx
 8098: D0 98    bne	$8032
 ; pokey again
-809A: 8D 0B 28 sta	$280b
-809D: 2C 08 28 bit	$2808
-80A0: 30 06    bmi	$80a8
+809A: 8D 0B 28 sta	potgo_280b
+809D: 2C 08 28 bit	allpot_2808
+80A0: 30 06    bmi	service_mode_80a8
 80A2: 20 49 E6 jsr	$e649
 80A5: 4C 61 E6 jmp continue_startup_e661
 ; not reached?
+service_mode_80a8:
 80A8: A2 00    ldx #$00
 80AA: B5 00    lda	$0000, x
 80AC: F0 03    beq	$80b1
@@ -2082,9 +2102,9 @@ startup_8000:
 80EA: 9A       txs
 80EB: A9 00    lda #$00
 80ED: 85 AF    sta	$00af
-80EF: 85 AD    sta	$00ad
-80F1: 85 AE    sta	$00ae
-80F3: E6 AE    inc	$00ae
+80EF: 85 AD    sta	screen_address_lsb_00ad
+80F1: 85 AE    sta	screen_address_msb_00ae
+80F3: E6 AE    inc	screen_address_msb_00ae
 80F5: A0 00    ldy #$00
 80F7: B1 AD    lda ($ad), y
 80F9: F0 03    beq	$80fe
@@ -2123,7 +2143,7 @@ startup_8000:
 8134: C8       iny
 8135: D0 F1    bne	$8128
 8137: 8D 00 30 sta watchdog_3000
-813A: A5 AE    lda	$00ae
+813A: A5 AE    lda	screen_address_msb_00ae
 813C: C9 20    cmp #$20
 813E: 90 B3    bcc	$80f3
 8140: 20 90 92 jsr	$9290
@@ -2223,9 +2243,9 @@ startup_8000:
 8207: C9 FF    cmp #$ff
 8209: F0 18    beq	$8223
 820B: A0 24    ldy #$24
-820D: 84 02    sty	$0002
+820D: 84 02    sty	screen_address_lsb_0002
 820F: A0 12    ldy #$12
-8211: 84 03    sty	$0003
+8211: 84 03    sty	screen_address_msb_0003
 8213: 20 64 92 jsr	$9264
 8216: A5 AF    lda	$00af
 8218: 09 04    ora #$04
@@ -2240,8 +2260,8 @@ startup_8000:
 822C: E6 B0    inc	$00b0
 822E: A5 B2    lda	$00b2
 8230: 85 B6    sta	$00b6
-8232: 8D 0B 28 sta	$280b
-8235: AE 08 28 ldx	$2808
+8232: 8D 0B 28 sta	potgo_280b
+8235: AE 08 28 ldx	allpot_2808
 8238: 86 B2    stx	$00b2
 823A: 49 FF    eor #$ff
 823C: 25 B2    and	$00b2
@@ -2275,18 +2295,19 @@ startup_8000:
 827A: 95 B8    sta	$00b8, x
 827C: CA       dex
 827D: 10 D5    bpl	$8254
-827F: 8D 0B 28 sta	$280b
-8282: 2C 08 28 bit	$2808
+827F: 8D 0B 28 sta	potgo_280b
+8282: 2C 08 28 bit	allpot_2808
 8285: 50 F8    bvc	$827f
 8287: A5 AC    lda	$00ac
 8289: D0 08    bne	$8293
-828B: 8D 0B 28 sta	$280b
-828E: 2C 08 28 bit	$2808
+828B: 8D 0B 28 sta	potgo_280b
+828E: 2C 08 28 bit	allpot_2808
 8291: 70 F4    bvs	$8287
 8293: A9 00    lda #$00
 8295: 85 AC    sta	$00ac
 8297: A5 B2    lda	$00b2
 8299: 30 04    bmi	$829f
+assert_failed_829b:
 829B: 78       sei
 829C: 4C 9C 82 jmp	$829c
 
@@ -2307,7 +2328,7 @@ startup_8000:
 ; jump from table
 82B9: B9 C3 82 lda	$82c3, y
 82BC: 48       pha
-82BD: B9 C2 82 lda	$82c2, y
+82BD: B9 C2 82 lda	jump_table_82c2, y
 82C0: 48       pha
 82C1: 60       rts
 
@@ -2696,9 +2717,9 @@ jump_table_82c2:
 863E: 85 5F    sta	$005f
 8640: 20 18 86 jsr	$8618
 8643: A9 5A    lda #$5a
-8645: 85 AD    sta	$00ad
+8645: 85 AD    sta	screen_address_lsb_00ad
 8647: A9 86    lda #$86
-8649: 85 AE    sta	$00ae
+8649: 85 AE    sta	screen_address_msb_00ae
 864B: 20 0A 87 jsr	$870a
 864E: A9 1B    lda #$1b
 8650: A0 00    ldy #$00
@@ -2714,9 +2735,9 @@ jump_table_82c2:
 86F0: E8       inx
 86F1: D0 F9    bne	$86ec
 86F3: A9 97    lda #$97
-86F5: 85 AD    sta	$00ad
+86F5: 85 AD    sta	screen_address_lsb_00ad
 86F7: A9 87    lda #$87
-86F9: 85 AE    sta	$00ae
+86F9: 85 AE    sta	screen_address_msb_00ae
 86FB: 20 0A 87 jsr	$870a
 86FE: A9 22    lda #$22
 8700: A0 00    ldy #$00
@@ -2786,12 +2807,12 @@ jump_table_82c2:
 8785: A0 00    ldy #$00
 8787: 20 BC 8C jsr	$8cbc
 878A: 60       rts
-878B: A5 AD    lda	$00ad
+878B: A5 AD    lda	screen_address_lsb_00ad
 878D: 18       clc
 878E: 69 01    adc #$01
-8790: 85 AD    sta	$00ad
+8790: 85 AD    sta	screen_address_lsb_00ad
 8792: 90 02    bcc	$8796
-8794: E6 AE    inc	$00ae
+8794: E6 AE    inc	screen_address_msb_00ae
 8796: 60       rts
 
 
@@ -3076,7 +3097,7 @@ display_screen_883b:
 8B60: A9 13    lda #$13
 8B62: 85 1C    sta	$001c
 8B64: A9 24    lda #$24
-8B66: 85 1B    sta	$001b
+8B66: 85 1B    sta	current_player_control_status_001b
 8B68: A5 B5    lda	$00b5
 8B6A: 29 80    and #$80
 8B6C: F0 17    beq	$8b85
@@ -3086,7 +3107,7 @@ display_screen_883b:
 8B73: D0 02    bne	$8b77
 8B75: A9 1C    lda #$1c
 8B77: 85 9B    sta	$009b
-8B79: 85 1F    sta	$001f
+8B79: 85 1F    sta	logical_grid_address_lsb_001f
 8B7B: A0 01    ldy #$01
 8B7D: 20 58 C8 jsr	$c858
 8B80: A9 03    lda #$03
@@ -3101,7 +3122,7 @@ display_screen_883b:
 8B92: 90 02    bcc	$8b96
 8B94: A9 01    lda #$01
 8B96: 85 9B    sta	$009b
-8B98: 85 1F    sta	$001f
+8B98: 85 1F    sta	logical_grid_address_lsb_001f
 8B9A: A0 01    ldy #$01
 8B9C: 20 58 C8 jsr	$c858
 8B9F: A9 03    lda #$03
@@ -3110,12 +3131,12 @@ display_screen_883b:
 8BA6: 29 10    and #$10
 8BA8: F0 05    beq	$8baf
 8BAA: A5 9B    lda	$009b
-8BAC: 20 59 E6 jsr	$e659
+8BAC: 20 59 E6 jsr	set_sound_event_e659
 8BAF: A5 B5    lda	$00b5
 8BB1: 29 22    and #$22
 8BB3: F0 05    beq	$8bba
 8BB5: A9 00    lda #$00
-8BB7: 20 59 E6 jsr	$e659
+8BB7: 20 59 E6 jsr	set_sound_event_e659
 8BBA: A5 9B    lda	$009b
 8BBC: C9 05    cmp #$05
 8BBE: B0 04    bcs	$8bc4
@@ -3125,7 +3146,7 @@ display_screen_883b:
 8BC6: A0 00    ldy #$00
 8BC8: 20 BC 8C jsr	$8cbc
 8BCB: 4C 2E 82 jmp	$822e
-8BCE: A5 AE    lda	$00ae
+8BCE: A5 AE    lda	screen_address_msb_00ae
 8BD0: C9 01    cmp #$01
 8BD2: F0 7E    beq	$8c52
 8BD4: C9 20    cmp #$20
@@ -3224,8 +3245,8 @@ display_screen_883b:
 
 8CA0: 84 67    sty	$0067
 8CA2: A0 00    ldy #$00
-8CA4: 84 AD    sty	$00ad
-8CA6: 86 AE    stx	$00ae
+8CA4: 84 AD    sty	screen_address_lsb_00ad
+8CA6: 86 AE    stx	screen_address_msb_00ae
 8CA8: E0 60    cpx #$60
 8CAA: D0 01    bne	$8cad
 8CAC: C8       iny
@@ -3319,19 +3340,19 @@ display_screen_883b:
 93C1: 60       rts
 
 93C8: 48       pha
-93C9: A5 AD    lda	$00ad
+93C9: A5 AD    lda	screen_address_lsb_00ad
 93CB: 18       clc
 93CC: 69 01    adc #$01
-93CE: 85 AD    sta	$00ad
-93D0: A5 AE    lda	$00ae
+93CE: 85 AD    sta	screen_address_lsb_00ad
+93D0: A5 AE    lda	screen_address_msb_00ae
 93D2: 69 00    adc #$00
-93D4: 85 AE    sta	$00ae
+93D4: 85 AE    sta	screen_address_msb_00ae
 93D6: 68       pla
 93D7: 60       rts
 93D8: AD E8 06 lda	$06e8
-93DB: 85 AD    sta	$00ad
+93DB: 85 AD    sta	screen_address_lsb_00ad
 93DD: AD E9 06 lda	$06e9
-93E0: 85 AE    sta	$00ae
+93E0: 85 AE    sta	screen_address_msb_00ae
 93E2: A9 00    lda #$00
 93E4: 8D EE 06 sta	$06ee
 93E7: A8       tay
@@ -3352,12 +3373,12 @@ display_screen_883b:
 9407: 4C E8 93 jmp	$93e8
 940A: CE EE 06 dec	$06ee
 940D: 60       rts
-940E: 85 1D    sta	$001d
+940E: 85 1D    sta	unknown_001d
 9410: AD E8 06 lda	$06e8
-9413: 85 AD    sta	$00ad
+9413: 85 AD    sta	screen_address_lsb_00ad
 9415: AD E9 06 lda	$06e9
-9418: 85 AE    sta	$00ae
-941A: A5 1D    lda	$001d
+9418: 85 AE    sta	screen_address_msb_00ae
+941A: A5 1D    lda	unknown_001d
 941C: F0 22    beq	$9440
 941E: A0 00    ldy #$00
 9420: B1 AD    lda ($ad), y
@@ -3373,19 +3394,19 @@ display_screen_883b:
 9436: D0 F9    bne	$9431
 9438: C6 1E    dec	$001e
 943A: 10 F5    bpl	$9431
-943C: C6 1D    dec	$001d
+943C: C6 1D    dec	unknown_001d
 943E: D0 E0    bne	$9420
 9440: A9 01    lda #$01
 9442: 60       rts
 
 944B: A0 00    ldy #$00                                            
 944D: B1 AD    lda ($ad), y
-944F: 85 1F    sta	$001f
+944F: 85 1F    sta	logical_grid_address_lsb_001f
 9451: 4A       lsr a
 9452: 4A       lsr a
 9453: 4A       lsr a
 9454: 85 21    sta	$0021
-9456: A5 1F    lda	$001f
+9456: A5 1F    lda	logical_grid_address_lsb_001f
 9458: 29 07    and #$07
 945A: F0 7A    beq	$94d6
 945C: A8       tay
@@ -3394,19 +3415,19 @@ display_screen_883b:
 9461: E9 01    sbc #$01
 9463: 85 22    sta	$0022
 9465: AD E4 06 lda	$06e4
-9468: 85 1B    sta	$001b
+9468: 85 1B    sta	current_player_control_status_001b
 946A: AD E5 06 lda	$06e5
 946D: 85 1C    sta	$001c
 946F: AD E6 06 lda	$06e6
-9472: 85 1D    sta	$001d
+9472: 85 1D    sta	unknown_001d
 9474: AD E7 06 lda	$06e7
 9477: 85 1E    sta	$001e
 9479: A0 00    ldy #$00
 947B: C6 21    dec	$0021
 947D: 30 0B    bmi	$948a
-947F: 46 1B    lsr	$001b
+947F: 46 1B    lsr	current_player_control_status_001b
 9481: 66 1C    ror	$001c
-9483: 46 1D    lsr	$001d
+9483: 46 1D    lsr	unknown_001d
 9485: 66 1E    ror	$001e
 9487: 4C 7B 94 jmp	$947b
 948A: A5 22    lda	$0022
@@ -3418,12 +3439,12 @@ display_screen_883b:
 9496: 20 C8 93 jsr	$93c8
 9499: 20 32 97 jsr	$9732
 949C: A5 1C    lda	$001c
-949E: 85 20    sta	$0020
+949E: 85 20    sta	logical_grid_address_msb_or_controls_0020
 94A0: A0 00    ldy #$00
 94A2: B1 AD    lda ($ad), y
 94A4: 20 C8 93 jsr	$93c8
 94A7: D0 F9    bne	$94a2
-94A9: C6 20    dec	$0020
+94A9: C6 20    dec	logical_grid_address_msb_or_controls_0020
 94AB: 10 F5    bpl	$94a2
 94AD: A5 1C    lda	$001c
 94AF: C5 1E    cmp	$001e
@@ -3438,12 +3459,12 @@ display_screen_883b:
 94C2: A5 22    lda	$0022
 94C4: 38       sec
 94C5: E5 1C    sbc	$001c
-94C7: 85 20    sta	$0020
+94C7: 85 20    sta	logical_grid_address_msb_or_controls_0020
 94C9: A0 00    ldy #$00
 94CB: B1 AD    lda ($ad), y
 94CD: 20 C8 93 jsr	$93c8
 94D0: D0 F9    bne	$94cb
-94D2: C6 20    dec	$0020
+94D2: C6 20    dec	logical_grid_address_msb_or_controls_0020
 94D4: 10 F5    bpl	$94cb
 94D6: A0 00    ldy #$00
 94D8: B1 AD    lda ($ad), y
@@ -3556,24 +3577,24 @@ display_screen_883b:
 95C9: 20 BC 8C jsr	$8cbc
 95CC: A5 B1    lda	$00b1
 95CE: 20 0E 94 jsr	$940e
-95D1: A5 AD    lda	$00ad
+95D1: A5 AD    lda	screen_address_lsb_00ad
 95D3: 8D EA 06 sta	$06ea
-95D6: A5 AE    lda	$00ae
+95D6: A5 AE    lda	screen_address_msb_00ae
 95D8: 8D EB 06 sta	$06eb
 95DB: A0 00    ldy #$00
 95DD: B1 AD    lda ($ad), y
-95DF: 85 1F    sta	$001f
+95DF: 85 1F    sta	logical_grid_address_lsb_001f
 95E1: 4A       lsr a
 95E2: 4A       lsr a
 95E3: 4A       lsr a
 95E4: 85 21    sta	$0021
-95E6: A5 1F    lda	$001f
+95E6: A5 1F    lda	logical_grid_address_lsb_001f
 95E8: 29 07    and #$07
 95EA: D0 03    bne	$95ef
 95EC: 4C B7 96 jmp	$96b7
 95EF: A8       tay
 95F0: B9 43 94 lda	$9443, y
-95F3: 85 1F    sta	$001f
+95F3: 85 1F    sta	logical_grid_address_lsb_001f
 95F5: 38       sec
 95F6: E9 01    sbc #$01
 95F8: 8D ED 06 sta	$06ed
@@ -3592,21 +3613,21 @@ display_screen_883b:
 9614: B9 7A 97 lda	$977a, y
 9617: 85 1E    sta	$001e
 9619: B9 7B 97 lda	$977b, y
-961C: 85 1D    sta	$001d
+961C: 85 1D    sta	unknown_001d
 961E: A5 B5    lda	$00b5
 9620: 29 C0    and #$c0
 9622: F0 30    beq	$9654
 9624: 20 B8 96 jsr	$96b8
 9627: AD EC 06 lda	$06ec
 962A: 2D E4 06 and	$06e4
-962D: 85 1D    sta	$001d
+962D: 85 1D    sta	unknown_001d
 962F: AD ED 06 lda	$06ed
 9632: 2D E5 06 and	$06e5
 9635: 85 1E    sta	$001e
 9637: A4 21    ldy	$0021
 9639: 88       dey
 963A: 30 07    bmi	$9643
-963C: 46 1D    lsr	$001d
+963C: 46 1D    lsr	unknown_001d
 963E: 66 1E    ror	$001e
 9640: 4C 39 96 jmp	$9639
 9643: A0 00    ldy #$00
@@ -3638,9 +3659,9 @@ display_screen_883b:
 967F: AD E3 06 lda	$06e3
 9682: 8D E5 06 sta	$06e5
 9685: AD EA 06 lda	$06ea
-9688: 85 AD    sta	$00ad
+9688: 85 AD    sta	screen_address_lsb_00ad
 968A: AD EB 06 lda	$06eb
-968D: 85 AE    sta	$00ae
+968D: 85 AE    sta	screen_address_msb_00ae
 968F: A9 01    lda #$01
 9691: 85 05    sta	$0005
 9693: 20 4B 94 jsr	$944b
@@ -3649,9 +3670,9 @@ display_screen_883b:
 969C: AD C3 05 lda	$05c3
 969F: 8D E5 06 sta	$06e5
 96A2: AD EA 06 lda	$06ea
-96A5: 85 AD    sta	$00ad
+96A5: 85 AD    sta	screen_address_lsb_00ad
 96A7: AD EB 06 lda	$06eb
-96AA: 85 AE    sta	$00ae
+96AA: 85 AE    sta	screen_address_msb_00ae
 96AC: A9 20    lda #$20
 96AE: 85 05    sta	$0005
 96B0: 20 4B 94 jsr	$944b
@@ -3679,7 +3700,7 @@ display_screen_883b:
 96E5: E5 1E    sbc	$001e
 96E7: 8D E5 06 sta	$06e5
 96EA: AD E4 06 lda	$06e4
-96ED: E5 1D    sbc	$001d
+96ED: E5 1D    sbc	unknown_001d
 96EF: 8D E4 06 sta	$06e4
 96F2: B8       clv
 96F3: 50 3C    bvc	$9731
@@ -3704,7 +3725,7 @@ display_screen_883b:
 9724: 65 1E    adc	$001e
 9726: 8D E5 06 sta	$06e5
 9729: AD E4 06 lda	$06e4
-972C: 65 1D    adc	$001d
+972C: 65 1D    adc	unknown_001d
 972E: 8D E4 06 sta	$06e4
 9731: 60       rts
 9732: AD 8B 06 lda	$068b
@@ -3746,7 +3767,7 @@ display_screen_883b:
 9776: 4C 56 97 jmp	$9756
 9779: 60       rts
 
-9A42: 4C 00 80 jmp	$8000
+9A42: 4C 00 80 jmp	startup_8000
 
 continue_startup_9a45:
 9A45: 20 8C CA jsr	$ca8c
@@ -3767,7 +3788,7 @@ game_mainloop_9A48:
 ; free play ?
 9A5E: A9 02    lda #$02
 9A60: 8D C1 00 sta number_of_credits_00c1
-9A63: A5 08    lda	$0008
+9A63: A5 08    lda	game_state_0008
 9A65: F0 19    beq	$9a80
 9A67: A5 55    lda	$0055
 9A69: C5 54    cmp	$0054
@@ -3780,7 +3801,7 @@ game_mainloop_9A48:
 9A77: D0 07    bne	$9a80
 9A79: A5 58    lda	$0058
 9A7B: 10 03    bpl	$9a80
-9A7D: 4C 9B 82 jmp	$829b
+9A7D: 4C 9B 82 jmp	assert_failed_829b
 9A80: A5 58    lda	$0058
 9A82: 29 0C    and #$0c
 9A84: C9 0C    cmp #$0c
@@ -3814,9 +3835,9 @@ game_mainloop_9A48:
 9AC1: 20 9B A4 jsr	$a49b
 9AC4: 20 5C C1 jsr	$c15c
 9AC7: 20 64 C5 jsr	$c564
-9ACA: A5 08    lda	$0008
+9ACA: A5 08    lda	game_state_0008
 9ACC: C9 FE    cmp #$fe
-9ACE: F0 4B    beq	$9b1b
+9ACE: F0 4B    beq	select_start_level_9b1b
 9AD0: A2 00    ldx #$00
 9AD2: 20 41 BF jsr	$bf41
 9AD5: A2 01    ldx #$01
@@ -3843,11 +3864,12 @@ game_mainloop_9A48:
 9B09: A5 35    lda	$0035
 9B0B: D0 05    bne	$9b12
 9B0D: A2 00    ldx #$00
-9B0F: 20 D0 9B jsr	$9bd0
+9B0F: 20 D0 9B jsr	player_tick_9bd0
 9B12: A5 36    lda	$0036
-9B14: D0 05    bne	$9b1b
+9B14: D0 05    bne	select_start_level_9b1b
 9B16: A2 01    ldx #$01
-9B18: 20 D0 9B jsr	$9bd0
+9B18: 20 D0 9B jsr	player_tick_9bd0
+select_start_level_9b1b:
 9B1B: B8       clv
 9B1C: 50 03    bvc	$9b21
 9B1E: 20 38 BD jsr	$bd38
@@ -3857,6 +3879,7 @@ game_mainloop_9A48:
 9B27: 20 05 B6 jsr	$b605
 9B2A: 4C 48 9A jmp game_mainloop_9A48
 
+handle_player_movement_9b2d:
 9B2D: B5 29    lda	$0029, x
 9B2F: 29 FD    and #$fd
 9B31: E0 00    cpx #$00
@@ -3864,127 +3887,128 @@ game_mainloop_9A48:
 9B35: AC 19 06 ldy	$0619
 9B38: C0 03    cpy #$03
 9B3A: B0 04    bcs	$9b40
-9B3C: A4 08    ldy	$0008
+9B3C: A4 08    ldy	game_state_0008
 9B3E: F0 01    beq	$9b41
 9B40: 60       rts
 9B41: A8       tay
-9B42: B5 27    lda	$0027, x
-9B44: 85 1B    sta	$001b
+9B42: B5 27    lda	player_control_status_array_0027, x
+9B44: 85 1B    sta	current_player_control_status_001b
 9B46: 29 08    and #$08
 9B48: F0 11    beq	$9b5b
-9B4A: BD 22 06 lda	$0622, x
+9B4A: BD 22 06 lda	move_to_left_timer_0622, x
 9B4D: 18       clc
 9B4E: 69 01    adc #$01
-9B50: 9D 22 06 sta	$0622, x
+9B50: 9D 22 06 sta	move_to_left_timer_0622, x
 9B53: C9 0B    cmp #$0b
 9B55: 90 09    bcc	$9b60
 9B57: 98       tya
 9B58: 09 08    ora #$08
 9B5A: A8       tay
 9B5B: A9 00    lda #$00
-9B5D: 9D 22 06 sta	$0622, x
-9B60: A5 1B    lda	$001b
+9B5D: 9D 22 06 sta	move_to_left_timer_0622, x
+9B60: A5 1B    lda	current_player_control_status_001b
 9B62: 29 04    and #$04
 9B64: F0 11    beq	$9b77
-9B66: BD 24 06 lda	$0624, x
+9B66: BD 24 06 lda	move_to_right_timer_0624, x
 9B69: 18       clc
 9B6A: 69 01    adc #$01
-9B6C: 9D 24 06 sta	$0624, x
+9B6C: 9D 24 06 sta	move_to_right_timer_0624, x
 9B6F: C9 0B    cmp #$0b
 9B71: 90 09    bcc	$9b7c
 9B73: 98       tya
 9B74: 09 04    ora #$04
 9B76: A8       tay
 9B77: A9 00    lda #$00
-9B79: 9D 24 06 sta	$0624, x
-9B7C: A5 1B    lda	$001b
+9B79: 9D 24 06 sta	move_to_right_timer_0624, x
+9B7C: A5 1B    lda	current_player_control_status_001b
 9B7E: 29 01    and #$01
 9B80: F0 11    beq	$9b93
-9B82: BD 26 06 lda	$0626, x
+9B82: BD 26 06 lda	rotate_shape_timer_0626, x
 9B85: 18       clc
 9B86: 69 01    adc #$01
-9B88: 9D 26 06 sta	$0626, x
+9B88: 9D 26 06 sta	rotate_shape_timer_0626, x
 9B8B: C9 1D    cmp #$1d
 9B8D: 90 09    bcc	$9b98
 9B8F: 98       tya
 9B90: 09 01    ora #$01
 9B92: A8       tay
 9B93: A9 00    lda #$00
-9B95: 9D 26 06 sta	$0626, x
-9B98: A5 1B    lda	$001b
+9B95: 9D 26 06 sta	rotate_shape_timer_0626, x
+9B98: A5 1B    lda	current_player_control_status_001b
 9B9A: 29 0E    and #$0e
 9B9C: C9 02    cmp #$02
 9B9E: D0 29    bne	$9bc9
-9BA0: BD 2A 06 lda	$062a, x
+9BA0: BD 2A 06 lda	move_down_timer_062a, x
 9BA3: 18       clc
 9BA4: 69 01    adc #$01
-9BA6: 9D 2A 06 sta	$062a, x
+9BA6: 9D 2A 06 sta	move_down_timer_062a, x
 9BA9: DD 2C 06 cmp	$062c, x
 9BAC: 90 19    bcc	$9bc7
 9BAE: 98       tya
 9BAF: 09 02    ora #$02
-9BB1: 85 1B    sta	$001b
+9BB1: 85 1B    sta	current_player_control_status_001b
 9BB3: BD 2C 06 lda	$062c, x
 9BB6: C9 02    cmp #$02
 9BB8: 90 03    bcc	$9bbd
 9BBA: DE 2C 06 dec	$062c, x
 9BBD: 20 A4 B5 jsr	$b5a4
-9BC0: A4 1B    ldy	$001b
+9BC0: A4 1B    ldy	current_player_control_status_001b
 9BC2: A9 00    lda #$00
-9BC4: 9D 2A 06 sta	$062a, x
+9BC4: 9D 2A 06 sta	move_down_timer_062a, x
 9BC7: 98       tya
 9BC8: 60       rts
 9BC9: A9 06    lda #$06
 9BCB: 9D 2C 06 sta	$062c, x
 9BCE: D0 F2    bne	$9bc2
-9BD0: A4 08    ldy	$0008
+player_tick_9bd0:
+9BD0: A4 08    ldy	game_state_0008
 9BD2: F0 05    beq	$9bd9
 9BD4: C0 FC    cpy #$fc
 9BD6: F0 01    beq	$9bd9
 9BD8: 60       rts
 9BD9: B5 95    lda	$0095, x
 9BDB: D0 FB    bne	$9bd8
-9BDD: B5 77    lda	$0077, x
+9BDD: B5 77    lda	player_active_array_0077, x
 9BDF: F0 07    beq	$9be8
-9BE1: B5 8B    lda	$008b, x
+9BE1: B5 8B    lda	current_shape_array_008b, x
 9BE3: D0 04    bne	$9be9
 9BE5: 4C D2 B2 jmp	$b2d2
 9BE8: 60       rts
-9BE9: 20 2D 9B jsr	$9b2d
-9BEC: 85 20    sta	$0020
-9BEE: D6 91    dec	$0091, x
+9BE9: 20 2D 9B jsr	handle_player_movement_9b2d
+9BEC: 85 20    sta	logical_grid_address_msb_or_controls_0020
+9BEE: D6 91    dec	fall_timeout_timer_0091, x
 9BF0: D0 07    bne	$9bf9
 9BF2: 09 02    ora #$02
-9BF4: 85 20    sta	$0020
+9BF4: 85 20    sta	logical_grid_address_msb_or_controls_0020
 9BF6: 20 A4 B5 jsr	$b5a4
-9BF9: A5 20    lda	$0020
+9BF9: A5 20    lda	logical_grid_address_msb_or_controls_0020
 9BFB: 29 0F    and #$0f
 9BFD: F0 D9    beq	$9bd8
 9BFF: 20 FA 9D jsr	$9dfa
 9C02: 20 C0 9E jsr	$9ec0
-9C05: A5 20    lda	$0020
+9C05: A5 20    lda	logical_grid_address_msb_or_controls_0020
 9C07: 29 08    and #$08
 9C09: F0 0E    beq	$9c19
 9C0B: D6 89    dec	$0089, x
 9C0D: 20 2A 9F jsr	$9f2a
 9C10: B0 07    bcs	$9c19
 9C12: A9 09    lda #$09
-9C14: 9D 22 06 sta	$0622, x
+9C14: 9D 22 06 sta	move_to_left_timer_0622, x
 9C17: F6 89    inc	$0089, x
-9C19: A5 20    lda	$0020
+9C19: A5 20    lda	logical_grid_address_msb_or_controls_0020
 9C1B: 29 04    and #$04
 9C1D: F0 0E    beq	$9c2d
 9C1F: F6 89    inc	$0089, x
 9C21: 20 2A 9F jsr	$9f2a
 9C24: B0 07    bcs	$9c2d
 9C26: A9 09    lda #$09
-9C28: 9D 24 06 sta	$0624, x
+9C28: 9D 24 06 sta	move_to_right_timer_0624, x
 9C2B: D6 89    dec	$0089, x
-9C2D: A5 20    lda	$0020
+9C2D: A5 20    lda	logical_grid_address_msb_or_controls_0020
 9C2F: 29 01    and #$01
 9C31: F0 1D    beq	$9c50
 9C33: B5 8F    lda	$008f, x
-9C35: 85 1F    sta	$001f
+9C35: 85 1F    sta	logical_grid_address_lsb_001f
 9C37: 18       clc
 9C38: 69 01    adc #$01
 9C3A: 29 03    and #$03
@@ -3995,9 +4019,9 @@ game_mainloop_9A48:
 9C45: 20 2A 9F jsr	$9f2a
 9C48: B0 06    bcs	$9c50
 9C4A: F6 89    inc	$0089, x
-9C4C: A5 1F    lda	$001f
+9C4C: A5 1F    lda	logical_grid_address_lsb_001f
 9C4E: 95 8F    sta	$008f, x
-9C50: A5 20    lda	$0020
+9C50: A5 20    lda	logical_grid_address_msb_or_controls_0020
 9C52: 29 02    and #$02
 9C54: F0 36    beq	$9c8c
 9C56: F6 87    inc	$0087, x
@@ -4007,7 +4031,7 @@ game_mainloop_9A48:
 9C5F: 20 E8 9E jsr	$9ee8
 9C62: 20 F1 B4 jsr	$b4f1
 9C65: A9 00    lda #$00
-9C67: 95 8B    sta	$008b, x
+9C67: 95 8B    sta	current_shape_array_008b, x
 9C69: B5 87    lda	$0087, x
 9C6B: C9 06    cmp #$06
 9C6D: B0 09    bcs	$9c78
@@ -4015,7 +4039,7 @@ game_mainloop_9A48:
 9C72: 20 F3 9C jsr	$9cf3
 9C75: 4C 8F 9C jmp	$9c8f
 9C78: A9 12    lda #$12
-9C7A: 20 59 E6 jsr	$e659
+9C7A: 20 59 E6 jsr	set_sound_event_e659
 9C7D: A5 99    lda	$0099
 9C7F: 18       clc
 9C80: 69 01    adc #$01
@@ -4025,10 +4049,11 @@ game_mainloop_9A48:
 9C89: 9D 2C 06 sta	$062c, x
 9C8C: 20 E8 9E jsr	$9ee8
 9C8F: 20 8F 9E jsr	clear_player_grid_9E8F
+draw_shape_9c92:
 9C92: A0 00    ldy #$00
 9C94: 84 05    sty	$0005
 9C96: A9 07    lda #$07
-9C98: 85 1B    sta	$001b
+9C98: 85 1B    sta	current_player_control_status_001b
 9C9A: A2 08    ldx #$08
 9C9C: B9 10 01 lda	$0110, y
 9C9F: D9 48 01 cmp	$0148, y
@@ -4042,10 +4067,10 @@ game_mainloop_9A48:
 9CAD: 85 9D    sta	$009d
 9CAF: 90 02    bcc	$9cb3
 9CB1: E6 9E    inc	$009e
-9CB3: C6 1B    dec	$001b
+9CB3: C6 1B    dec	current_player_control_status_001b
 9CB5: D0 E3    bne	$9c9a
 9CB7: 60       rts
-9CB8: 84 1D    sty	$001d
+9CB8: 84 1D    sty	unknown_001d
 9CBA: 86 1C    stx	$001c
 9CBC: 84 1E    sty	$001e
 9CBE: C8       iny
@@ -4057,23 +4082,23 @@ game_mainloop_9A48:
 9CCA: D0 F0    bne	$9cbc
 9CCC: A9 48    lda #$48
 9CCE: 18       clc
-9CCF: 65 1D    adc	$001d
+9CCF: 65 1D    adc	unknown_001d
 9CD1: 85 00    sta	$0000
 9CD3: A9 01    lda #$01
 9CD5: 85 01    sta	$0001
-9CD7: A5 1D    lda	$001d
+9CD7: A5 1D    lda	unknown_001d
 9CD9: 29 07    and #$07
 9CDB: 0A       asl a
 9CDC: 65 9D    adc	$009d
-9CDE: 85 02    sta	$0002
+9CDE: 85 02    sta	screen_address_lsb_0002
 9CE0: A5 9E    lda	$009e
 9CE2: 69 00    adc #$00
-9CE4: 85 03    sta	$0003
+9CE4: 85 03    sta	screen_address_msb_0003
 9CE6: A5 1E    lda	$001e
 9CE8: 38       sec
-9CE9: E5 1D    sbc	$001d
+9CE9: E5 1D    sbc	unknown_001d
 9CEB: 69 00    adc #$00
-9CED: 20 E4 D5 jsr	$d5e4
+9CED: 20 E4 D5 jsr	draw_shape_row_d5e4
 9CF0: 4C A8 9C jmp	$9ca8
 9CF3: 8E 4D 06 stx	$064d
 9CF6: BD 9B 06 lda	$069b, x
@@ -4088,15 +4113,15 @@ game_mainloop_9A48:
 9D0A: A9 00    lda #$00
 9D0C: 24 0B    bit	$000b
 9D0E: 10 0A    bpl	$9d1a
-9D10: 85 77    sta	$0077
+9D10: 85 77    sta	player_active_array_0077
 9D12: 85 78    sta	$0078
 9D14: A9 0C    lda #$0c
-9D16: 85 4E    sta	$004e
+9D16: 85 4E    sta	continue_timer_array_004e
 9D18: 85 4F    sta	$004f
 9D1A: A9 00    lda #$00
-9D1C: 95 77    sta	$0077, x
+9D1C: 95 77    sta	player_active_array_0077, x
 9D1E: A9 0C    lda #$0c
-9D20: 95 4E    sta	$004e, x
+9D20: 95 4E    sta	continue_timer_array_004e, x
 9D22: E0 01    cpx #$01
 9D24: D0 10    bne	$9d36
 9D26: A9 00    lda #$00
@@ -4116,14 +4141,14 @@ game_mainloop_9A48:
 9D42: 8D 72 06 sta	$0672
 9D45: AD 18 06 lda	$0618
 9D48: 85 50    sta	$0050
-9D4A: A5 08    lda	$0008
+9D4A: A5 08    lda	game_state_0008
 9D4C: D0 03    bne	$9d51
 9D4E: 20 05 F1 jsr	$f105
-9D51: A5 77    lda	$0077
+9D51: A5 77    lda	player_active_array_0077
 9D53: 05 78    ora	$0078
 9D55: D0 08    bne	$9d5f
 9D57: A9 09    lda #$09
-9D59: 20 59 E6 jsr	$e659
+9D59: 20 59 E6 jsr	set_sound_event_e659
 9D5C: B8       clv
 9D5D: 50 07    bvc	$9d66
 9D5F: A9 00    lda #$00
@@ -4136,8 +4161,8 @@ game_mainloop_9A48:
 9D6F: 0A       asl a
 9D70: A8       tay
 9D71: A9 00    lda #$00
-9D73: 99 30 00 sta	$0030, y
-9D76: 99 31 00 sta	$0031, y
+9D73: 99 30 00 sta	remaining_rows_tenths_0030, y
+9D76: 99 31 00 sta	remaining_rows_units_0031, y
 9D79: AE 4D 06 ldx	$064d
 9D7C: 20 D3 BC jsr	$bcd3
 9D7F: A9 46    lda #$46
@@ -4145,13 +4170,13 @@ game_mainloop_9A48:
 9D82: 6D 4D 06 adc	$064d
 9D85: 20 70 D6 jsr	$d670
 9D88: A9 0B    lda #$0b
-9D8A: 20 59 E6 jsr	$e659
+9D8A: 20 59 E6 jsr	set_sound_event_e659
 9D8D: 60       rts
 9D8E: A2 00    ldx #$00
 9D90: C8       iny
 9D91: C8       iny
 9D92: A9 0C    lda #$0c
-9D94: 85 1B    sta	$001b
+9D94: 85 1B    sta	current_player_control_status_001b
 9D96: 08       php
 9D97: 78       sei
 ; switch to bank 1
@@ -4197,7 +4222,7 @@ game_mainloop_9A48:
 9DED: 9D 00 01 sta	$0100, x
 9DF0: E8       inx
 9DF1: C8       iny
-9DF2: C6 1B    dec	$001b
+9DF2: C6 1B    dec	current_player_control_status_001b
 9DF4: D0 A0    bne	$9d96
 9DF6: 8A       txa
 9DF7: 4A       lsr a
@@ -4220,7 +4245,7 @@ game_mainloop_9A48:
 9E16: 0A       asl a
 9E17: 0A       asl a
 9E18: 0A       asl a
-9E19: 85 1B    sta	$001b
+9E19: 85 1B    sta	current_player_control_status_001b
 9E1B: 90 02    bcc	$9e1f
 9E1D: E6 1C    inc	$001c
 9E1F: B5 89    lda	$0089, x
@@ -4230,10 +4255,10 @@ game_mainloop_9A48:
 9E26: A9 00    lda #$00
 9E28: 85 9A    sta	$009a
 9E2A: 0A       asl a
-9E2B: 85 1F    sta	$001f
+9E2B: 85 1F    sta	logical_grid_address_lsb_001f
 9E2D: 4A       lsr a
-9E2E: 05 1B    ora	$001b
-9E30: 85 1B    sta	$001b
+9E2E: 05 1B    ora	current_player_control_status_001b
+9E30: 85 1B    sta	current_player_control_status_001b
 9E32: 85 9B    sta	$009b
 9E34: A5 1C    lda	$001c
 9E36: 85 9C    sta	$009c
@@ -4250,7 +4275,7 @@ game_mainloop_9A48:
 9E49: 90 02    bcc	$9e4d
 9E4B: E6 9E    inc	$009e
 9E4D: 18       clc
-9E4E: 65 1F    adc	$001f
+9E4E: 65 1F    adc	logical_grid_address_lsb_001f
 9E50: 85 9D    sta	$009d
 9E52: 90 02    bcc	$9e56
 9E54: E6 9E    inc	$009e
@@ -4259,17 +4284,17 @@ game_mainloop_9A48:
 9E5A: B1 1B    lda ($1b), y
 9E5C: 9D 10 01 sta	$0110, x
 9E5F: 9D 48 01 sta	$0148, x
-9E62: E6 1B    inc	$001b
+9E62: E6 1B    inc	current_player_control_status_001b
 9E64: D0 02    bne	$9e68
 9E66: E6 1C    inc	$001c
 9E68: E8       inx
 9E69: 8A       txa
 9E6A: 29 07    and #$07
 9E6C: D0 0B    bne	$9e79
-9E6E: A5 1B    lda	$001b
+9E6E: A5 1B    lda	current_player_control_status_001b
 9E70: 18       clc
 9E71: 69 08    adc #$08
-9E73: 85 1B    sta	$001b
+9E73: 85 1B    sta	current_player_control_status_001b
 9E75: 90 02    bcc	$9e79
 9E77: E6 1C    inc	$001c
 9E79: E0 38    cpx #$38
@@ -4281,7 +4306,7 @@ game_mainloop_9A48:
 ; player 2 grid $400-$5C0
 clear_player_grid_9E8F:
 9E8F: A5 9B    lda	$009b
-9E91: 85 1B    sta	$001b
+9E91: 85 1B    sta	current_player_control_status_001b
 9E93: A5 9C    lda	$009c
 9E95: 85 1C    sta	$001c
 9E97: 86 1E    stx	$001e
@@ -4291,17 +4316,17 @@ clear_player_grid_9E8F:
 9E9D: BD 48 01 lda	$0148, x
 ; write to logical grid address $2xx or $4xx
 9EA0: 91 1B    sta ($1b), y
-9EA2: E6 1B    inc	$001b
+9EA2: E6 1B    inc	current_player_control_status_001b
 9EA4: D0 02    bne	$9ea8
 9EA6: E6 1C    inc	$001c
 9EA8: E8       inx
 9EA9: 8A       txa
 9EAA: 29 07    and #$07
 9EAC: D0 0B    bne	$9eb9
-9EAE: A5 1B    lda	$001b
+9EAE: A5 1B    lda	current_player_control_status_001b
 9EB0: 18       clc
 9EB1: 69 08    adc #$08
-9EB3: 85 1B    sta	$001b
+9EB3: 85 1B    sta	current_player_control_status_001b
 9EB5: 90 02    bcc	$9eb9
 9EB7: E6 1C    inc	$001c
 9EB9: E0 38    cpx #$38
@@ -4309,7 +4334,7 @@ clear_player_grid_9E8F:
 9EBD: A6 1E    ldx	$001e
 9EBF: 60       rts
 9EC0: 20 6C 9F jsr	$9f6c
-9EC3: 06 1B    asl	$001b
+9EC3: 06 1B    asl	current_player_control_status_001b
 9EC5: 90 05    bcc	$9ecc
 9EC7: A9 00    lda #$00
 9EC9: 9D 48 01 sta	$0148, x
@@ -4326,14 +4351,14 @@ clear_player_grid_9E8F:
 9EDA: C0 08    cpy #$08
 9EDC: D0 04    bne	$9ee2
 9EDE: A5 1C    lda	$001c
-9EE0: 85 1B    sta	$001b
+9EE0: 85 1B    sta	current_player_control_status_001b
 9EE2: 4C C3 9E jmp	$9ec3
-9EE5: A6 1D    ldx	$001d
+9EE5: A6 1D    ldx	unknown_001d
 9EE7: 60       rts
 9EE8: 20 6C 9F jsr	$9f6c
 9EEB: A5 1E    lda	$001e
 9EED: 86 1E    stx	$001e
-9EEF: A6 1D    ldx	$001d
+9EEF: A6 1D    ldx	unknown_001d
 9EF1: 0A       asl a
 9EF2: 0A       asl a
 9EF3: 15 8F    ora	$008f, x
@@ -4341,7 +4366,7 @@ clear_player_grid_9E8F:
 9EF6: 0A       asl a
 9EF7: A6 1E    ldx	$001e
 9EF9: 85 1E    sta	$001e
-9EFB: 06 1B    asl	$001b
+9EFB: 06 1B    asl	current_player_control_status_001b
 9EFD: 90 0F    bcc	$9f0e
 9EFF: 84 59    sty	$0059
 9F01: A4 1E    ldy	$001e
@@ -4363,14 +4388,14 @@ clear_player_grid_9E8F:
 9F1C: C0 08    cpy #$08
 9F1E: D0 04    bne	$9f24
 9F20: A5 1C    lda	$001c
-9F22: 85 1B    sta	$001b
+9F22: 85 1B    sta	current_player_control_status_001b
 9F24: 4C FB 9E jmp	$9efb
-9F27: A6 1D    ldx	$001d
+9F27: A6 1D    ldx	unknown_001d
 9F29: 60       rts
 9F2A: 20 6C 9F jsr	$9f6c
 9F2D: A9 FF    lda #$ff
 9F2F: 85 0A    sta	$000a
-9F31: 06 1B    asl	$001b
+9F31: 06 1B    asl	current_player_control_status_001b
 9F33: 90 07    bcc	$9f3c
 9F35: BD 48 01 lda	$0148, x
 9F38: F0 02    beq	$9f3c
@@ -4388,9 +4413,9 @@ clear_player_grid_9E8F:
 9F4A: C0 08    cpy #$08
 9F4C: D0 04    bne	$9f52
 9F4E: A5 1C    lda	$001c
-9F50: 85 1B    sta	$001b
+9F50: 85 1B    sta	current_player_control_status_001b
 9F52: 4C 31 9F jmp	$9f31
-9F55: A6 1D    ldx	$001d
+9F55: A6 1D    ldx	unknown_001d
 9F57: A5 0A    lda	$000a
 9F59: 10 03    bpl	$9f5e
 9F5B: 38       sec
@@ -4405,7 +4430,7 @@ clear_player_grid_9E8F:
 9F68: 85 0A    sta	$000a
 9F6A: 18       clc
 9F6B: 60       rts
-9F6C: B5 8B    lda	$008b, x
+9F6C: B5 8B    lda	current_shape_array_008b, x
 9F6E: 85 1E    sta	$001e
 9F70: 0A       asl a
 9F71: 0A       asl a
@@ -4425,7 +4450,7 @@ clear_player_grid_9E8F:
 9F8D: AD B0 60 lda	$60b0
 9F90: 28       plp
 9F91: B9 00 40 lda	$4000, y
-9F94: 85 1B    sta	$001b
+9F94: 85 1B    sta	current_player_control_status_001b
 9F96: B9 01 40 lda	$4001, y
 9F99: 85 1C    sta	$001c
 9F9B: B5 87    lda	$0087, x
@@ -4437,7 +4462,7 @@ clear_player_grid_9E8F:
 9FA3: 75 89    adc	$0089, x
 9FA5: 38       sec
 9FA6: E5 9A    sbc	$009a
-9FA8: 86 1D    stx	$001d
+9FA8: 86 1D    stx	unknown_001d
 9FAA: AA       tax
 9FAB: A0 10    ldy #$10
 9FAD: 60       rts
@@ -4465,32 +4490,32 @@ A058: 95 95    sta	$0095, x
 A05A: C9 01    cmp #$01
 A05C: F0 01    beq	$a05f
 A05E: 60       rts
-A05F: 86 20    stx	$0020
+A05F: 86 20    stx	logical_grid_address_msb_or_controls_0020
 A061: 24 0B    bit	$000b
 A063: 10 16    bpl	$a07b
 A065: 8A       txa
 A066: 49 01    eor #$01
 A068: AA       tax
-A069: B5 8B    lda	$008b, x
+A069: B5 8B    lda	current_shape_array_008b, x
 A06B: F0 0C    beq	$a079
 A06D: 20 FA 9D jsr	$9dfa
 A070: 20 C0 9E jsr	$9ec0
 A073: 20 8F 9E jsr	clear_player_grid_9E8F
-A076: 20 92 9C jsr	$9c92
-A079: A6 20    ldx	$0020
+A076: 20 92 9C jsr	draw_shape_9c92
+A079: A6 20    ldx	logical_grid_address_msb_or_controls_0020
 A07B: B5 93    lda	$0093, x
 A07D: 0A       asl a
 A07E: 0A       asl a
 A07F: 0A       asl a
 A080: 0A       asl a
-A081: 85 1F    sta	$001f
+A081: 85 1F    sta	logical_grid_address_lsb_001f
 A083: 24 0B    bit	$000b
 A085: 10 02    bpl	$a089
 A087: A2 00    ldx #$00
 A089: BD 8C 9E lda	$9e8c, x
 A08C: 69 00    adc #$00
-A08E: A6 20    ldx	$0020
-A090: 85 20    sta	$0020
+A08E: A6 20    ldx	logical_grid_address_msb_or_controls_0020
+A090: 85 20    sta	logical_grid_address_msb_or_controls_0020
 A092: A9 00    lda #$00
 A094: 85 21    sta	$0021
 A096: A9 1A    lda #$1a
@@ -4530,30 +4555,30 @@ A0D8: 20 3A A4 jsr	$a43a
 A0DB: A6 21    ldx	$0021
 A0DD: 60       rts
 A0DE: 20 47 A3 jsr	$a347
-A0E1: A5 08    lda	$0008
+A0E1: A5 08    lda	game_state_0008
 A0E3: D0 07    bne	$a0ec
 A0E5: 84 21    sty	$0021
-A0E7: 20 D0 A6 jsr	$a6d0
+A0E7: 20 D0 A6 jsr	account_for_one_line_done_a6d0
 A0EA: A4 21    ldy	$0021
-A0EC: A5 20    lda	$0020
+A0EC: A5 20    lda	logical_grid_address_msb_or_controls_0020
 A0EE: 4A       lsr a
-A0EF: A5 1F    lda	$001f
+A0EF: A5 1F    lda	logical_grid_address_lsb_001f
 A0F1: 6A       ror a
 A0F2: 85 21    sta	$0021
 A0F4: 4C 31 A1 jmp	$a131
-A0F7: A5 1F    lda	$001f
+A0F7: A5 1F    lda	logical_grid_address_lsb_001f
 A0F9: 18       clc
 A0FA: 69 10    adc #$10
-A0FC: 85 1F    sta	$001f
+A0FC: 85 1F    sta	logical_grid_address_lsb_001f
 A0FE: 90 02    bcc	$a102
-A100: E6 20    inc	$0020
+A100: E6 20    inc	logical_grid_address_msb_or_controls_0020
 A102: C6 22    dec	$0022
 A104: D0 9D    bne	$a0a3
 A106: 8A       txa
 A107: 0A       asl a
 A108: A8       tay
-A109: B9 31 00 lda	$0031, y
-A10C: 19 30 00 ora	$0030, y
+A109: B9 31 00 lda	remaining_rows_units_0031, y
+A10C: 19 30 00 ora	remaining_rows_tenths_0030, y
 A10F: C9 30    cmp #$30
 A111: D0 0C    bne	$a11f
 A113: 8A       txa
@@ -4565,7 +4590,7 @@ A11C: 20 6F B8 jsr	$b86f
 A11F: A9 00    lda #$00
 A121: 95 93    sta	$0093, x
 A123: 95 97    sta	$0097, x
-A125: A5 08    lda	$0008
+A125: A5 08    lda	game_state_0008
 A127: C9 FC    cmp #$fc
 A129: D0 03    bne	$a12e
 A12B: 20 16 C9 jsr	$c916
@@ -4577,16 +4602,16 @@ A137: F0 29    beq	$a162
 A139: 0A       asl a
 A13A: 29 F0    and #$f0
 A13C: 85 21    sta	$0021
-A13E: 85 1F    sta	$001f
-A140: A5 20    lda	$0020
+A13E: 85 1F    sta	logical_grid_address_lsb_001f
+A140: A5 20    lda	logical_grid_address_msb_or_controls_0020
 A142: 29 FE    and #$fe
 A144: 69 00    adc #$00
-A146: 85 20    sta	$0020
+A146: 85 20    sta	logical_grid_address_msb_or_controls_0020
 A148: 85 22    sta	$0022
 A14A: 20 7B A1 jsr	$a17b
-A14D: A5 20    lda	$0020
+A14D: A5 20    lda	logical_grid_address_msb_or_controls_0020
 A14F: 4A       lsr a
-A150: A5 1F    lda	$001f
+A150: A5 1F    lda	logical_grid_address_lsb_001f
 A152: 6A       ror a
 A153: C9 38    cmp #$38
 A155: B0 F3    bcs	$a14a
@@ -4600,19 +4625,19 @@ A164: 10 14    bpl	$a17a
 A166: 8A       txa
 A167: 49 01    eor #$01
 A169: AA       tax
-A16A: B5 8B    lda	$008b, x
+A16A: B5 8B    lda	current_shape_array_008b, x
 A16C: F0 0C    beq	$a17a
 A16E: 20 FA 9D jsr	$9dfa
 A171: 20 E8 9E jsr	$9ee8
 A174: 20 8F 9E jsr	clear_player_grid_9E8F
-A177: 20 92 9C jsr	$9c92
+A177: 20 92 9C jsr	draw_shape_9c92
 A17A: 60       rts
-A17B: A5 1F    lda	$001f
+A17B: A5 1F    lda	logical_grid_address_lsb_001f
 A17D: 38       sec
 A17E: E9 10    sbc #$10
-A180: 85 1F    sta	$001f
+A180: 85 1F    sta	logical_grid_address_lsb_001f
 A182: B0 02    bcs	$a186
-A184: C6 20    dec	$0020
+A184: C6 20    dec	logical_grid_address_msb_or_controls_0020
 A186: A0 02    ldy #$02
 A188: B1 1F    lda ($1f), y
 A18A: C8       iny
@@ -4701,12 +4726,12 @@ A213: A9 01    lda #$01
 A215: 85 1E    sta	$001e
 A217: C6 22    dec	$0022
 A219: F0 19    beq	$a234
-A21B: A5 1F    lda	$001f
+A21B: A5 1F    lda	logical_grid_address_lsb_001f
 A21D: 18       clc
 A21E: 69 10    adc #$10
-A220: 85 1F    sta	$001f
+A220: 85 1F    sta	logical_grid_address_lsb_001f
 A222: 90 02    bcc	$a226
-A224: E6 20    inc	$0020
+A224: E6 20    inc	logical_grid_address_msb_or_controls_0020
 A226: A0 0C    ldy #$0c
 A228: B1 1F    lda ($1f), y
 A22A: F0 EB    beq	$a217
@@ -4724,7 +4749,7 @@ A243: C9 04    cmp #$04
 A245: D0 05    bne	$a24c
 A247: A9 0F    lda #$0f
 A249: 9D 7B 06 sta	$067b, x
-A24C: A5 08    lda	$0008
+A24C: A5 08    lda	game_state_0008
 A24E: D0 1A    bne	$a26a
 A250: A5 1E    lda	$001e
 A252: 38       sec
@@ -4733,12 +4758,12 @@ A255: 29 03    and #$03
 A257: 0A       asl a
 A258: A8       tay
 A259: B9 C0 A2 lda	$a2c0, y
-A25C: 85 1B    sta	$001b
+A25C: 85 1B    sta	current_player_control_status_001b
 A25E: B9 C1 A2 lda	$a2c1, y
 A261: 85 1C    sta	$001c
 A263: A9 00    lda #$00
-A265: 85 1D    sta	$001d
-A267: 4C 3F B5 jmp	$b53f
+A265: 85 1D    sta	unknown_001d
+A267: 4C 3F B5 jmp	update_player_score_b53f
 A26A: 60       rts
 
 A26F: 86 1D    stx $1d                                             
@@ -4761,13 +4786,13 @@ A289: AD 43 75 lda	$7543
 A28C: AD 56 75 lda	$7556
 A28F: AD B0 60 lda	$60b0
 A292: 28       plp
-A293: A5 1D    lda	$001d
+A293: A5 1D    lda	unknown_001d
 A295: 0A       asl a
 A296: A8       tay
 A297: B9 C8 A2 lda	$a2c8, y
-A29A: 85 02    sta	$0002
+A29A: 85 02    sta	screen_address_lsb_0002
 A29C: B9 C9 A2 lda	$a2c9, y
-A29F: 85 03    sta	$0003
+A29F: 85 03    sta	screen_address_msb_0003
 A2A1: A0 00    ldy #$00
 A2A3: BD 7D 65 lda	$657d, x
 A2A6: 91 02    sta ($02), y
@@ -4775,29 +4800,29 @@ A2A8: E8       inx
 A2A9: C8       iny
 A2AA: C0 14    cpy #$14
 A2AC: D0 0B    bne	$a2b9
-A2AE: A5 02    lda	$0002
+A2AE: A5 02    lda	screen_address_lsb_0002
 A2B0: 18       clc
 A2B1: 69 6C    adc #$6c
-A2B3: 85 02    sta	$0002
+A2B3: 85 02    sta	screen_address_lsb_0002
 A2B5: 90 02    bcc	$a2b9
-A2B7: E6 03    inc	$0003
+A2B7: E6 03    inc	screen_address_msb_0003
 A2B9: C0 28    cpy #$28
 A2BB: 90 E6    bcc	$a2a3
-A2BD: A6 1D    ldx	$001d
+A2BD: A6 1D    ldx	unknown_001d
 A2BF: 60       rts
 
 ; entrypoint?
 
 A2CC: 94 1C    sty	$001c, x
 A2CE: C4 1C    cpy	$001c
-A2D0: 86 1D    stx	$001d
-A2D2: A5 1D    lda	$001d
+A2D0: 86 1D    stx	unknown_001d
+A2D2: A5 1D    lda	unknown_001d
 A2D4: 0A       asl a
 A2D5: A8       tay
 A2D6: B9 CC A2 lda	$a2cc, y
-A2D9: 85 02    sta	$0002
+A2D9: 85 02    sta	screen_address_lsb_0002
 A2DB: B9 CD A2 lda	$a2cd, y
-A2DE: 85 03    sta	$0003
+A2DE: 85 03    sta	screen_address_msb_0003
 A2E0: 08       php
 A2E1: 78       sei
 ; switch to bank 1
@@ -4811,44 +4836,44 @@ A2F4: 28       plp
 A2F5: A9 00    lda #$00
 A2F7: 85 1E    sta	$001e
 A2F9: A9 03    lda #$03
-A2FB: 85 1F    sta	$001f
+A2FB: 85 1F    sta	logical_grid_address_lsb_001f
 A2FD: BD 8D 06 lda	$068d, x
 A300: 29 0F    and #$0f
-A302: 85 20    sta	$0020
+A302: 85 20    sta	logical_grid_address_msb_or_controls_0020
 A304: F0 04    beq	$a30a
 A306: A9 01    lda #$01
 A308: 85 1E    sta	$001e
 A30A: A5 1E    lda	$001e
 A30C: F0 29    beq	$a337
-A30E: A5 20    lda	$0020
+A30E: A5 20    lda	logical_grid_address_msb_or_controls_0020
 A310: 0A       asl a
 A311: 0A       asl a
-A312: 85 20    sta	$0020
+A312: 85 20    sta	logical_grid_address_msb_or_controls_0020
 A314: A8       tay
 A315: B9 3D 65 lda	$653d, y
 A318: A0 00    ldy #$00
 A31A: 91 02    sta ($02), y
-A31C: A4 20    ldy	$0020
+A31C: A4 20    ldy	logical_grid_address_msb_or_controls_0020
 A31E: B9 3E 65 lda	$653e, y
 A321: A0 01    ldy #$01
 A323: 91 02    sta ($02), y
-A325: A4 20    ldy	$0020
+A325: A4 20    ldy	logical_grid_address_msb_or_controls_0020
 A327: B9 3F 65 lda	$653f, y
 A32A: A0 80    ldy #$80
 A32C: 91 02    sta ($02), y
-A32E: A4 20    ldy	$0020
+A32E: A4 20    ldy	logical_grid_address_msb_or_controls_0020
 A330: B9 40 65 lda	$6540, y
 A333: A0 81    ldy #$81
 A335: 91 02    sta ($02), y
-A337: A5 02    lda	$0002
+A337: A5 02    lda	screen_address_lsb_0002
 A339: 18       clc
 A33A: 69 02    adc #$02
-A33C: 85 02    sta	$0002
+A33C: 85 02    sta	screen_address_lsb_0002
 A33E: E8       inx
 A33F: E8       inx
-A340: C6 1F    dec	$001f
+A340: C6 1F    dec	logical_grid_address_lsb_001f
 A342: 10 B9    bpl	$a2fd
-A344: A6 1D    ldx	$001d
+A344: A6 1D    ldx	unknown_001d
 A346: 60       rts
 A347: A9 F0    lda #$f0
 A349: 24 0B    bit	$000b
@@ -4918,11 +4943,11 @@ A3B0: 91 1F    sta ($1f), y
 A3B2: 60       rts
 A3B3: 8A       txa
 A3B4: 48       pha
-A3B5: A5 1F    lda	$001f
+A3B5: A5 1F    lda	logical_grid_address_lsb_001f
 A3B7: 18       clc
 A3B8: 69 10    adc #$10
-A3BA: 85 1D    sta	$001d
-A3BC: A5 20    lda	$0020
+A3BA: 85 1D    sta	unknown_001d
+A3BC: A5 20    lda	logical_grid_address_msb_or_controls_0020
 A3BE: 69 00    adc #$00
 A3C0: 85 1E    sta	$001e
 A3C2: A0 00    ldy #$00
@@ -4932,7 +4957,7 @@ A3C8: C8       iny
 A3C9: B1 1D    lda ($1d), y
 A3CB: AA       tax
 A3CC: 29 F0    and #$f0
-A3CE: 85 1B    sta	$001b
+A3CE: 85 1B    sta	current_player_control_status_001b
 A3D0: F0 0F    beq	$a3e1
 A3D2: 8A       txa
 A3D3: C9 80    cmp #$80
@@ -4940,16 +4965,16 @@ A3D5: B0 0A    bcs	$a3e1
 A3D7: 29 0F    and #$0f
 A3D9: AA       tax
 A3DA: BD 1A A4 lda	$a41a, x
-A3DD: 05 1B    ora	$001b
+A3DD: 05 1B    ora	current_player_control_status_001b
 A3DF: 91 1D    sta ($1d), y
 A3E1: C8       iny
 A3E2: C0 10    cpy #$10
 A3E4: 90 E3    bcc	$a3c9
-A3E6: A5 1F    lda	$001f
+A3E6: A5 1F    lda	logical_grid_address_lsb_001f
 A3E8: 38       sec
 A3E9: E9 10    sbc #$10
-A3EB: 85 1D    sta	$001d
-A3ED: A5 20    lda	$0020
+A3EB: 85 1D    sta	unknown_001d
+A3ED: A5 20    lda	logical_grid_address_msb_or_controls_0020
 A3EF: E9 00    sbc #$00
 A3F1: 85 1E    sta	$001e
 A3F3: A0 00    ldy #$00
@@ -4959,7 +4984,7 @@ A3F9: C8       iny
 A3FA: B1 1D    lda ($1d), y
 A3FC: AA       tax
 A3FD: 29 F0    and #$f0
-A3FF: 85 1B    sta	$001b
+A3FF: 85 1B    sta	current_player_control_status_001b
 A401: F0 0F    beq	$a412
 A403: 8A       txa
 A404: C9 80    cmp #$80
@@ -4967,7 +4992,7 @@ A406: B0 0A    bcs	$a412
 A408: 29 0F    and #$0f
 A40A: AA       tax
 A40B: BD 2A A4 lda	$a42a, x
-A40E: 05 1B    ora	$001b
+A40E: 05 1B    ora	current_player_control_status_001b
 A410: 91 1D    sta ($1d), y
 A412: C8       iny
 A413: C0 10    cpy #$10
@@ -4977,10 +5002,10 @@ A418: AA       tax
 A419: 60       rts
 
 A43A: A9 00    lda #$00
-A43C: 85 1F    sta	$001f
-A43E: A5 20    lda	$0020
+A43C: 85 1F    sta	logical_grid_address_lsb_001f
+A43E: A5 20    lda	logical_grid_address_msb_or_controls_0020
 A440: 29 FE    and #$fe
-A442: 85 20    sta	$0020
+A442: 85 20    sta	logical_grid_address_msb_or_controls_0020
 A444: 24 0B    bit	$000b
 A446: 10 02    bpl	$a44a
 A448: A2 02    ldx #$02
@@ -5002,11 +5027,11 @@ A469: 85 00    sta	$0000
 A46B: A9 01    lda #$01
 A46D: 85 01    sta	$0001
 A46F: A5 9D    lda	$009d
-A471: 85 02    sta	$0002
+A471: 85 02    sta	screen_address_lsb_0002
 A473: A5 9E    lda	$009e
-A475: 85 03    sta	$0003
+A475: 85 03    sta	screen_address_msb_0003
 A477: 8A       txa
-A478: 20 33 D6 jsr	$d633
+A478: 20 33 D6 jsr	copy_data_to_screen_d633
 A47B: A5 9D    lda	$009d
 A47D: 18       clc
 A47E: 69 80    adc #$80
@@ -5019,15 +5044,15 @@ A489: 18       clc
 A48A: 69 10    adc #$10
 A48C: A8       tay
 A48D: 90 02    bcc	$a491
-A48F: E6 20    inc	$0020
-A491: A5 20    lda	$0020
+A48F: E6 20    inc	logical_grid_address_msb_or_controls_0020
+A491: A5 20    lda	logical_grid_address_msb_or_controls_0020
 A493: 4A       lsr a
 A494: 98       tya
 A495: 6A       ror a
 A496: C9 D0    cmp #$d0
 A498: 90 BC    bcc	$a456
 A49A: 60       rts
-A49B: A4 08    ldy	$0008
+A49B: A4 08    ldy	game_state_0008
 A49D: C0 F8    cpy #$f8
 A49F: D0 1E    bne	$a4bf
 A4A1: 20 52 D5 jsr	$d552
@@ -5049,11 +5074,11 @@ A4C6: 8A       txa
 A4C7: 18       clc
 A4C8: 69 4A    adc #$4a
 A4CA: 20 70 D6 jsr	$d670
-A4CD: 20 F4 AF jsr	$aff4
+A4CD: 20 F4 AF jsr	update_screen_grid_aff4
 A4D0: A9 3B    lda #$3b
-A4D2: 86 1B    stx	$001b
+A4D2: 86 1B    stx	current_player_control_status_001b
 A4D4: 18       clc
-A4D5: 65 1B    adc	$001b
+A4D5: 65 1B    adc	current_player_control_status_001b
 A4D7: 20 70 D6 jsr	$d670
 A4DA: AD 18 06 lda	$0618
 A4DD: 85 50    sta	$0050
@@ -5063,28 +5088,28 @@ A4E2: 8E 50 06 stx	$0650
 A4E5: A5 0F    lda	$000f
 A4E7: 29 3F    and #$3f
 A4E9: D0 03    bne	$a4ee
-A4EB: 20 2D A5 jsr	$a52d
+A4EB: 20 2D A5 jsr	handle_continue_timer_a52d
 A4EE: AE 50 06 ldx	$0650
-A4F1: B5 4E    lda	$004e, x
+A4F1: B5 4E    lda	continue_timer_array_004e, x
 A4F3: F0 32    beq	$a527
 A4F5: AD 18 06 lda	$0618
 A4F8: C5 50    cmp	$0050
 A4FA: F0 19    beq	$a515
 A4FC: 85 50    sta	$0050
-A4FE: B5 4E    lda	$004e, x
+A4FE: B5 4E    lda	continue_timer_array_004e, x
 A500: C9 09    cmp #$09
 A502: 90 03    bcc	$a507
 A504: 20 C3 A4 jsr	$a4c3
 A507: A0 09    ldy #$09
-A509: A5 4E    lda	$004e
+A509: A5 4E    lda	continue_timer_array_004e
 A50B: F0 02    beq	$a50f
-A50D: 84 4E    sty	$004e
+A50D: 84 4E    sty	continue_timer_array_004e
 A50F: A5 4F    lda	$004f
 A511: F0 02    beq	$a515
 A513: 84 4F    sty	$004f
 A515: AD C1 00 lda number_of_credits_00c1
 A518: F0 0D    beq	$a527
-A51A: B5 4E    lda	$004e, x
+A51A: B5 4E    lda	continue_timer_array_004e, x
 A51C: C9 0A    cmp #$0a
 A51E: B0 07    bcs	$a527
 A520: 8A       txa
@@ -5095,17 +5120,19 @@ A527: E8       inx
 A528: E0 02    cpx #$02
 A52A: 90 B6    bcc	$a4e2
 A52C: 60       rts
-A52D: B4 4E    ldy	$004e, x
+
+handle_continue_timer_a52d:
+A52D: B4 4E    ldy	continue_timer_array_004e, x
 A52F: C0 01    cpy #$01
 A531: 90 79    bcc	$a5ac
 A533: 88       dey
-A534: 94 4E    sty	$004e, x
+A534: 94 4E    sty	continue_timer_array_004e, x
 A536: 8E 4D 06 stx	$064d
 A539: C0 09    cpy #$09
 A53B: D0 03    bne	$a540
 A53D: 20 C3 A4 jsr	$a4c3
 A540: AE 4D 06 ldx	$064d
-A543: B5 4E    lda	$004e, x
+A543: B5 4E    lda	continue_timer_array_004e, x
 A545: C9 0A    cmp #$0a
 A547: B0 63    bcs	$a5ac
 A549: E0 00    cpx #$00
@@ -5113,12 +5140,12 @@ A54B: D0 04    bne	$a551
 A54D: A9 92    lda #$92
 A54F: D0 02    bne	$a553
 A551: A9 C2    lda #$c2
-A553: 85 02    sta	$0002
+A553: 85 02    sta	screen_address_lsb_0002
 A555: A9 1B    lda #$1b
-A557: 85 03    sta	$0003
+A557: 85 03    sta	screen_address_msb_0003
 A559: A0 00    ldy #$00
 A55B: 18       clc
-A55C: B5 4E    lda	$004e, x
+A55C: B5 4E    lda	continue_timer_array_004e, x
 A55E: 69 30    adc #$30
 A560: 91 02    sta ($02), y
 A562: C8       iny
@@ -5128,22 +5155,22 @@ A567: 8A       txa
 A568: 18       clc
 A569: 69 3B    adc #$3b
 A56B: 20 70 D6 jsr	$d670
-A56E: B5 4E    lda	$004e, x
+A56E: B5 4E    lda	continue_timer_array_004e, x
 A570: D0 3A    bne	$a5ac
 A572: 18       clc
 A573: 8A       txa
 A574: 69 4A    adc #$4a
 A576: 20 70 D6 jsr	$d670
 A579: 20 D3 BC jsr	$bcd3
-A57C: 20 F4 AF jsr	$aff4
+A57C: 20 F4 AF jsr	update_screen_grid_aff4
 A57F: 20 15 EA jsr	$ea15
 A582: BD 63 06 lda	$0663, x
 A585: 30 03    bmi	$a58a
 A587: 20 7E E7 jsr	$e77e
-A58A: A5 77    lda	$0077
+A58A: A5 77    lda	player_active_array_0077
 A58C: 05 78    ora	$0078
 A58E: D0 1C    bne	$a5ac
-A590: A5 4E    lda	$004e
+A590: A5 4E    lda	continue_timer_array_004e
 A592: 05 4F    ora	$004f
 A594: D0 16    bne	$a5ac
 A596: AD 63 06 lda	$0663
@@ -5182,29 +5209,29 @@ A5E7: 85 07    sta	$0007
 A5E9: A9 0A    lda #$0a
 A5EB: 20 18 88 jsr display_screen_and_other_stuff_8818
 A5EE: A9 F8    lda #$f8
-A5F0: 85 08    sta	$0008
+A5F0: 85 08    sta	game_state_0008
 A5F2: A9 9C    lda #$9c
-A5F4: 85 02    sta	$0002
+A5F4: 85 02    sta	screen_address_lsb_0002
 A5F6: A9 15    lda #$15
-A5F8: 85 03    sta	$0003
+A5F8: 85 03    sta	screen_address_msb_0003
 A5FA: A9 96    lda #$96
 A5FC: 8D 6E 06 sta	$066e
 A5FF: A9 31    lda #$31
-A601: 85 1F    sta	$001f
+A601: 85 1F    sta	logical_grid_address_lsb_001f
 A603: A9 30    lda #$30
-A605: 85 20    sta	$0020
+A605: 85 20    sta	logical_grid_address_msb_or_controls_0020
 A607: A2 00    ldx #$00
 A609: A9 B0    lda #$b0
 A60B: 85 05    sta	$0005
 A60D: 8A       txa
 A60E: 4A       lsr a
-A60F: 85 1D    sta	$001d
+A60F: 85 1D    sta	unknown_001d
 A611: AD 63 06 lda	$0663
 A614: 10 0E    bpl	$a624
 A616: C9 80    cmp #$80
 A618: F0 0A    beq	$a624
 A61A: 49 FF    eor #$ff
-A61C: C5 1D    cmp	$001d
+A61C: C5 1D    cmp	unknown_001d
 A61E: D0 04    bne	$a624
 A620: A9 E0    lda #$e0
 A622: 85 05    sta	$0005
@@ -5213,21 +5240,21 @@ A627: 10 0E    bpl	$a637
 A629: C9 80    cmp #$80
 A62B: F0 0A    beq	$a637
 A62D: 49 FF    eor #$ff
-A62F: C5 1D    cmp	$001d
+A62F: C5 1D    cmp	unknown_001d
 A631: D0 04    bne	$a637
 A633: A9 F0    lda #$f0
 A635: 85 05    sta	$0005
 A637: 20 A7 A6 jsr	$a6a7
 A63A: A9 00    lda #$00
-A63C: 85 1D    sta	$001d
+A63C: 85 1D    sta	unknown_001d
 A63E: A9 05    lda #$05
 A640: 85 1E    sta	$001e
-A642: BD 79 09 lda	$0979, x
+A642: BD 79 09 lda	current_highscore_table_0979, x
 A645: C9 30    cmp #$30
 A647: F0 04    beq	$a64d
-A649: C6 1D    dec	$001d
+A649: C6 1D    dec	unknown_001d
 A64B: 30 0A    bmi	$a657
-A64D: 24 1D    bit	$001d
+A64D: 24 1D    bit	unknown_001d
 A64F: 30 06    bmi	$a657
 A651: C0 12    cpy #$12
 A653: B0 02    bcs	$a657
@@ -5249,7 +5276,7 @@ A669: E9 03    sbc #$03
 A66B: AA       tax
 A66C: A9 02    lda #$02
 A66E: 85 1E    sta	$001e
-A670: BD D9 09 lda	$09d9, x
+A670: BD D9 09 lda	current_highscore_names_09d9, x
 A673: 91 02    sta ($02), y
 A675: C8       iny
 A676: A5 05    lda	$0005
@@ -5261,27 +5288,27 @@ A67E: 10 F0    bpl	$a670
 A680: 8A       txa
 A681: 0A       asl a
 A682: AA       tax
-A683: A5 02    lda	$0002
+A683: A5 02    lda	screen_address_lsb_0002
 A685: 18       clc
 A686: 69 80    adc #$80
-A688: 85 02    sta	$0002
-A68A: A5 03    lda	$0003
+A688: 85 02    sta	screen_address_lsb_0002
+A68A: A5 03    lda	screen_address_msb_0003
 A68C: 69 00    adc #$00
-A68E: 85 03    sta	$0003
-A690: A5 1F    lda	$001f
+A68E: 85 03    sta	screen_address_msb_0003
+A690: A5 1F    lda	logical_grid_address_lsb_001f
 A692: 18       clc
 A693: 69 01    adc #$01
 A695: C9 3A    cmp #$3a
 A697: 90 04    bcc	$a69d
-A699: E6 20    inc	$0020
+A699: E6 20    inc	logical_grid_address_msb_or_controls_0020
 A69B: A9 30    lda #$30
-A69D: 85 1F    sta	$001f
+A69D: 85 1F    sta	logical_grid_address_lsb_001f
 A69F: E0 60    cpx #$60
 A6A1: B0 03    bcs	$a6a6
 A6A3: 4C 09 A6 jmp	$a609
 A6A6: 60       rts
 A6A7: A0 00    ldy #$00
-A6A9: A5 20    lda	$0020
+A6A9: A5 20    lda	logical_grid_address_msb_or_controls_0020
 A6AB: C9 30    cmp #$30
 A6AD: D0 02    bne	$a6b1
 A6AF: A9 00    lda #$00
@@ -5290,7 +5317,7 @@ A6B3: C8       iny
 A6B4: A5 05    lda	$0005
 A6B6: 91 02    sta ($02), y
 A6B8: C8       iny
-A6B9: A5 1F    lda	$001f
+A6B9: A5 1F    lda	logical_grid_address_lsb_001f
 A6BB: 91 02    sta ($02), y
 A6BD: C8       iny
 A6BE: A5 05    lda	$0005
@@ -5305,9 +5332,11 @@ A6CC: C8       iny
 A6CD: C8       iny
 A6CE: C8       iny
 A6CF: 60       rts
+
+account_for_one_line_done_a6d0:
 A6D0: 20 C9 A7 jsr	$a7c9
 A6D3: A9 30    lda #$30
-A6D5: 85 1B    sta	$001b
+A6D5: 85 1B    sta	current_player_control_status_001b
 A6D7: A9 01    lda #$01
 A6D9: 95 7B    sta	$007b, x
 A6DB: 8A       txa
@@ -5345,7 +5374,7 @@ A718: 99 0C 06 sta	$060c, y
 A71B: 98       tya
 A71C: 4A       lsr a
 A71D: A8       tay
-A71E: 84 1B    sty	$001b
+A71E: 84 1B    sty	current_player_control_status_001b
 A720: A9 0F    lda #$0f
 A722: 20 AD A7 jsr	$a7ad
 A725: BD 49 06 lda	$0649, x
@@ -5372,14 +5401,14 @@ A754: CD AF 06 cmp	$06af
 A757: D0 0A    bne	$a763
 A759: 84 1E    sty	$001e
 A75B: 98       tya
-A75C: A4 1B    ldy	$001b
+A75C: A4 1B    ldy	current_player_control_status_001b
 A75E: 99 15 06 sta	$0615, y
 A761: A4 1E    ldy	$001e
 A763: C8       iny
 A764: C0 10    cpy #$10
 A766: 90 E5    bcc	$a74d
 A768: A9 16    lda #$16
-A76A: 4C 59 E6 jmp	$e659
+A76A: 4C 59 E6 jmp	set_sound_event_e659
 
 A7AD: 8D 4D 06 sta $064d                                           
 A7B0: 98       tya                                                 
@@ -5411,23 +5440,23 @@ A7D9: 85 05    sta	$0005
 A7DB: 8A       txa
 A7DC: 0A       asl a
 A7DD: A8       tay
-A7DE: B9 31 00 lda	$0031, y
+A7DE: B9 31 00 lda	remaining_rows_units_0031, y
 A7E1: C9 30    cmp #$30
 A7E3: D0 15    bne	$a7fa
-A7E5: B9 30 00 lda	$0030, y
+A7E5: B9 30 00 lda	remaining_rows_tenths_0030, y
 A7E8: C9 30    cmp #$30
 A7EA: F0 0B    beq	$a7f7
 A7EC: 38       sec
 A7ED: E9 01    sbc #$01
-A7EF: 99 30 00 sta	$0030, y
+A7EF: 99 30 00 sta	remaining_rows_tenths_0030, y
 A7F2: A9 39    lda #$39
-A7F4: 99 31 00 sta	$0031, y
+A7F4: 99 31 00 sta	remaining_rows_units_0031, y
 A7F7: B8       clv
 A7F8: 50 06    bvc	$a800
 A7FA: 38       sec
 A7FB: E9 01    sbc #$01
-A7FD: 99 31 00 sta	$0031, y
-A800: B5 77    lda	$0077, x
+A7FD: 99 31 00 sta	remaining_rows_units_0031, y
+A800: B5 77    lda	player_active_array_0077, x
 A802: D0 01    bne	$a805
 A804: 60       rts
 A805: E0 00    cpx #$00
@@ -5448,20 +5477,20 @@ A81C: 06 34    asl	$0034
 A81E: 18       clc
 A81F: A9 22    lda #$22
 A821: 65 34    adc	$0034
-A823: 85 02    sta	$0002
+A823: 85 02    sta	screen_address_lsb_0002
 A825: A9 17    lda #$17
-A827: 85 03    sta	$0003
-A829: B9 30 00 lda	$0030, y
-A82C: 20 4A D6 jsr	$d64a
+A827: 85 03    sta	screen_address_msb_0003
+A829: B9 30 00 lda	remaining_rows_tenths_0030, y
+A82C: 20 4A D6 jsr	write_tile_to_screen_d64a
 A82F: A9 24    lda #$24
 A831: 65 34    adc	$0034
-A833: 85 02    sta	$0002
-A835: B9 31 00 lda	$0031, y
-A838: 20 4A D6 jsr	$d64a
-A83B: B9 30 00 lda	$0030, y
+A833: 85 02    sta	screen_address_lsb_0002
+A835: B9 31 00 lda	remaining_rows_units_0031, y
+A838: 20 4A D6 jsr	write_tile_to_screen_d64a
+A83B: B9 30 00 lda	remaining_rows_tenths_0030, y
 A83E: C9 30    cmp #$30
 A840: D0 21    bne	$a863
-A842: B9 31 00 lda	$0031, y
+A842: B9 31 00 lda	remaining_rows_units_0031, y
 A845: C9 36    cmp #$36
 A847: B0 1A    bcs	$a863
 A849: 38       sec
@@ -5478,7 +5507,7 @@ A85E: A9 1E    lda #$1e
 A860: 8D 73 06 sta	$0673
 A863: 60       rts
 A864: A9 FC    lda #$fc
-A866: 85 08    sta	$0008
+A866: 85 08    sta	game_state_0008
 A868: A9 00    lda #$00
 A86A: 85 0B    sta	$000b
 A86C: 85 45    sta	$0045
@@ -5489,7 +5518,7 @@ A874: 8D 57 06 sta	$0657
 A877: A9 31    lda #$31
 A879: 8D 58 06 sta	$0658
 A87C: A9 01    lda #$01
-A87E: 20 59 E6 jsr	$e659
+A87E: 20 59 E6 jsr	set_sound_event_e659
 A881: 20 4B AA jsr	$aa4b
 A884: A9 09    lda #$09
 A886: 8D 15 06 sta	$0615
@@ -5497,11 +5526,11 @@ A889: A9 0A    lda #$0a
 A88B: 8D 81 06 sta	$0681
 A88E: 60       rts
 A88F: A9 F0    lda #$f0
-A891: 85 08    sta	$0008
+A891: 85 08    sta	game_state_0008
 A893: A9 00    lda #$00
 A895: 85 0B    sta	$000b
 A897: A9 01    lda #$01
-A899: 20 59 E6 jsr	$e659
+A899: 20 59 E6 jsr	set_sound_event_e659
 A89C: A9 03    lda #$03
 A89E: 85 07    sta	$0007
 A8A0: A5 45    lda	$0045
@@ -5510,21 +5539,21 @@ A8A3: 20 18 88 jsr display_screen_and_other_stuff_8818
 A8A6: A9 00    lda #$00
 A8A8: AA       tax
 A8A9: A9 01    lda #$01
-A8AB: 85 77    sta	$0077
+A8AB: 85 77    sta	player_active_array_0077
 A8AD: A9 1E    lda #$1e
 A8AF: 85 2F    sta	$002f
-A8B1: 20 AD AD jsr	$adad
+A8B1: 20 AD AD jsr	fill_game_grid_adad
 A8B4: A9 03    lda #$03
 A8B6: 85 8F    sta	$008f
 A8B8: A9 00    lda #$00
-A8BA: 85 77    sta	$0077
+A8BA: 85 77    sta	player_active_array_0077
 A8BC: 8D 7F 06 sta	$067f
 A8BF: A9 08    lda #$08
 A8C1: 85 87    sta	$0087
 A8C3: A9 07    lda #$07
 A8C5: 85 89    sta	$0089
 A8C7: A9 02    lda #$02
-A8C9: 85 8B    sta	$008b
+A8C9: 85 8B    sta	current_shape_array_008b
 A8CB: 8D 7E 06 sta	$067e
 A8CE: A9 37    lda #$37
 A8D0: 20 70 D6 jsr	$d670
@@ -5544,7 +5573,7 @@ A8ED: 4C 45 A9 jmp	$a945
 A8F0: A5 0B    lda	$000b
 A8F2: 8D 4F 06 sta	$064f
 A8F5: A9 EC    lda #$ec
-A8F7: 85 08    sta	$0008
+A8F7: 85 08    sta	game_state_0008
 A8F9: A9 00    lda #$00
 A8FB: 8D 50 06 sta	$0650
 A8FE: 8D 55 06 sta	$0655
@@ -5558,12 +5587,12 @@ A90D: 20 18 88 jsr display_screen_and_other_stuff_8818
 A910: A9 00    lda #$00
 A912: AA       tax
 A913: A9 01    lda #$01
-A915: 85 77    sta	$0077
+A915: 85 77    sta	player_active_array_0077
 A917: A9 1E    lda #$1e
 A919: 85 2F    sta	$002f
-A91B: 20 AD AD jsr	$adad
+A91B: 20 AD AD jsr	fill_game_grid_adad
 A91E: A9 00    lda #$00
-A920: 85 77    sta	$0077
+A920: 85 77    sta	player_active_array_0077
 A922: A9 02    lda #$02
 A924: 85 8F    sta	$008f
 A926: 8D 7F 06 sta	$067f
@@ -5572,7 +5601,7 @@ A92B: 85 87    sta	$0087
 A92D: A9 08    lda #$08
 A92F: 85 89    sta	$0089
 A931: A9 02    lda #$02
-A933: 85 8B    sta	$008b
+A933: 85 8B    sta	current_shape_array_008b
 A935: 8D 7E 06 sta	$067e
 A938: A9 37    lda #$37
 A93A: 20 70 D6 jsr	$d670
@@ -5581,7 +5610,7 @@ A93F: 85 78    sta	$0078
 A941: 20 16 BC jsr	$bc16
 A944: 60       rts
 A945: A9 00    lda #$00
-A947: 85 08    sta	$0008
+A947: 85 08    sta	game_state_0008
 A949: 85 44    sta	$0044
 A94B: 8D 4B 06 sta	$064b
 A94E: A4 46    ldy	$0046
@@ -5597,7 +5626,7 @@ A963: A5 46    lda	$0046
 A965: 85 45    sta	$0045
 A967: A2 05    ldx #$05
 A969: A9 30    lda #$30
-A96B: 9D 00 06 sta	$0600, x
+A96B: 9D 00 06 sta	score_digit_1_0600, x
 A96E: 9D 06 06 sta	$0606, x
 A971: 9D 0C 06 sta	$060c, x
 A974: 9D 12 06 sta	$0612, x
@@ -5612,7 +5641,7 @@ A988: 8D 49 06 sta	$0649
 A98B: 8D 4A 06 sta	$064a
 A98E: 20 4B AA jsr	$aa4b
 A991: 20 9C B6 jsr	$b69c
-A994: A5 77    lda	$0077
+A994: A5 77    lda	player_active_array_0077
 A996: F0 05    beq	$a99d
 A998: A2 00    ldx #$00
 A99A: 20 AB A9 jsr	$a9ab
@@ -5621,7 +5650,7 @@ A99F: F0 05    beq	$a9a6
 A9A1: A2 01    ldx #$01
 A9A3: 20 AB A9 jsr	$a9ab
 A9A6: A9 F7    lda #$f7
-A9A8: 85 08    sta	$0008
+A9A8: 85 08    sta	game_state_0008
 A9AA: 60       rts
 A9AB: A5 2F    lda	$002f
 A9AD: C9 03    cmp #$03
@@ -5632,7 +5661,7 @@ A9B5: 9D 49 06 sta	$0649, x
 A9B8: 95 79    sta	$0079, x
 A9BA: E0 00    cpx #$00
 A9BC: D0 0B    bne	$a9c9
-A9BE: 8C 01 06 sty	$0601
+A9BE: 8C 01 06 sty	score_digit_2_0601
 A9C1: A9 02    lda #$02
 A9C3: 8D 15 06 sta	$0615
 A9C6: B8       clv
@@ -5649,7 +5678,7 @@ A9DB: 9D 49 06 sta	$0649, x
 A9DE: 95 79    sta	$0079, x
 A9E0: E0 00    cpx #$00
 A9E2: D0 0B    bne	$a9ef
-A9E4: 8C 01 06 sty	$0601
+A9E4: 8C 01 06 sty	score_digit_2_0601
 A9E7: A9 04    lda #$04
 A9E9: 8D 15 06 sta	$0615
 A9EC: B8       clv
@@ -5714,7 +5743,7 @@ AA69: E8       inx
 AA6A: E0 AC    cpx #$ac
 AA6C: D0 F9    bne	$aa67
 AA6E: A9 01    lda #$01
-AA70: 85 77    sta	$0077
+AA70: 85 77    sta	player_active_array_0077
 AA72: 85 79    sta	$0079
 AA74: 85 7B    sta	$007b
 AA76: A6 0B    ldx	$000b
@@ -5747,43 +5776,43 @@ AAAD: 8D 3C 06 sta	$063c
 AAB0: 8D 3D 06 sta	$063d
 AAB3: 8D 3F 06 sta	$063f
 AAB6: 8D 40 06 sta	$0640
-AAB9: A5 08    lda	$0008
+AAB9: A5 08    lda	game_state_0008
 AABB: D0 0D    bne	$aaca
 AABD: A5 0B    lda	$000b
 AABF: C9 01    cmp #$01
 AAC1: D0 07    bne	$aaca
-AAC3: 20 06 AE jsr	$ae06
+AAC3: 20 06 AE jsr	process_player_2_grid_ae06
 AAC6: A9 00    lda #$00
 AAC8: 85 36    sta	$0036
 AACA: A2 00    ldx #$00
 AACC: 86 29    stx	$0029
 AACE: 86 2A    stx	$002a
-AAD0: A5 08    lda	$0008
+AAD0: A5 08    lda	game_state_0008
 AAD2: D0 04    bne	$aad8
 AAD4: A9 F7    lda #$f7
-AAD6: 85 08    sta	$0008
+AAD6: 85 08    sta	game_state_0008
 AAD8: A2 00    ldx #$00
-AADA: 20 AD AD jsr	$adad
+AADA: 20 AD AD jsr	fill_game_grid_adad
 AADD: A2 01    ldx #$01
-AADF: 20 AD AD jsr	$adad
+AADF: 20 AD AD jsr	fill_game_grid_adad
 AAE2: A5 0B    lda	$000b
 AAE4: F0 1A    beq	$ab00
-AAE6: A5 77    lda	$0077
+AAE6: A5 77    lda	player_active_array_0077
 AAE8: D0 09    bne	$aaf3
-AAEA: A5 4E    lda	$004e
+AAEA: A5 4E    lda	continue_timer_array_004e
 AAEC: D0 05    bne	$aaf3
 AAEE: A2 00    ldx #$00
-AAF0: 20 F4 AF jsr	$aff4
+AAF0: 20 F4 AF jsr	update_screen_grid_aff4
 AAF3: A5 78    lda	$0078
 AAF5: D0 09    bne	$ab00
 AAF7: A5 4F    lda	$004f
 AAF9: D0 05    bne	$ab00
 AAFB: A2 01    ldx #$01
-AAFD: 20 F4 AF jsr	$aff4
+AAFD: 20 F4 AF jsr	update_screen_grid_aff4
 AB00: A9 2C    lda #$2c
-AB02: 85 02    sta	$0002
+AB02: 85 02    sta	screen_address_lsb_0002
 AB04: A9 1D    lda #$1d
-AB06: 85 03    sta	$0003
+AB06: 85 03    sta	screen_address_msb_0003
 AB08: A0 00    ldy #$00
 AB0A: AD 57 06 lda	$0657
 AB0D: C9 30    cmp #$30
@@ -5842,21 +5871,21 @@ AB7C: 90 04    bcc	$ab82
 AB7E: A9 00    lda #$00
 AB80: 85 45    sta	$0045
 AB82: A9 0E    lda #$0e
-AB84: 20 59 E6 jsr	$e659
+AB84: 20 59 E6 jsr	set_sound_event_e659
 AB87: A5 45    lda	$0045
 AB89: 18       clc
 AB8A: 69 03    adc #$03
 AB8C: 85 07    sta	$0007
 AB8E: 20 C0 AB jsr	$abc0
 AB91: A2 00    ldx #$00
-AB93: B5 4E    lda	$004e, x
+AB93: B5 4E    lda	continue_timer_array_004e, x
 AB95: D0 03    bne	$ab9a
 AB97: 20 D3 BC jsr	$bcd3
 AB9A: A2 01    ldx #$01
-AB9C: B5 4E    lda	$004e, x
+AB9C: B5 4E    lda	continue_timer_array_004e, x
 AB9E: D0 03    bne	$aba3
 ABA0: 20 D3 BC jsr	$bcd3
-ABA3: A5 77    lda	$0077
+ABA3: A5 77    lda	player_active_array_0077
 ABA5: F0 05    beq	$abac
 ABA7: A9 09    lda #$09
 ABA9: 20 70 D6 jsr	$d670
@@ -5876,7 +5905,7 @@ ABC6: A0 00    ldy #$00
 ABC8: 20 52 89 jsr	$8952
 ABCB: A9 01    lda #$01
 ABCD: 85 80    sta	$0080
-ABCF: A5 77    lda	$0077
+ABCF: A5 77    lda	player_active_array_0077
 ABD1: F0 0B    beq	$abde
 ABD3: A9 09    lda #$09
 ABD5: 85 79    sta	$0079
@@ -5911,7 +5940,7 @@ AC11: 20 70 D6 jsr	$d670
 AC14: 20 05 B6 jsr	$b605
 AC17: 20 16 BC jsr	$bc16
 AC1A: 60       rts
-AC1B: 86 1B    stx	$001b
+AC1B: 86 1B    stx	current_player_control_status_001b
 AC1D: 20 8A AC jsr	$ac8a
 AC20: A9 07    lda #$07
 AC22: E0 00    cpx #$00
@@ -5924,7 +5953,7 @@ AC2F: A0 05    ldy #$05
 AC31: E0 00    cpx #$00
 AC33: D0 17    bne	$ac4c
 AC35: A9 30    lda #$30
-AC37: 99 00 06 sta	$0600, y
+AC37: 99 00 06 sta	score_digit_1_0600, y
 AC3A: C0 04    cpy #$04
 AC3C: B0 03    bcs	$ac41
 AC3E: 99 0C 06 sta	$060c, y
@@ -5950,7 +5979,7 @@ AC6A: D0 05    bne	$ac71
 AC6C: A5 78    lda	$0078
 AC6E: B8       clv
 AC6F: 50 02    bvc	$ac73
-AC71: A5 77    lda	$0077
+AC71: A5 77    lda	player_active_array_0077
 AC73: F0 05    beq	$ac7a
 AC75: A9 01    lda #$01
 AC77: B8       clv
@@ -5959,11 +5988,11 @@ AC7A: A9 00    lda #$00
 AC7C: 85 0B    sta	$000b
 AC7E: 8D 19 06 sta	$0619
 AC81: 20 AB A9 jsr	$a9ab
-AC84: 20 AD AD jsr	$adad
+AC84: 20 AD AD jsr	fill_game_grid_adad
 AC87: 60       rts
 AC88: 09 0A    ora #$0a
 AC8A: A9 30    lda #$30
-AC8C: 95 77    sta	$0077, x
+AC8C: 95 77    sta	player_active_array_0077, x
 AC8E: 95 79    sta	$0079, x
 AC90: 95 7B    sta	$007b, x
 AC92: 78       sei
@@ -5977,7 +6006,7 @@ ACA1: BD 9B 06 lda	$069b, x
 ACA4: D0 40    bne	$ace6
 ACA6: BD 76 BA lda	$ba76, x
 ACA9: A8       tay
-ACAA: B9 77 00 lda	$0077, y
+ACAA: B9 77 00 lda	player_active_array_0077, y
 ACAD: D0 06    bne	$acb5
 ACAF: 20 1C B8 jsr	$b81c
 ACB2: B8       clv
@@ -5985,10 +6014,10 @@ ACB3: 50 31    bvc	$ace6
 ACB5: 98       tya
 ACB6: 0A       asl a
 ACB7: A8       tay
-ACB8: B9 30 00 lda	$0030, y
+ACB8: B9 30 00 lda	remaining_rows_tenths_0030, y
 ACBB: C9 30    cmp #$30
 ACBD: D0 13    bne	$acd2
-ACBF: B9 31 00 lda	$0031, y
+ACBF: B9 31 00 lda	remaining_rows_units_0031, y
 ACC2: C9 35    cmp #$35
 ACC4: B0 0C    bcs	$acd2
 ACC6: A9 04    lda #$04
@@ -6015,9 +6044,9 @@ ACF0: 0A       asl a
 ACF1: AA       tax
 ACF2: A4 2F    ldy	$002f
 ACF4: B9 AA B7 lda	$b7aa, y
-ACF7: 95 30    sta	$0030, x
+ACF7: 95 30    sta	remaining_rows_tenths_0030, x
 ACF9: B9 C5 B7 lda	$b7c5, y
-ACFC: 95 31    sta	$0031, x
+ACFC: 95 31    sta	remaining_rows_units_0031, x
 ACFE: B9 E0 B7 lda	$b7e0, y
 AD01: E0 00    cpx #$00
 AD03: D0 17    bne	$ad1c
@@ -6043,7 +6072,7 @@ AD26: 6D BC 06 adc	$06bc
 AD29: A8       tay
 AD2A: B9 28 C0 lda	$c028, y
 AD2D: 8D BC 06 sta	$06bc
-AD30: A6 1B    ldx	$001b
+AD30: A6 1B    ldx	current_player_control_status_001b
 AD32: BD 9B 06 lda	$069b, x
 AD35: D0 10    bne	$ad47
 AD37: 8A       txa
@@ -6057,7 +6086,7 @@ AD44: 20 C9 A7 jsr	$a7c9
 AD47: BD 88 AC lda	$ac88, x
 AD4A: 20 70 D6 jsr	$d670
 AD4D: 60       rts
-AD4E: 86 1B    stx	$001b
+AD4E: 86 1B    stx	current_player_control_status_001b
 AD50: A9 01    lda #$01
 AD52: 9D 9B 06 sta	$069b, x
 AD55: 18       clc
@@ -6065,8 +6094,8 @@ AD56: 8A       txa
 AD57: 69 4A    adc #$4a
 AD59: 20 70 D6 jsr	$d670
 AD5C: 20 8A AC jsr	$ac8a
-AD5F: 4C AD AD jmp	$adad
-AD62: 86 1B    stx	$001b
+AD5F: 4C AD AD jmp	fill_game_grid_adad
+AD62: 86 1B    stx	current_player_control_status_001b
 AD64: 18       clc
 AD65: 8A       txa
 AD66: 69 4A    adc #$4a
@@ -6084,39 +6113,40 @@ AD83: 8D 4E 06 sta	$064e
 AD86: 8A       txa
 AD87: A8       tay
 AD88: BE 76 BA ldx	$ba76, y
-AD8B: B5 77    lda	$0077, x
+AD8B: B5 77    lda	player_active_array_0077, x
 AD8D: F0 05    beq	$ad94
 AD8F: A9 01    lda #$01
 AD91: 8D 4E 06 sta	$064e
 AD94: AD 4E 06 lda	$064e
 AD97: 8D 19 06 sta	$0619
 AD9A: 85 0B    sta	$000b
-AD9C: A6 1B    ldx	$001b
+AD9C: A6 1B    ldx	current_player_control_status_001b
 AD9E: A9 07    lda #$07
 ADA0: E0 00    cpx #$00
 ADA2: D0 06    bne	$adaa
 ADA4: 8D 70 06 sta	$0670
 ADA7: B8       clv
-ADA8: 50 03    bvc	$adad
+ADA8: 50 03    bvc	fill_game_grid_adad
 ADAA: 8D 72 06 sta	$0672
-ADAD: 20 E8 AF jsr	$afe8
+fill_game_grid_adad:
+ADAD: 20 E8 AF jsr	update_screen_grid_afe8
 ADB0: A9 00    lda #$00
-ADB2: 95 8D    sta	$008d, x
-ADB4: 95 8B    sta	$008b, x
+ADB2: 95 8D    sta	next_shape_array_008d, x
+ADB4: 95 8B    sta	current_shape_array_008b, x
 ADB6: 95 29    sta	$0029, x
-ADB8: B5 77    lda	$0077, x
+ADB8: B5 77    lda	player_active_array_0077, x
 ADBA: F0 06    beq	$adc2
 ADBC: BD 88 AC lda	$ac88, x
 ADBF: 20 70 D6 jsr	$d670
 ADC2: E0 00    cpx #$00
-ADC4: D0 40    bne	$ae06
+ADC4: D0 40    bne	process_player_2_grid_ae06
 ADC6: A9 00    lda #$00
-ADC8: 85 1F    sta	$001f
+ADC8: 85 1F    sta	logical_grid_address_lsb_001f
 ADCA: A9 02    lda #$02
-ADCC: 85 20    sta	$0020
+ADCC: 85 20    sta	logical_grid_address_msb_or_controls_0020
 ADCE: A9 1C    lda #$1c
-ADD0: 85 1D    sta	$001d
-ADD2: A5 1D    lda	$001d
+ADD0: 85 1D    sta	unknown_001d
+ADD2: A5 1D    lda	unknown_001d
 ADD4: C9 03    cmp #$03
 ADD6: B0 04    bcs	$addc
 ADD8: A2 20    ldx #$20
@@ -6127,29 +6157,30 @@ ADE0: A2 00    ldx #$00
 ADE2: F0 02    beq	$ade6
 ADE4: A2 10    ldx #$10
 ADE6: A0 00    ldy #$00
-ADE8: BD C3 AE lda	$aec3, x
+ADE8: BD C3 AE lda	empty_row_3_tiles_each_side_aec3, x
 ADEB: 91 1F    sta ($1f), y
 ADED: E8       inx
 ADEE: C8       iny
 ADEF: C0 10    cpy #$10
 ADF1: 90 F5    bcc	$ade8
-ADF3: A5 1F    lda	$001f
+ADF3: A5 1F    lda	logical_grid_address_lsb_001f
 ADF5: 18       clc
 ADF6: 69 10    adc #$10
-ADF8: 85 1F    sta	$001f
+ADF8: 85 1F    sta	logical_grid_address_lsb_001f
 ADFA: 90 02    bcc	$adfe
-ADFC: E6 20    inc	$0020
-ADFE: C6 1D    dec	$001d
+ADFC: E6 20    inc	logical_grid_address_msb_or_controls_0020
+ADFE: C6 1D    dec	unknown_001d
 AE00: D0 D0    bne	$add2
 AE02: A2 00    ldx #$00
-AE04: F0 3E    beq	$ae44
+AE04: F0 3E    beq	fill_inside_the_grid_ae44
+process_player_2_grid_ae06:
 AE06: A9 00    lda #$00
-AE08: 85 1F    sta	$001f
+AE08: 85 1F    sta	logical_grid_address_lsb_001f
 AE0A: A9 04    lda #$04
-AE0C: 85 20    sta	$0020
+AE0C: 85 20    sta	logical_grid_address_msb_or_controls_0020
 AE0E: A9 1C    lda #$1c
-AE10: 85 1D    sta	$001d
-AE12: A5 1D    lda	$001d
+AE10: 85 1D    sta	unknown_001d
+AE12: A5 1D    lda	unknown_001d
 AE14: C9 03    cmp #$03
 AE16: B0 04    bcs	$ae1c
 AE18: A2 20    ldx #$20
@@ -6160,22 +6191,23 @@ AE20: A2 00    ldx #$00
 AE22: F0 02    beq	$ae26
 AE24: A2 10    ldx #$10
 AE26: A0 00    ldy #$00
-AE28: BD C3 AE lda	$aec3, x
+AE28: BD C3 AE lda	empty_row_3_tiles_each_side_aec3, x
 AE2B: 91 1F    sta ($1f), y
 AE2D: E8       inx
 AE2E: C8       iny
 AE2F: C0 10    cpy #$10
 AE31: 90 F5    bcc	$ae28
-AE33: A5 1F    lda	$001f
+AE33: A5 1F    lda	logical_grid_address_lsb_001f
 AE35: 18       clc
 AE36: 69 10    adc #$10
-AE38: 85 1F    sta	$001f
+AE38: 85 1F    sta	logical_grid_address_lsb_001f
 AE3A: 90 02    bcc	$ae3e
-AE3C: E6 20    inc	$0020
-AE3E: C6 1D    dec	$001d
+AE3C: E6 20    inc	logical_grid_address_msb_or_controls_0020
+AE3E: C6 1D    dec	unknown_001d
 AE40: D0 D0    bne	$ae12
 AE42: A2 01    ldx #$01
-AE44: B5 77    lda	$0077, x
+fill_inside_the_grid_ae44:
+AE44: B5 77    lda	player_active_array_0077, x
 AE46: D0 01    bne	$ae49
 AE48: 60       rts
 AE49: BD 9B 06 lda	$069b, x
@@ -6224,11 +6256,11 @@ AEA3: F6 79    inc	$0079, x
 AEA5: A9 12    lda #$12
 AEA7: 95 93    sta	$0093, x
 AEA9: A9 20    lda #$20
-AEAB: 85 1F    sta	$001f
+AEAB: 85 1F    sta	logical_grid_address_lsb_001f
 AEAD: BD 8C 9E lda	$9e8c, x
 AEB0: 18       clc
 AEB1: 69 01    adc #$01
-AEB3: 85 20    sta	$0020
+AEB3: 85 20    sta	logical_grid_address_msb_or_controls_0020
 AEB5: A0 00    ldy #$00
 AEB7: B1 21    lda ($21), y
 AEB9: 91 1F    sta ($1f), y
@@ -6241,32 +6273,32 @@ AEF3: 38       sec
 AEF4: E9 08    sbc #$08
 AEF6: 18       clc
 AEF7: 69 D9    adc #$d9
-AEF9: 85 1D    sta	$001d
+AEF9: 85 1D    sta	unknown_001d
 AEFB: A9 09    lda #$09
 AEFD: 85 1E    sta	$001e
 AEFF: A9 40    lda #$40
-AF01: 85 1F    sta	$001f
+AF01: 85 1F    sta	logical_grid_address_lsb_001f
 AF03: BD 8C 9E lda	$9e8c, x
 AF06: 18       clc
 AF07: 69 01    adc #$01
-AF09: 85 20    sta	$0020
+AF09: 85 20    sta	logical_grid_address_msb_or_controls_0020
 AF0B: A0 00    ldy #$00
 AF0D: A9 F1    lda #$f1
 AF0F: 91 1F    sta ($1f), y
-AF11: A5 1F    lda	$001f
+AF11: A5 1F    lda	logical_grid_address_lsb_001f
 AF13: 69 10    adc #$10
-AF15: 85 1F    sta	$001f
+AF15: 85 1F    sta	logical_grid_address_lsb_001f
 AF17: C9 A0    cmp #$a0
 AF19: 90 F2    bcc	$af0d
 AF1B: F6 79    inc	$0079, x
 AF1D: A9 14    lda #$14
 AF1F: 95 93    sta	$0093, x
 AF21: A9 43    lda #$43
-AF23: 85 1F    sta	$001f
+AF23: 85 1F    sta	logical_grid_address_lsb_001f
 AF25: BD 8C 9E lda	$9e8c, x
 AF28: 18       clc
 AF29: 69 01    adc #$01
-AF2B: 85 20    sta	$0020
+AF2B: 85 20    sta	logical_grid_address_msb_or_controls_0020
 AF2D: 8A       txa
 AF2E: 48       pha
 AF2F: A2 00    ldx #$00
@@ -6295,10 +6327,10 @@ AF56: C8       iny
 AF57: 98       tya
 AF58: 29 03    and #$03
 AF5A: D0 07    bne	$af63
-AF5C: A5 1F    lda	$001f
+AF5C: A5 1F    lda	logical_grid_address_lsb_001f
 AF5E: 18       clc
 AF5F: 69 0C    adc #$0c
-AF61: 85 1F    sta	$001f
+AF61: 85 1F    sta	logical_grid_address_lsb_001f
 AF63: 98       tya
 AF64: 29 07    and #$07
 AF66: D0 11    bne	$af79
@@ -6315,27 +6347,30 @@ AF78: 48       pha
 AF79: C0 18    cpy #$18
 AF7B: 90 D0    bcc	$af4d
 AF7D: 68       pla
-AF7E: E6 1D    inc	$001d
+AF7E: E6 1D    inc	unknown_001d
 AF80: A5 5E    lda	$005e
 AF82: 18       clc
 AF83: 69 10    adc #$10
 AF85: 85 5E    sta	$005e
-AF87: A5 1F    lda	$001f
+AF87: A5 1F    lda	logical_grid_address_lsb_001f
 AF89: 38       sec
 AF8A: E9 45    sbc #$45
-AF8C: 85 1F    sta	$001f
+AF8C: 85 1F    sta	logical_grid_address_lsb_001f
 AF8E: C9 4A    cmp #$4a
 AF90: 90 A3    bcc	$af35
 AF92: 68       pla
 AF93: AA       tax
 AF94: 4C 3A A4 jmp	$a43a
 
+update_screen_grid_afe8:
 AFE8: A9 00    lda #$00
 AFEA: 85 05    sta	$0005
-AFEC: B5 77    lda	$0077, x
+AFEC: B5 77    lda	player_active_array_0077, x
 AFEE: F0 03    beq	$aff3
-AFF0: 20 F4 AF jsr	$aff4
+AFF0: 20 F4 AF jsr	update_screen_grid_aff4
 AFF3: 60       rts
+
+update_screen_grid_aff4:
 AFF4: A9 00    lda #$00
 AFF6: 85 05    sta	$0005
 AFF8: 8A       txa
@@ -6343,29 +6378,29 @@ AFF9: 0A       asl a
 AFFA: A8       tay
 AFFB: B9 56 E7 lda	$e756, y
 AFFE: F0 39    beq	$b039
-B000: 85 1D    sta	$001d
+B000: 85 1D    sta	unknown_001d
 B002: B9 57 E7 lda	$e757, y
 B005: 85 1E    sta	$001e
 B007: B9 4E E7 lda	$e74e, y
-B00A: 85 1F    sta	$001f
+B00A: 85 1F    sta	logical_grid_address_lsb_001f
 B00C: B9 4F E7 lda	$e74f, y
-B00F: 85 20    sta	$0020
+B00F: 85 20    sta	logical_grid_address_msb_or_controls_0020
 B011: A9 62    lda #$62
 B013: 85 00    sta	$0000
 B015: A9 E7    lda #$e7
 B017: 85 01    sta	$0001
-B019: A5 1F    lda	$001f
-B01B: 85 02    sta	$0002
+B019: A5 1F    lda	logical_grid_address_lsb_001f
+B01B: 85 02    sta	screen_address_lsb_0002
 B01D: 18       clc
 B01E: 69 80    adc #$80
-B020: 85 1F    sta	$001f
-B022: A5 20    lda	$0020
-B024: 85 03    sta	$0003
+B020: 85 1F    sta	logical_grid_address_lsb_001f
+B022: A5 20    lda	logical_grid_address_msb_or_controls_0020
+B024: 85 03    sta	screen_address_msb_0003
 B026: 69 00    adc #$00
-B028: 85 20    sta	$0020
+B028: 85 20    sta	logical_grid_address_msb_or_controls_0020
 B02A: A5 1E    lda	$001e
-B02C: 20 CC D5 jsr	$d5cc
-B02F: C6 1D    dec	$001d
+B02C: 20 CC D5 jsr	copy_to_screen_d5cc
+B02F: C6 1D    dec	unknown_001d
 B031: D0 DE    bne	$b011
 B033: C8       iny
 B034: C8       iny
@@ -6374,20 +6409,20 @@ B036: C8       iny
 B037: D0 C2    bne	$affb
 B039: 60       rts
 B03A: A8       tay
-B03B: 86 1D    stx	$001d
-B03D: A6 1D    ldx	$001d
+B03B: 86 1D    stx	unknown_001d
+B03D: A6 1D    ldx	unknown_001d
 B03F: F6 79    inc	$0079, x
 B041: B9 B5 B0 lda	$b0b5, y
 B044: 95 93    sta	$0093, x
-B046: 86 1D    stx	$001d
+B046: 86 1D    stx	unknown_001d
 B048: 0A       asl a
 B049: 0A       asl a
 B04A: 0A       asl a
 B04B: 0A       asl a
-B04C: 85 1F    sta	$001f
+B04C: 85 1F    sta	logical_grid_address_lsb_001f
 B04E: BD 8C 9E lda	$9e8c, x
 B051: 69 00    adc #$00
-B053: 85 20    sta	$0020
+B053: 85 20    sta	logical_grid_address_msb_or_controls_0020
 B055: A5 81    lda	$0081
 B057: 85 17    sta	$0017
 B059: A5 82    lda	$0082
@@ -6402,7 +6437,7 @@ B067: C8       iny
 B068: A2 17    ldx #$17
 B06A: B1 1F    lda ($1f), y
 B06C: D0 0D    bne	$b07b
-B06E: AD 1A 28 lda	$281a
+B06E: AD 1A 28 lda	random_281a
 B071: 29 70    and #$70
 B073: F0 04    beq	$b079
 B075: E6 1C    inc	$001c
@@ -6415,29 +6450,29 @@ B07F: D0 E9    bne	$b06a
 B081: A5 1C    lda	$001c
 B083: C9 07    cmp #$07
 B085: 90 0D    bcc	$b094
-B087: AD 1A 28 lda	$281a
+B087: AD 1A 28 lda	random_281a
 B08A: 29 07    and #$07
 B08C: 18       clc
 B08D: 69 04    adc #$04
 B08F: A8       tay
 B090: A9 00    lda #$00
 B092: 91 1F    sta ($1f), y
-B094: A5 1F    lda	$001f
+B094: A5 1F    lda	logical_grid_address_lsb_001f
 B096: 18       clc
 B097: 69 10    adc #$10
-B099: 85 1F    sta	$001f
+B099: 85 1F    sta	logical_grid_address_lsb_001f
 B09B: 90 02    bcc	$b09f
-B09D: E6 20    inc	$0020
-B09F: A5 20    lda	$0020
+B09D: E6 20    inc	logical_grid_address_msb_or_controls_0020
+B09F: A5 20    lda	logical_grid_address_msb_or_controls_0020
 B0A1: 4A       lsr a
-B0A2: A5 1F    lda	$001f
+B0A2: A5 1F    lda	logical_grid_address_lsb_001f
 B0A4: 6A       ror a
 B0A5: C9 D0    cmp #$d0
 B0A7: 90 B4    bcc	$b05d
-B0A9: A6 1D    ldx	$001d
+B0A9: A6 1D    ldx	unknown_001d
 B0AB: 4C 3A A4 jmp	$a43a
 
-B125: AD 1A 28 lda	$281a
+B125: AD 1A 28 lda	random_281a
 B128: 29 07    and #$07
 B12A: F0 02    beq	$b12e
 B12C: E6 1C    inc	$001c
@@ -6448,27 +6483,27 @@ B131: 24 0B    bit	$000b
 B133: 10 02    bpl	$b137
 B135: A0 02    ldy #$02
 B137: B9 8C 9E lda	$9e8c, y
-B13A: 85 03    sta	$0003
+B13A: 85 03    sta	screen_address_msb_0003
 B13C: B9 86 9E lda	$9e86, y
 B13F: 85 9D    sta	$009d
 B141: B9 89 9E lda	$9e89, y
 B144: 85 9E    sta	$009e
 B146: 20 1A CA jsr	$ca1a
 B149: A9 D0    lda #$d0
-B14B: 85 1B    sta	$001b
+B14B: 85 1B    sta	current_player_control_status_001b
 B14D: A2 03    ldx #$03
 B14F: BD C0 05 lda	$05c0, x
-B152: C5 1B    cmp	$001b
+B152: C5 1B    cmp	current_player_control_status_001b
 B154: B0 02    bcs	$b158
-B156: 85 1B    sta	$001b
+B156: 85 1B    sta	current_player_control_status_001b
 B158: E8       inx
 B159: E0 0D    cpx #$0d
 B15B: 90 F2    bcc	$b14f
-B15D: A5 1B    lda	$001b
+B15D: A5 1B    lda	current_player_control_status_001b
 B15F: C9 80    cmp #$80
 B161: B0 01    bcs	$b164
 B163: 60       rts
-B164: AD 0A 28 lda	$280a
+B164: AD 0A 28 lda	random_280a
 B167: 29 0F    and #$0f
 B169: 18       clc
 B16A: 69 03    adc #$03
@@ -6476,11 +6511,11 @@ B16C: C9 0D    cmp #$0d
 B16E: 90 02    bcc	$b172
 B170: E9 08    sbc #$08
 B172: AA       tax
-B173: 85 1B    sta	$001b
+B173: 85 1B    sta	current_player_control_status_001b
 B175: BD C0 05 lda	$05c0, x
 B178: 85 1C    sta	$001c
 B17A: A0 03    ldy #$03
-B17C: C4 1B    cpy	$001b
+B17C: C4 1B    cpy	current_player_control_status_001b
 B17E: F0 07    beq	$b187
 B180: B9 C0 05 lda	$05c0, y
 B183: C5 1C    cmp	$001c
@@ -6498,13 +6533,13 @@ B197: 38       sec
 B198: E9 08    sbc #$08
 B19A: 85 1C    sta	$001c
 B19C: 0A       asl a
-B19D: 85 02    sta	$0002
+B19D: 85 02    sta	screen_address_lsb_0002
 B19F: 90 02    bcc	$b1a3
-B1A1: E6 03    inc	$0003
+B1A1: E6 03    inc	screen_address_msb_0003
 B1A3: 8A       txa
 B1A4: 18       clc
-B1A5: 65 02    adc	$0002
-B1A7: 85 02    sta	$0002
+B1A5: 65 02    adc	screen_address_lsb_0002
+B1A7: 85 02    sta	screen_address_lsb_0002
 B1A9: A9 09    lda #$09
 B1AB: A0 00    ldy #$00
 B1AD: 91 02    sta ($02), y
@@ -6535,16 +6570,16 @@ B1DD: 26 1E    rol	$001e
 B1DF: 0A       asl a
 B1E0: 26 1E    rol	$001e
 B1E2: 65 9D    adc	$009d
-B1E4: 85 02    sta	$0002
+B1E4: 85 02    sta	screen_address_lsb_0002
 B1E6: A5 1E    lda	$001e
 B1E8: 65 9E    adc	$009e
-B1EA: 85 03    sta	$0003
+B1EA: 85 03    sta	screen_address_msb_0003
 B1EC: 8A       txa
 B1ED: 0A       asl a
-B1EE: 65 02    adc	$0002
+B1EE: 65 02    adc	screen_address_lsb_0002
 B1F0: 38       sec
 B1F1: E9 06    sbc #$06
-B1F3: 85 02    sta	$0002
+B1F3: 85 02    sta	screen_address_lsb_0002
 B1F5: A9 01    lda #$01
 B1F7: 85 01    sta	$0001
 B1F9: A9 00    lda #$00
@@ -6552,20 +6587,20 @@ B1FB: 85 00    sta	$0000
 B1FD: A9 F0    lda #$f0
 B1FF: 8D 01 01 sta	$0101
 B202: A9 01    lda #$01
-B204: 20 33 D6 jsr	$d633
+B204: 20 33 D6 jsr	copy_data_to_screen_d633
 B207: A9 17    lda #$17
-B209: 20 59 E6 jsr	$e659
+B209: 20 59 E6 jsr	set_sound_event_e659
 B20C: 60       rts
 B20D: BD 8C 9E lda	$9e8c, x
-B210: 85 20    sta	$0020
+B210: 85 20    sta	logical_grid_address_msb_or_controls_0020
 B212: A9 60    lda #$60
-B214: 85 1F    sta	$001f
-B216: A5 1F    lda	$001f
+B214: 85 1F    sta	logical_grid_address_lsb_001f
+B216: A5 1F    lda	logical_grid_address_lsb_001f
 B218: 18       clc
 B219: 69 10    adc #$10
-B21B: 85 1F    sta	$001f
+B21B: 85 1F    sta	logical_grid_address_lsb_001f
 B21D: 90 02    bcc	$b221
-B21F: E6 20    inc	$0020
+B21F: E6 20    inc	logical_grid_address_msb_or_controls_0020
 B221: A0 03    ldy #$03
 B223: B1 1F    lda ($1f), y
 B225: C8       iny
@@ -6587,19 +6622,19 @@ B23B: 11 1F    ora ($1f), y
 B23D: C8       iny
 B23E: 11 1F    ora ($1f), y
 B240: F0 D4    beq	$b216
-B242: A5 20    lda	$0020
+B242: A5 20    lda	logical_grid_address_msb_or_controls_0020
 B244: 4A       lsr a
-B245: A5 1F    lda	$001f
+B245: A5 1F    lda	logical_grid_address_lsb_001f
 B247: 6A       ror a
 B248: C9 80    cmp #$80
 B24A: 90 48    bcc	$b294
 B24C: C9 D0    cmp #$d0
 B24E: B0 3A    bcs	$b28a
-B250: A5 1F    lda	$001f
+B250: A5 1F    lda	logical_grid_address_lsb_001f
 B252: 38       sec
 B253: E9 10    sbc #$10
 B255: 85 21    sta	$0021
-B257: A5 20    lda	$0020
+B257: A5 20    lda	logical_grid_address_msb_or_controls_0020
 B259: E9 00    sbc #$00
 B25B: 85 22    sta	$0022
 B25D: A0 00    ldy #$00
@@ -6611,23 +6646,23 @@ B266: 91 21    sta ($21), y
 B268: C8       iny
 B269: C0 10    cpy #$10
 B26B: 90 F7    bcc	$b264
-B26D: A5 20    lda	$0020
+B26D: A5 20    lda	logical_grid_address_msb_or_controls_0020
 B26F: 4A       lsr a
-B270: A5 1F    lda	$001f
+B270: A5 1F    lda	logical_grid_address_lsb_001f
 B272: 6A       ror a
 B273: C9 C8    cmp #$c8
 B275: B0 0E    bcs	$b285
-B277: A5 1F    lda	$001f
+B277: A5 1F    lda	logical_grid_address_lsb_001f
 B279: 69 10    adc #$10
-B27B: 85 1F    sta	$001f
-B27D: A5 20    lda	$0020
+B27B: 85 1F    sta	logical_grid_address_lsb_001f
+B27D: A5 20    lda	logical_grid_address_msb_or_controls_0020
 B27F: 69 00    adc #$00
-B281: 85 20    sta	$0020
+B281: 85 20    sta	logical_grid_address_msb_or_controls_0020
 B283: D0 CB    bne	$b250
 B285: A0 02    ldy #$02
 B287: 20 47 A3 jsr	$a347
 B28A: A9 18    lda #$18
-B28C: 20 59 E6 jsr	$e659
+B28C: 20 59 E6 jsr	set_sound_event_e659
 B28F: A9 19    lda #$19
 B291: 4C 46 B0 jmp	$b046
 B294: 60       rts
@@ -6637,32 +6672,32 @@ B299: 46 1C    lsr	$001c
 B29B: 90 07    bcc	$b2a4
 B29D: 98       tya
 B29E: 18       clc
-B29F: 65 1B    adc	$001b
+B29F: 65 1B    adc	current_player_control_status_001b
 B2A1: B0 0F    bcs	$b2b2
 B2A3: A8       tay
 B2A4: A5 1C    lda	$001c
 B2A6: F0 06    beq	$b2ae
-B2A8: 06 1B    asl	$001b
+B2A8: 06 1B    asl	current_player_control_status_001b
 B2AA: 90 ED    bcc	$b299
 B2AC: B0 04    bcs	$b2b2
 B2AE: C0 FA    cpy #$fa
 B2B0: 90 02    bcc	$b2b4
 B2B2: A0 FA    ldy #$fa
 B2B4: A9 00    lda #$00
-B2B6: 85 1B    sta	$001b
+B2B6: 85 1B    sta	current_player_control_status_001b
 B2B8: 85 1C    sta	$001c
 B2BA: 98       tya
 B2BB: C9 64    cmp #$64
 B2BD: 90 06    bcc	$b2c5
 B2BF: E9 64    sbc #$64
-B2C1: E6 1B    inc	$001b
+B2C1: E6 1B    inc	current_player_control_status_001b
 B2C3: D0 F6    bne	$b2bb
 B2C5: C9 0A    cmp #$0a
 B2C7: 90 06    bcc	$b2cf
 B2C9: E9 0A    sbc #$0a
 B2CB: E6 1C    inc	$001c
 B2CD: D0 F6    bne	$b2c5
-B2CF: 85 1D    sta	$001d
+B2CF: 85 1D    sta	unknown_001d
 B2D1: 60       rts
 B2D2: B5 97    lda	$0097, x
 B2D4: D0 38    bne	$b30e
@@ -6695,7 +6730,7 @@ B309: 20 0D B2 jsr	$b20d
 B30C: 68       pla
 B30D: AA       tax
 B30E: A9 14    lda #$14
-B310: 95 91    sta	$0091, x
+B310: 95 91    sta	fall_timeout_timer_0091, x
 B312: 9D 2C 06 sta	$062c, x
 B315: A5 0B    lda	$000b
 B317: 10 07    bpl	$b320
@@ -6708,9 +6743,9 @@ B325: 94 87    sty	$0087, x
 B327: 95 89    sta	$0089, x
 B329: A9 00    lda #$00
 B32B: 95 8F    sta	$008f, x
-B32D: B5 8D    lda	$008d, x
+B32D: B5 8D    lda	next_shape_array_008d, x
 B32F: 48       pha
-B330: 95 8B    sta	$008b, x
+B330: 95 8B    sta	current_shape_array_008b, x
 B332: 20 FA 9D jsr	$9dfa
 B335: A5 0B    lda	$000b
 B337: 10 08    bpl	$b341
@@ -6719,28 +6754,28 @@ B33B: 18       clc
 B33C: 7D 5C B4 adc	$b45c, x
 B33F: 85 9D    sta	$009d
 B341: 20 C0 9E jsr	$9ec0
-B344: 86 1B    stx	$001b
+B344: 86 1B    stx	current_player_control_status_001b
 B346: 8A       txa
 B347: 0A       asl a
 B348: 69 83    adc #$83
 B34A: AA       tax
-B34B: 20 AC B4 jsr	$b4ac
+B34B: 20 AC B4 jsr	random_b4ac
 B34E: 29 07    and #$07
 B350: F0 F9    beq	$b34b
-B352: A6 1B    ldx	$001b
-B354: 95 8B    sta	$008b, x
-B356: 95 8D    sta	$008d, x
+B352: A6 1B    ldx	current_player_control_status_001b
+B354: 95 8B    sta	current_shape_array_008b, x
+B356: 95 8D    sta	next_shape_array_008d, x
 B358: 20 E8 9E jsr	$9ee8
 B35B: 20 8F 9E jsr	clear_player_grid_9E8F
-B35E: 86 20    stx	$0020
-B360: 20 92 9C jsr	$9c92
-B363: A6 20    ldx	$0020
+B35E: 86 20    stx	logical_grid_address_msb_or_controls_0020
+B360: 20 92 9C jsr	draw_shape_9c92
+B363: A6 20    ldx	logical_grid_address_msb_or_controls_0020
 B365: BD 8C 9E lda	$9e8c, x
-B368: 85 03    sta	$0003
+B368: 85 03    sta	screen_address_msb_0003
 B36A: BD 5A B4 lda	$b45a, x
 B36D: 18       clc
 B36E: 69 40    adc #$40
-B370: 85 02    sta	$0002
+B370: 85 02    sta	screen_address_lsb_0002
 B372: A0 00    ldy #$00
 B374: B1 02    lda ($02), y
 B376: D0 04    bne	$b37c
@@ -6766,16 +6801,16 @@ B39B: D0 02    bne	$b39f
 B39D: A9 07    lda #$07
 B39F: 95 89    sta	$0089, x
 B3A1: 68       pla
-B3A2: 95 8B    sta	$008b, x
+B3A2: 95 8B    sta	current_shape_array_008b, x
 B3A4: 20 FA 9D jsr	$9dfa
 B3A7: 20 E8 9E jsr	$9ee8
 B3AA: 20 8F 9E jsr	clear_player_grid_9E8F
-B3AD: 86 20    stx	$0020
-B3AF: 20 92 9C jsr	$9c92
-B3B2: A6 20    ldx	$0020
-B3B4: B5 8B    lda	$008b, x
+B3AD: 86 20    stx	logical_grid_address_msb_or_controls_0020
+B3AF: 20 92 9C jsr	draw_shape_9c92
+B3B2: A6 20    ldx	logical_grid_address_msb_or_controls_0020
+B3B4: B5 8B    lda	current_shape_array_008b, x
 B3B6: F0 11    beq	$b3c9
-B3B8: A5 08    lda	$0008
+B3B8: A5 08    lda	game_state_0008
 B3BA: C9 FC    cmp #$fc
 B3BC: D0 06    bne	$b3c4
 B3BE: 20 16 C9 jsr	$c916
@@ -6783,13 +6818,13 @@ B3C1: 4C CA B3 jmp	$b3ca
 B3C4: AD 19 06 lda	$0619
 B3C7: F0 01    beq	$b3ca
 B3C9: 60       rts
-B3CA: A5 77    lda	$0077
+B3CA: A5 77    lda	player_active_array_0077
 B3CC: F0 FB    beq	$b3c9
 B3CE: A5 4F    lda	$004f
 B3D0: D0 F7    bne	$b3c9
 B3D2: AD 64 06 lda	$0664
 B3D5: 10 F2    bpl	$b3c9
-B3D7: A6 8B    ldx	$008b
+B3D7: A6 8B    ldx	current_shape_array_008b
 B3D9: B5 A0    lda	$00a0, x
 B3DB: C9 7F    cmp #$7f
 B3DD: B0 EA    bcs	$b3c9
@@ -6797,7 +6832,7 @@ B3DF: 29 07    and #$07
 B3E1: A8       tay
 B3E2: B9 25 65 lda	$6525, y
 B3E5: 8D 00 01 sta	$0100
-B3E8: A5 8B    lda	$008b
+B3E8: A5 8B    lda	current_shape_array_008b
 B3EA: 0A       asl a
 B3EB: 0A       asl a
 B3EC: 0A       asl a
@@ -6805,8 +6840,8 @@ B3ED: 0A       asl a
 B3EE: 69 70    adc #$70
 B3F0: 8D 01 01 sta	$0101
 B3F3: A9 1C    lda #$1c
-B3F5: 85 03    sta	$0003
-B3F7: A4 8B    ldy	$008b
+B3F5: 85 03    sta	screen_address_msb_0003
+B3F7: A4 8B    ldy	current_shape_array_008b
 B3F9: B9 A0 00 lda	$00a0, y
 B3FC: 4A       lsr a
 B3FD: 4A       lsr a
@@ -6814,40 +6849,40 @@ B3FE: 4A       lsr a
 B3FF: 4A       lsr a
 B400: 49 FF    eor #$ff
 B402: 38       sec
-B403: 65 03    adc	$0003
-B405: 85 03    sta	$0003
+B403: 65 03    adc	screen_address_msb_0003
+B405: 85 03    sta	screen_address_msb_0003
 B407: B9 A0 00 lda	$00a0, y
 B40A: 29 08    and #$08
 B40C: F0 02    beq	$b410
 B40E: A9 80    lda #$80
-B410: 85 1B    sta	$001b
-B412: A5 8B    lda	$008b
+B410: 85 1B    sta	current_player_control_status_001b
+B412: A5 8B    lda	current_shape_array_008b
 B414: 0A       asl a
 B415: 69 38    adc #$38
 B417: 38       sec
-B418: E5 1B    sbc	$001b
-B41A: 85 02    sta	$0002
-B41C: A5 03    lda	$0003
+B418: E5 1B    sbc	current_player_control_status_001b
+B41A: 85 02    sta	screen_address_lsb_0002
+B41C: A5 03    lda	screen_address_msb_0003
 B41E: E9 00    sbc #$00
-B420: 85 03    sta	$0003
+B420: 85 03    sta	screen_address_msb_0003
 B422: A0 00    ldy #$00
 B424: AD 00 01 lda	$0100
 B427: 91 02    sta ($02), y
 B429: C8       iny
 B42A: AD 01 01 lda	$0101
 B42D: 91 02    sta ($02), y
-B42F: A6 8B    ldx	$008b
+B42F: A6 8B    ldx	current_shape_array_008b
 B431: B5 A0    lda	$00a0, x
 B433: C9 07    cmp #$07
 B435: 90 1C    bcc	$b453
 B437: 29 07    and #$07
 B439: D0 18    bne	$b453
-B43B: A5 02    lda	$0002
+B43B: A5 02    lda	screen_address_lsb_0002
 B43D: 18       clc
 B43E: 69 80    adc #$80
-B440: 85 02    sta	$0002
+B440: 85 02    sta	screen_address_lsb_0002
 B442: 90 02    bcc	$b446
-B444: E6 03    inc	$0003
+B444: E6 03    inc	screen_address_msb_0003
 B446: A0 00    ldy #$00
 B448: AD 2D 65 lda	$652d
 B44B: 91 02    sta ($02), y
@@ -6869,17 +6904,17 @@ B46E: 94 87    sty	$0087, x
 B470: 95 89    sta	$0089, x
 B472: A9 00    lda #$00
 B474: 95 8F    sta	$008f, x
-B476: 86 1B    stx	$001b
+B476: 86 1B    stx	current_player_control_status_001b
 B478: 8A       txa
 B479: 0A       asl a
 B47A: 69 83    adc #$83
 B47C: AA       tax
-B47D: 20 AC B4 jsr	$b4ac
+B47D: 20 AC B4 jsr	random_b4ac
 B480: 29 07    and #$07
 B482: F0 F9    beq	$b47d
-B484: A6 1B    ldx	$001b
-B486: 95 8B    sta	$008b, x
-B488: 95 8D    sta	$008d, x
+B484: A6 1B    ldx	current_player_control_status_001b
+B486: 95 8B    sta	current_shape_array_008b, x
+B488: 95 8D    sta	next_shape_array_008d, x
 B48A: 20 FA 9D jsr	$9dfa
 B48D: A5 0B    lda	$000b
 B48F: 10 08    bpl	$b499
@@ -6889,13 +6924,15 @@ B494: 7D 5C B4 adc	$b45c, x
 B497: 85 9D    sta	$009d
 B499: 20 E8 9E jsr	$9ee8
 B49C: 20 8F 9E jsr	clear_player_grid_9E8F
-B49F: 86 20    stx	$0020
-B4A1: 20 92 9C jsr	$9c92
-B4A4: A6 20    ldx	$0020
+B49F: 86 20    stx	logical_grid_address_msb_or_controls_0020
+B4A1: 20 92 9C jsr	draw_shape_9c92
+B4A4: A6 20    ldx	logical_grid_address_msb_or_controls_0020
 B4A6: A9 00    lda #$00
-B4A8: 95 8B    sta	$008b, x
+B4A8: 95 8B    sta	current_shape_array_008b, x
 B4AA: 60       rts
 B4AB: 60       rts
+
+random_b4ac:
 B4AC: 20 B2 B4 jsr	$b4b2
 B4AF: 20 B2 B4 jsr	$b4b2
 B4B2: B5 00    lda	$0000, x
@@ -6912,24 +6949,24 @@ B4C4: 60       rts
 B4C5: BD 2C 06 lda	$062c, x
 B4C8: C9 02    cmp #$02
 B4CA: B0 24    bcs	$b4f0
-B4CC: A5 1D    lda	$001d
-B4CE: 65 1D    adc	$001d
+B4CC: A5 1D    lda	unknown_001d
+B4CE: 65 1D    adc	unknown_001d
 B4D0: C9 0A    cmp #$0a
 B4D2: 90 02    bcc	$b4d6
 B4D4: E9 0A    sbc #$0a
-B4D6: 85 1D    sta	$001d
+B4D6: 85 1D    sta	unknown_001d
 B4D8: A5 1C    lda	$001c
 B4DA: 65 1C    adc	$001c
 B4DC: C9 0A    cmp #$0a
 B4DE: 90 02    bcc	$b4e2
 B4E0: E9 0A    sbc #$0a
 B4E2: 85 1C    sta	$001c
-B4E4: A5 1B    lda	$001b
-B4E6: 65 1B    adc	$001b
+B4E4: A5 1B    lda	current_player_control_status_001b
+B4E6: 65 1B    adc	current_player_control_status_001b
 B4E8: C9 0A    cmp #$0a
 B4EA: 90 02    bcc	$b4ee
 B4EC: E9 0A    sbc #$0a
-B4EE: 85 1B    sta	$001b
+B4EE: 85 1B    sta	current_player_control_status_001b
 B4F0: 60       rts
 B4F1: 8A       txa
 B4F2: 0A       asl a
@@ -6941,88 +6978,90 @@ B4FA: 24 0B    bit	$000b
 B4FC: 10 03    bpl	$b501
 B4FE: 18       clc
 B4FF: 69 03    adc #$03
-B501: 85 1B    sta	$001b
+B501: 85 1B    sta	current_player_control_status_001b
 B503: B9 14 06 lda	$0614, y
 B506: C9 01    cmp #$01
 B508: 90 06    bcc	$b510
-B50A: A5 1B    lda	$001b
+B50A: A5 1B    lda	current_player_control_status_001b
 B50C: 69 09    adc #$09
-B50E: 85 1B    sta	$001b
-B510: A5 1B    lda	$001b
+B50E: 85 1B    sta	current_player_control_status_001b
+B510: A5 1B    lda	current_player_control_status_001b
 B512: 18       clc
 B513: 65 0A    adc	$000a
 B515: 20 95 B2 jsr	$b295
 B518: 20 C5 B4 jsr	$b4c5
 B51B: A9 00    lda #$00
 B51D: 9D 8D 06 sta	$068d, x
-B520: A5 1B    lda	$001b
+B520: A5 1B    lda	current_player_control_status_001b
 B522: 9D 8F 06 sta	$068f, x
 B525: A5 1C    lda	$001c
 B527: 9D 91 06 sta	$0691, x
-B52A: A5 1D    lda	$001d
+B52A: A5 1D    lda	unknown_001d
 B52C: 9D 93 06 sta	$0693, x
-B52F: A5 08    lda	$0008
+B52F: A5 08    lda	game_state_0008
 B531: D0 03    bne	$b536
-B533: 20 3F B5 jsr	$b53f
+B533: 20 3F B5 jsr	update_player_score_b53f
 B536: 20 D0 A2 jsr	$a2d0
 B539: A9 1E    lda #$1e
 B53B: 9D 79 06 sta	$0679, x
 B53E: 60       rts
+
+update_player_score_b53f:
 B53F: 8A       txa
 B540: 85 1E    sta	$001e
 B542: 0A       asl a
 B543: 65 1E    adc	$001e
 B545: 0A       asl a
 B546: A8       tay
-B547: A5 1D    lda	$001d
+B547: A5 1D    lda	unknown_001d
 B549: 18       clc
-B54A: 79 05 06 adc	$0605, y
+B54A: 79 05 06 adc	score_digit_6_0605, y
 B54D: C9 3A    cmp #$3a
 B54F: 90 03    bcc	$b554
 B551: E9 0A    sbc #$0a
 B553: 38       sec
-B554: 99 05 06 sta	$0605, y
-B557: B9 04 06 lda	$0604, y
+B554: 99 05 06 sta	score_digit_6_0605, y
+B557: B9 04 06 lda	score_digit_5_0604, y
 B55A: 65 1C    adc	$001c
 B55C: C9 3A    cmp #$3a
 B55E: 90 03    bcc	$b563
 B560: E9 0A    sbc #$0a
 B562: 38       sec
-B563: 99 04 06 sta	$0604, y
-B566: B9 03 06 lda	$0603, y
-B569: 65 1B    adc	$001b
+B563: 99 04 06 sta	score_digit_5_0604, y
+B566: B9 03 06 lda	score_digit_4_0603, y
+B569: 65 1B    adc	current_player_control_status_001b
 B56B: C9 3A    cmp #$3a
 B56D: 90 03    bcc	$b572
 B56F: E9 0A    sbc #$0a
 B571: 38       sec
-B572: 99 03 06 sta	$0603, y
-B575: B9 02 06 lda	$0602, y
+B572: 99 03 06 sta	score_digit_4_0603, y
+B575: B9 02 06 lda	score_digit_3_0602, y
 B578: 69 00    adc #$00
 B57A: C9 3A    cmp #$3a
 B57C: 90 03    bcc	$b581
 B57E: E9 0A    sbc #$0a
 B580: 38       sec
-B581: 99 02 06 sta	$0602, y
-B584: B9 01 06 lda	$0601, y
+B581: 99 02 06 sta	score_digit_3_0602, y
+B584: B9 01 06 lda	score_digit_2_0601, y
 B587: 69 00    adc #$00
 B589: C9 3A    cmp #$3a
 B58B: 90 03    bcc	$b590
 B58D: E9 0A    sbc #$0a
 B58F: 38       sec
-B590: 99 01 06 sta	$0601, y
-B593: B9 00 06 lda	$0600, y
+B590: 99 01 06 sta	score_digit_2_0601, y
+B593: B9 00 06 lda	score_digit_1_0600, y
 B596: 69 00    adc #$00
 B598: C9 3A    cmp #$3a
 B59A: 90 02    bcc	$b59e
 B59C: E9 0A    sbc #$0a
-B59E: 99 00 06 sta	$0600, y
+B59E: 99 00 06 sta	score_digit_1_0600, y
 B5A1: F6 79    inc	$0079, x
 B5A3: 60       rts
 B5A4: 8A       txa
 B5A5: 0A       asl a
 B5A6: A8       tay
 B5A7: B9 15 06 lda	$0615, y
-B5AA: 95 91    sta	$0091, x
+B5AA: 95 91    sta	fall_timeout_timer_0091, x
 B5AC: A8       tay
 B5AD: AD BB 08 lda	$08bb
 B5B0: 29 03    and #$03
@@ -7035,8 +7074,8 @@ B5B9: 98       tya
 B5BA: 18       clc
 B5BB: 6D 4D 06 adc	$064d
 B5BE: A8       tay
-B5BF: B9 C5 B5 lda	$b5c5, y
-B5C2: 95 91    sta	$0091, x
+B5BF: B9 C5 B5 lda	delay_array_table_b5c5, y
+B5C2: 95 91    sta	fall_timeout_timer_0091, x
 B5C4: 60       rts
 
 B605: A2 07    ldx #$07                                            
@@ -7044,19 +7083,19 @@ B607: B5 79    lda $79, x
 B609: F0 5B    beq $b666                                           
 B60B: A9 00    lda #$00
 B60D: 95 79    sta	$0079, x
-B60F: 86 1D    stx	$001d
+B60F: 86 1D    stx	unknown_001d
 B611: 8A       txa
 B612: 0A       asl a
 B613: A8       tay
 B614: B9 72 B6 lda	$b672, y
 B617: 85 00    sta	$0000
-B619: 85 1B    sta	$001b
+B619: 85 1B    sta	current_player_control_status_001b
 B61B: B9 73 B6 lda	$b673, y
 B61E: 85 01    sta	$0001
 B620: 85 1C    sta	$001c
 B622: 24 0B    bit	$000b
 B624: 10 0E    bpl	$b634
-B626: A5 08    lda	$0008
+B626: A5 08    lda	game_state_0008
 B628: 30 0A    bmi	$b634
 B62A: C0 08    cpy #$08
 B62C: 90 06    bcc	$b634
@@ -7064,11 +7103,11 @@ B62E: C0 0C    cpy #$0c
 B630: B0 02    bcs	$b634
 B632: A0 10    ldy #$10
 B634: B9 82 B6 lda	$b682, y
-B637: 85 02    sta	$0002
+B637: 85 02    sta	screen_address_lsb_0002
 B639: B9 83 B6 lda	$b683, y
-B63C: 85 03    sta	$0003
-B63E: 84 1F    sty	$001f
-B640: A4 1D    ldy	$001d
+B63C: 85 03    sta	screen_address_msb_0003
+B63E: 84 1F    sty	logical_grid_address_lsb_001f
+B640: A4 1D    ldy	unknown_001d
 B642: B9 6A B6 lda	$b66a, y
 B645: 85 1E    sta	$001e
 B647: A0 00    ldy #$00
@@ -7084,8 +7123,8 @@ B658: B0 EF    bcs	$b649
 B65A: BD 94 B6 lda	$b694, x
 B65D: 85 05    sta	$0005
 B65F: A5 1E    lda	$001e
-B661: 20 CC D5 jsr	$d5cc
-B664: A6 1D    ldx	$001d
+B661: 20 CC D5 jsr	copy_to_screen_d5cc
+B664: A6 1D    ldx	unknown_001d
 B666: CA       dex
 B667: 10 9E    bpl	$b607
 B669: 60       rts
@@ -7110,7 +7149,7 @@ B6D9: A5 11    lda $11
 B6DB: D0 4C    bne $b729                                           
 B6DD: A5 2E    lda $2e                                             
 B6DF: D0 12    bne $b6f3                                           
-B6E1: A5 77    lda	$0077
+B6E1: A5 77    lda	player_active_array_0077
 B6E3: F0 05    beq	$b6ea
 B6E5: A2 00    ldx #$00
 B6E7: 20 5E B4 jsr	$b45e
@@ -7162,14 +7201,14 @@ B748: 20 70 D6 jsr	$d670
 B74B: A9 0E    lda #$0e
 B74D: 20 70 D6 jsr	$d670
 B750: A9 00    lda #$00
-B752: 85 08    sta	$0008
+B752: 85 08    sta	game_state_0008
 B754: 85 2B    sta	$002b
 B756: A6 2F    ldx	$002f
 B758: BD AA B7 lda	$b7aa, x
-B75B: 85 30    sta	$0030
+B75B: 85 30    sta	remaining_rows_tenths_0030
 B75D: 85 32    sta	$0032
 B75F: BD C5 B7 lda	$b7c5, x
-B762: 85 31    sta	$0031
+B762: 85 31    sta	remaining_rows_units_0031
 B764: 85 33    sta	$0033
 B766: BD E0 B7 lda	$b7e0, x
 B769: 8D BB 06 sta	$06bb
@@ -7194,11 +7233,11 @@ B78B: B9 28 C0 lda	$c028, y
 B78E: 8D BC 06 sta	$06bc
 B791: 20 FB B7 jsr	$b7fb
 B794: A2 00    ldx #$00
-B796: B5 77    lda	$0077, x
+B796: B5 77    lda	player_active_array_0077, x
 B798: F0 03    beq	$b79d
 B79A: 20 C9 A7 jsr	$a7c9
 B79D: A2 01    ldx #$01
-B79F: B5 77    lda	$0077, x
+B79F: B5 77    lda	player_active_array_0077, x
 B7A1: F0 03    beq	$b7a6
 B7A3: 20 C9 A7 jsr	$a7c9
 B7A6: 20 1C B8 jsr	$b81c
@@ -7234,7 +7273,7 @@ B834: A9 07    lda #$07
 B836: B8       clv
 B837: 50 02    bvc	$b83b
 B839: A9 08    lda #$08
-B83B: 20 59 E6 jsr	$e659
+B83B: 20 59 E6 jsr	set_sound_event_e659
 B83E: 60       rts
 B83F: A9 02    lda #$02
 B841: 85 3A    sta	$003a
@@ -7246,11 +7285,11 @@ B84B: A9 12    lda #$12
 B84D: 85 3E    sta	$003e
 B84F: A4 2F    ldy	$002f
 B851: B9 AA B7 lda	$b7aa, y
-B854: 85 30    sta	$0030
+B854: 85 30    sta	remaining_rows_tenths_0030
 B856: B9 C5 B7 lda	$b7c5, y
-B859: 85 31    sta	$0031
+B859: 85 31    sta	remaining_rows_units_0031
 B85B: A9 1A    lda #$1a
-B85D: 20 59 E6 jsr	$e659
+B85D: 20 59 E6 jsr	set_sound_event_e659
 B860: A9 01    lda #$01
 B862: 85 35    sta	$0035
 B864: 85 37    sta	$0037
@@ -7272,7 +7311,7 @@ B884: 85 32    sta	$0032
 B886: B9 C5 B7 lda	$b7c5, y
 B889: 85 33    sta	$0033
 B88B: A9 1A    lda #$1a
-B88D: 20 59 E6 jsr	$e659
+B88D: 20 59 E6 jsr	set_sound_event_e659
 B890: A9 01    lda #$01
 B892: 85 36    sta	$0036
 B894: 85 37    sta	$0037
@@ -7280,18 +7319,18 @@ B896: A9 78    lda #$78
 B898: 8D 72 06 sta	$0672
 B89B: 85 42    sta	$0042
 B89D: BC 76 BA ldy	$ba76, x
-B8A0: B9 77 00 lda	$0077, y
+B8A0: B9 77 00 lda	player_active_array_0077, y
 B8A3: D0 08    bne	$b8ad
 B8A5: A9 09    lda #$09
-B8A7: 20 59 E6 jsr	$e659
+B8A7: 20 59 E6 jsr	set_sound_event_e659
 B8AA: B8       clv
 B8AB: 50 0A    bvc	$b8b7
 B8AD: B9 35 00 lda	$0035, y
 B8B0: F0 05    beq	$b8b7
 B8B2: A9 09    lda #$09
-B8B4: 20 59 E6 jsr	$e659
+B8B4: 20 59 E6 jsr	set_sound_event_e659
 B8B7: A9 0C    lda #$0c
-B8B9: 4C 59 E6 jmp	$e659
+B8B9: 4C 59 E6 jmp	set_sound_event_e659
 B8BC: B5 35    lda	$0035, x
 B8BE: D0 01    bne	$b8c1
 B8C0: 60       rts
@@ -7302,10 +7341,10 @@ B8C7: B5 41    lda	$0041, x
 B8C9: C9 78    cmp #$78
 B8CB: D0 20    bne	$b8ed
 B8CD: BC 76 BA ldy	$ba76, x
-B8D0: B9 77 00 lda	$0077, y
+B8D0: B9 77 00 lda	player_active_array_0077, y
 B8D3: D0 0F    bne	$b8e4
 B8D5: A9 09    lda #$09
-B8D7: 20 59 E6 jsr	$e659
+B8D7: 20 59 E6 jsr	set_sound_event_e659
 B8DA: A9 0B    lda #$0b
 B8DC: 20 70 D6 jsr	$d670
 B8DF: A9 21    lda #$21
@@ -7317,7 +7356,7 @@ B8EA: 20 70 D6 jsr	$d670
 B8ED: D6 41    dec	$0041, x
 B8EF: D0 4B    bne	$b93c
 B8F1: BC 76 BA ldy	$ba76, x
-B8F4: B9 77 00 lda	$0077, y
+B8F4: B9 77 00 lda	player_active_array_0077, y
 B8F7: D0 09    bne	$b902
 B8F9: A9 03    lda #$03
 B8FB: 95 35    sta	$0035, x
@@ -7350,13 +7389,13 @@ B937: A9 05    lda #$05
 B939: 20 6F A2 jsr	$a26f
 B93C: B5 35    lda	$0035, x
 B93E: C9 02    cmp #$02
-B940: D0 61    bne	$b9a3
+B940: D0 61    bne	level_completed_mainloop_b9a3
 B942: A9 00    lda #$00
-B944: 85 1B    sta	$001b
-B946: 85 1D    sta	$001d
+B944: 85 1B    sta	current_player_control_status_001b
+B946: 85 1D    sta	unknown_001d
 B948: A9 01    lda #$01
 B94A: 85 1C    sta	$001c
-B94C: 20 3F B5 jsr	$b53f
+B94C: 20 3F B5 jsr	update_player_score_b53f
 B94F: BD 91 06 lda	$0691, x
 B952: 18       clc
 B953: 69 01    adc #$01
@@ -7378,7 +7417,7 @@ B975: A9 00    lda #$00
 B977: 9D 8D 06 sta	$068d, x
 B97A: 20 D0 A2 jsr	$a2d0
 B97D: D6 41    dec	$0041, x
-B97F: D0 22    bne	$b9a3
+B97F: D0 22    bne	level_completed_mainloop_b9a3
 B981: BD 7E BA lda	$ba7e, x
 B984: 20 70 D6 jsr	$d670
 B987: A9 03    lda #$03
@@ -7392,6 +7431,7 @@ B997: 9D 91 06 sta	$0691, x
 B99A: 9D 93 06 sta	$0693, x
 B99D: 9D 95 06 sta	$0695, x
 B9A0: 9D 97 06 sta	$0697, x
+level_completed_mainloop_b9a3:
 B9A3: B5 35    lda	$0035, x
 B9A5: C9 03    cmp #$03
 B9A7: D0 3E    bne	$b9e7
@@ -7399,7 +7439,7 @@ B9A9: B5 41    lda	$0041, x
 B9AB: C9 1E    cmp #$1e
 B9AD: D0 1E    bne	$b9cd
 B9AF: BC 76 BA ldy	$ba76, x
-B9B2: B9 77 00 lda	$0077, y
+B9B2: B9 77 00 lda	player_active_array_0077, y
 B9B5: D0 0A    bne	$b9c1
 B9B7: A9 0B    lda #$0b
 B9B9: 20 70 D6 jsr	$d670
@@ -7416,7 +7456,7 @@ B9CF: D0 09    bne	$b9da
 B9D1: A5 0F    lda	$000f
 B9D3: 29 03    and #$03
 B9D5: D0 03    bne	$b9da
-B9D7: 20 A9 BA jsr	$baa9
+B9D7: 20 A9 BA jsr	draw_level_completion_bar_baa9
 B9DA: B5 41    lda	$0041, x
 B9DC: F0 09    beq	$b9e7
 B9DE: D6 41    dec	$0041, x
@@ -7427,7 +7467,7 @@ B9E7: B5 35    lda	$0035, x
 B9E9: C9 04    cmp #$04
 B9EB: D0 53    bne	$ba40
 B9ED: BC 76 BA ldy	$ba76, x
-B9F0: B9 77 00 lda	$0077, y
+B9F0: B9 77 00 lda	player_active_array_0077, y
 B9F3: D0 1E    bne	$ba13
 B9F5: A5 44    lda	$0044
 B9F7: C9 02    cmp #$02
@@ -7438,7 +7478,7 @@ B9FF: 50 0F    bvc	$ba10
 BA01: A9 1E    lda #$1e
 BA03: 85 43    sta	$0043
 BA05: A9 09    lda #$09
-BA07: 20 59 E6 jsr	$e659
+BA07: 20 59 E6 jsr	set_sound_event_e659
 BA0A: A9 00    lda #$00
 BA0C: 85 35    sta	$0035
 BA0E: 85 36    sta	$0036
@@ -7456,7 +7496,7 @@ BA24: 50 0F    bvc	$ba35
 BA26: A9 1E    lda #$1e
 BA28: 85 43    sta	$0043
 BA2A: A9 09    lda #$09
-BA2C: 20 59 E6 jsr	$e659
+BA2C: 20 59 E6 jsr	set_sound_event_e659
 BA2F: A9 00    lda #$00
 BA31: 85 35    sta	$0035
 BA33: 85 36    sta	$0036
@@ -7512,13 +7552,15 @@ BA9E: A9 11    lda #$11
 BAA0: B8       clv
 BAA1: 50 02    bvc	$baa5
 BAA3: A9 0F    lda #$0f
-BAA5: 20 59 E6 jsr	$e659
+BAA5: 20 59 E6 jsr	set_sound_event_e659
 BAA8: 60       rts
+
+draw_level_completion_bar_baa9:
 BAA9: 8A       txa
 BAAA: 0A       asl a
 BAAB: A8       tay
 BAAC: B9 39 00 lda	$0039, y
-BAAF: 85 1D    sta	$001d
+BAAF: 85 1D    sta	unknown_001d
 BAB1: B9 3A 00 lda	$003a, y
 BAB4: 85 1E    sta	$001e
 BAB6: A0 00    ldy #$00
@@ -7564,11 +7606,11 @@ BB08: 85 00    sta	$0000
 BB0A: A9 01    lda #$01
 BB0C: 85 01    sta	$0001
 BB0E: B5 3D    lda	$003d, x
-BB10: 85 02    sta	$0002
+BB10: 85 02    sta	screen_address_lsb_0002
 BB12: B5 3E    lda	$003e, x
-BB14: 85 03    sta	$0003
+BB14: 85 03    sta	screen_address_msb_0003
 BB16: A9 0A    lda #$0a
-BB18: 20 33 D6 jsr	$d633
+BB18: 20 33 D6 jsr	copy_data_to_screen_d633
 BB1B: B5 39    lda	$0039, x
 BB1D: 18       clc
 BB1E: 69 10    adc #$10
@@ -7595,17 +7637,17 @@ BB43: A9 00    lda #$00
 BB45: 9D 79 06 sta	$0679, x
 BB48: BD 76 BA lda	$ba76, x
 BB4B: A8       tay
-BB4C: B9 77 00 lda	$0077, y
+BB4C: B9 77 00 lda	player_active_array_0077, y
 BB4F: F0 2E    beq	$bb7f
 BB51: B9 35 00 lda	$0035, y
 BB54: D0 29    bne	$bb7f
 BB56: 98       tya
 BB57: 0A       asl a
 BB58: A8       tay
-BB59: B9 30 00 lda	$0030, y
+BB59: B9 30 00 lda	remaining_rows_tenths_0030, y
 BB5C: C9 30    cmp #$30
 BB5E: D0 13    bne	$bb73
-BB60: B9 31 00 lda	$0031, y
+BB60: B9 31 00 lda	remaining_rows_units_0031, y
 BB63: C9 35    cmp #$35
 BB65: B0 0C    bcs	$bb73
 BB67: A9 04    lda #$04
@@ -7624,7 +7666,7 @@ BB83: D0 05    bne	$bb8a
 BB85: A9 4C    lda #$4c
 BB87: 9D 9F 06 sta	$069f, x
 BB8A: A9 1B    lda #$1b
-BB8C: 20 59 E6 jsr	$e659
+BB8C: 20 59 E6 jsr	set_sound_event_e659
 BB8F: 60       rts
 BB90: BD 97 06 lda	$0697, x
 BB93: 18       clc
@@ -7640,12 +7682,12 @@ BBA6: C9 0A    cmp #$0a
 BBA8: 90 02    bcc	$bbac
 BBAA: A9 00    lda #$00
 BBAC: 9D 95 06 sta	$0695, x
-BBAF: 85 1B    sta	$001b
+BBAF: 85 1B    sta	current_player_control_status_001b
 BBB1: A9 00    lda #$00
-BBB3: 85 1D    sta	$001d
-BBB5: 20 3F B5 jsr	$b53f
+BBB3: 85 1D    sta	unknown_001d
+BBB5: 20 3F B5 jsr	update_player_score_b53f
 BBB8: A9 19    lda #$19
-BBBA: 20 59 E6 jsr	$e659
+BBBA: 20 59 E6 jsr	set_sound_event_e659
 BBBD: F8       sed
 BBBE: BD 91 06 lda	$0691, x
 BBC1: 18       clc
@@ -7690,9 +7732,9 @@ BC10: 85 43    sta	$0043
 BC12: 20 34 AB jsr	$ab34
 BC15: 60       rts
 BC16: A9 20    lda #$20
-BC18: 85 AD    sta	$00ad
+BC18: 85 AD    sta	screen_address_lsb_00ad
 BC1A: A9 1E    lda #$1e
-BC1C: 85 AE    sta	$00ae
+BC1C: 85 AE    sta	screen_address_msb_00ae
 BC1E: A0 00    ldy #$00
 BC20: AD BC 08 lda	$08bc
 BC23: 29 E0    and #$e0
@@ -7745,7 +7787,7 @@ BCA7: A8       tay
 BCA8: B9 35 00 lda	$0035, y
 BCAB: F0 03    beq	$bcb0
 BCAD: 4C C0 BC jmp	$bcc0
-BCB0: B9 77 00 lda	$0077, y
+BCB0: B9 77 00 lda	player_active_array_0077, y
 BCB3: D0 0A    bne	$bcbf
 BCB5: 8A       txa
 BCB6: 18       clc
@@ -7772,10 +7814,10 @@ BCDD: 6D C0 05 adc	$05c0
 BCE0: AA       tax
 BCE1: A0 00    ldy #$00
 BCE3: BD 24 BD lda	$bd24, x
-BCE6: 85 02    sta	$0002
+BCE6: 85 02    sta	screen_address_lsb_0002
 BCE8: E8       inx
 BCE9: BD 24 BD lda	$bd24, x
-BCEC: 85 03    sta	$0003
+BCEC: 85 03    sta	screen_address_msb_0003
 BCEE: E8       inx
 BCEF: A9 0A    lda #$0a
 BCF1: 85 00    sta	$0000
@@ -7784,7 +7826,7 @@ BCF5: 85 01    sta	$0001
 BCF7: A9 50    lda #$50
 BCF9: 85 05    sta	$0005
 BCFB: A9 0F    lda #$0f
-BCFD: 20 CC D5 jsr	$d5cc
+BCFD: 20 CC D5 jsr	copy_to_screen_d5cc
 BD00: C8       iny
 BD01: 98       tya
 BD02: C9 05    cmp #$05
@@ -7833,7 +7875,7 @@ BD83: A9 00    lda #$00
 BD85: 8D BF 06 sta	$06bf
 BD88: A9 00    lda #$00
 BD8A: 8D A4 06 sta	$06a4
-BD8D: A5 77    lda	$0077
+BD8D: A5 77    lda	player_active_array_0077
 BD8F: D0 03    bne	$bd94
 BD91: 4C 3B BE jmp	$be3b
 BD94: 08       php
@@ -8014,7 +8056,7 @@ BF1F: 8D A5 06 sta	$06a5
 BF22: A9 1E    lda #$1e
 BF24: 85 43    sta	$0043
 BF26: A9 00    lda #$00
-BF28: 20 59 E6 jsr	$e659
+BF28: 20 59 E6 jsr	set_sound_event_e659
 BF2B: A9 00    lda #$00
 BF2D: 85 35    sta	$0035
 BF2F: 85 36    sta	$0036
@@ -8028,9 +8070,9 @@ BF40: 60       rts
 BF41: BD 9B 06 lda	$069b, x
 BF44: F0 01    beq	$bf47
 BF46: 60       rts
-BF47: A5 08    lda	$0008
+BF47: A5 08    lda	game_state_0008
 BF49: D0 3C    bne	$bf87
-BF4B: B5 77    lda	$0077, x
+BF4B: B5 77    lda	player_active_array_0077, x
 BF4D: F0 38    beq	$bf87
 BF4F: B5 35    lda	$0035, x
 BF51: D0 34    bne	$bf87
@@ -8046,10 +8088,10 @@ BF67: 90 1E    bcc	$bf87
 BF69: 8A       txa
 BF6A: 0A       asl a
 BF6B: A8       tay
-BF6C: B9 30 00 lda	$0030, y
+BF6C: B9 30 00 lda	remaining_rows_tenths_0030, y
 BF6F: C9 30    cmp #$30
 BF71: D0 14    bne	$bf87
-BF73: B9 31 00 lda	$0031, y
+BF73: B9 31 00 lda	remaining_rows_units_0031, y
 BF76: C9 32    cmp #$32
 BF78: 90 0D    bcc	$bf87
 BF7A: A9 01    lda #$01
@@ -8105,7 +8147,7 @@ BFEA: A9 00    lda #$00
 BFEC: 9D B5 06 sta	$06b5, x
 BFEF: A9 F0    lda #$f0
 BFF1: 9D BB 06 sta	$06bb, x
-BFF4: B5 77    lda	$0077, x
+BFF4: B5 77    lda	player_active_array_0077, x
 BFF6: D0 1F    bne	$c017
 BFF8: E0 00    cpx #$00
 BFFA: D0 0F    bne	$c00b
@@ -8131,10 +8173,10 @@ C024: 9D B9 06 sta	$06b9, x
 C027: 60       rts
 
 C15C: A2 00    ldx #$00
-C15E: A5 08    lda	$0008
-C160: F0 67    beq	$c1c9
+C15E: A5 08    lda	game_state_0008
+C160: F0 67    beq	ingame_c1c9
 C162: C9 FC    cmp #$fc
-C164: F0 6F    beq	$c1d5
+C164: F0 6F    beq	demo_game_c1d5
 C166: C9 FB    cmp #$fb
 C168: F0 10    beq	$c17a
 C16A: C9 EF    cmp #$ef
@@ -8157,7 +8199,7 @@ C18E: D0 03    bne	$c193
 C190: 4C BA C1 jmp	$c1ba
 C193: B8       clv
 C194: 50 15    bvc	$c1ab
-C196: A5 14    lda	$0014
+C196: A5 14    lda	fadeout_in_progress_timer_0014
 C198: C9 04    cmp #$04
 C19A: D0 0F    bne	$c1ab
 C19C: A5 13    lda	$0013
@@ -8174,19 +8216,22 @@ C1B2: A9 00    lda #$00
 C1B4: 8D 7D 06 sta	$067d
 C1B7: F0 01    beq	$c1ba
 C1B9: 60       rts
-C1BA: A5 08    lda	$0008
+C1BA: A5 08    lda	game_state_0008
 C1BC: C9 FB    cmp #$fb
 C1BE: D0 06    bne	$c1c6
 C1C0: 4C 8F A8 jmp	$a88f
 C1C3: B8       clv
-C1C4: 50 03    bvc	$c1c9
+C1C4: 50 03    bvc	ingame_c1c9
 C1C6: 4C 64 A8 jmp	$a864
+
+ingame_c1c9:
 C1C9: AD 19 06 lda	$0619
 C1CC: C9 03    cmp #$03
 C1CE: 90 57    bcc	$c227
 C1D0: E8       inx
-C1D1: B5 77    lda	$0077, x
+C1D1: B5 77    lda	player_active_array_0077, x
 C1D3: F0 52    beq	$c227
+demo_game_c1d5:
 C1D5: 20 52 D5 jsr	$d552
 C1D8: 20 28 C2 jsr	$c228
 C1DB: C9 00    cmp #$00
@@ -8196,7 +8241,7 @@ C1E1: D0 1A    bne	$c1fd
 C1E3: CE 81 06 dec	$0681
 C1E6: D0 15    bne	$c1fd
 C1E8: A9 00    lda #$00
-C1EA: 85 77    sta	$0077
+C1EA: 85 77    sta	player_active_array_0077
 C1EC: 85 78    sta	$0078
 C1EE: 8D 77 06 sta	$0677
 C1F1: 8D 78 06 sta	$0678
@@ -8232,7 +8277,7 @@ C22D: CE 6F 06 dec	$066f
 C230: A9 00    lda #$00
 C232: B8       clv
 C233: 50 11    bvc	$c246
-C235: A5 27    lda	$0027
+C235: A5 27    lda	player_control_status_array_0027
 C237: 29 08    and #$08
 C239: F0 0B    beq	$c246
 C23B: A5 28    lda	$0028
@@ -8242,11 +8287,11 @@ C241: A9 28    lda #$28
 C243: 8D 6F 06 sta	$066f
 C246: 60       rts
 C247: A2 00    ldx #$00
-C249: A5 08    lda	$0008
+C249: A5 08    lda	game_state_0008
 C24B: C9 00    cmp #$00
 C24D: D0 02    bne	$c251
 C24F: A2 01    ldx #$01
-C251: A5 08    lda	$0008
+C251: A5 08    lda	game_state_0008
 C253: C9 F7    cmp #$f7
 C255: D0 02    bne	$c259
 C257: A2 01    ldx #$01
@@ -8257,11 +8302,11 @@ C260: A5 0F    lda	$000f
 C262: 29 7F    and #$7f
 C264: D0 3F    bne	$c2a5
 C266: A2 00    ldx #$00
-C268: B5 77    lda	$0077, x
+C268: B5 77    lda	player_active_array_0077, x
 C26A: D0 34    bne	$c2a0
-C26C: B5 4E    lda	$004e, x
+C26C: B5 4E    lda	continue_timer_array_004e, x
 C26E: D0 30    bne	$c2a0
-C270: 86 1B    stx	$001b
+C270: 86 1B    stx	current_player_control_status_001b
 C272: A9 01    lda #$01
 C274: 38       sec
 C275: ED 4B 06 sbc	$064b
@@ -8271,19 +8316,19 @@ C27D: AD C1 00 lda number_of_credits_00c1
 C280: D0 0B    bne	$c28d
 C282: 18       clc
 C283: A9 40    lda #$40
-C285: 65 1B    adc	$001b
+C285: 65 1B    adc	current_player_control_status_001b
 C287: 20 70 D6 jsr	$d670
 C28A: B8       clv
 C28B: 50 08    bvc	$c295
 C28D: 18       clc
 C28E: A9 44    lda #$44
-C290: 65 1B    adc	$001b
+C290: 65 1B    adc	current_player_control_status_001b
 C292: 20 70 D6 jsr	$d670
 C295: B8       clv
 C296: 50 08    bvc	$c2a0
 C298: 18       clc
 C299: A9 42    lda #$42
-C29B: 65 1B    adc	$001b
+C29B: 65 1B    adc	current_player_control_status_001b
 C29D: 20 70 D6 jsr	$d670
 C2A0: E8       inx
 C2A1: E0 02    cpx #$02
@@ -8291,14 +8336,14 @@ C2A3: 90 C3    bcc	$c268
 C2A5: A2 00    ldx #$00
 C2A7: BD 63 06 lda	$0663, x
 C2AA: 30 2D    bmi	$c2d9
-C2AC: 20 E4 E7 jsr	$e7e4
+C2AC: 20 E4 E7 jsr	enter_highscore_e7e4
 C2AF: BD 63 06 lda	$0663, x
 C2B2: 10 25    bpl	$c2d9
-C2B4: 20 F4 AF jsr	$aff4
-C2B7: A5 77    lda	$0077
+C2B4: 20 F4 AF jsr	update_screen_grid_aff4
+C2B7: A5 77    lda	player_active_array_0077
 C2B9: 05 78    ora	$0078
 C2BB: D0 1C    bne	$c2d9
-C2BD: A5 4E    lda	$004e
+C2BD: A5 4E    lda	continue_timer_array_004e
 C2BF: 05 4F    ora	$004f
 C2C1: D0 16    bne	$c2d9
 C2C3: BC 76 BA ldy	$ba76, x
@@ -8313,17 +8358,17 @@ C2D9: E8       inx
 C2DA: E0 02    cpx #$02
 C2DC: 90 C9    bcc	$c2a7
 C2DE: 20 EB C2 jsr	$c2eb
-C2E1: A5 4E    lda	$004e
+C2E1: A5 4E    lda	continue_timer_array_004e
 C2E3: 05 4F    ora	$004f
 C2E5: F0 03    beq	$c2ea
 C2E7: 20 E0 A4 jsr	$a4e0
 C2EA: 60       rts
 C2EB: A2 00    ldx #$00
-C2ED: B5 77    lda	$0077, x
+C2ED: B5 77    lda	player_active_array_0077, x
 C2EF: D0 19    bne	$c30a
 C2F1: BD 63 06 lda	$0663, x
 C2F4: 10 14    bpl	$c30a
-C2F6: B5 4E    lda	$004e, x
+C2F6: B5 4E    lda	continue_timer_array_004e, x
 C2F8: C9 0A    cmp #$0a
 C2FA: B0 0E    bcs	$c30a
 C2FC: AD C1 00 lda number_of_credits_00c1
@@ -8337,14 +8382,14 @@ C30B: E0 02    cpx #$02
 C30D: 90 DE    bcc	$c2ed
 C30F: 60       rts
 C310: A9 16    lda #$16
-C312: 20 59 E6 jsr	$e659
+C312: 20 59 E6 jsr	set_sound_event_e659
 C315: AD 18 06 lda	$0618
 C318: 38       sec
 C319: ED 3E CB sbc	$cb3e
 C31C: C9 30    cmp #$30
 C31E: B0 05    bcs	$c325
 C320: A9 14    lda #$14
-C322: 4C 59 E6 jmp	$e659
+C322: 4C 59 E6 jmp	set_sound_event_e659
 C325: 8D 18 06 sta	$0618
 C328: 78       sei
 C329: AD C1 00 lda number_of_credits_00c1
@@ -8356,7 +8401,7 @@ C334: 20 16 BC jsr	$bc16
 C337: A9 00    lda #$00
 C339: 85 0B    sta	$000b
 C33B: 8D 19 06 sta	$0619
-C33E: A5 77    lda	$0077
+C33E: A5 77    lda	player_active_array_0077
 C340: F0 0B    beq	$c34d
 C342: A5 78    lda	$0078
 C344: F0 07    beq	$c34d
@@ -8369,7 +8414,7 @@ C351: 18       clc
 C352: 65 1C    adc	$001c
 C354: 20 70 D6 jsr	$d670
 C357: 20 D3 BC jsr	$bcd3
-C35A: B5 4E    lda	$004e, x
+C35A: B5 4E    lda	continue_timer_array_004e, x
 C35C: D0 24    bne	$c382
 C35E: 8A       txa
 C35F: 49 01    eor #$01
@@ -8386,22 +8431,23 @@ C373: D0 02    bne	$c377
 C375: A9 00    lda #$00
 C377: 95 75    sta	$0075, x
 C379: 20 1B AC jsr	$ac1b
-C37C: 20 F4 AF jsr	$aff4
+C37C: 20 F4 AF jsr	update_screen_grid_aff4
 C37F: B8       clv
 C380: 50 0E    bvc	$c390
 C382: A9 03    lda #$03
 C384: 95 75    sta	$0075, x
 C386: A9 00    lda #$00
-C388: 95 4E    sta	$004e, x
+C388: 95 4E    sta	continue_timer_array_004e, x
 C38A: 20 62 AD jsr	$ad62
-C38D: 20 F4 AF jsr	$aff4
+C38D: 20 F4 AF jsr	update_screen_grid_aff4
 C390: 60       rts
 
 fade_out_C391:
-C391: A5 14    lda	$0014
+animate_title_screen_colors_C391:
+C391: A5 14    lda	fadeout_in_progress_timer_0014
 C393: C9 01    cmp #$01
 C395: 90 4D    bcc	$c3e4
-C397: AD 45 06 lda	$0645
+C397: AD 45 06 lda	screen_fade_counter_0645
 C39A: C9 14    cmp #$14
 C39C: D0 06    bne	$c3a4
 C39E: 20 7C CC jsr	$cc7c
@@ -8412,14 +8458,14 @@ C3AA: C9 08    cmp #$08
 C3AC: 90 36    bcc	$c3e4
 C3AE: A9 00    lda #$00
 C3B0: 8D 44 06 sta	$0644
-C3B3: AD 45 06 lda	$0645
+C3B3: AD 45 06 lda	screen_fade_counter_0645
 C3B6: C9 14    cmp #$14
 C3B8: F0 2A    beq	$c3e4
-C3BA: AD 45 06 lda	$0645
+C3BA: AD 45 06 lda	screen_fade_counter_0645
 C3BD: 0A       asl a
 C3BE: A8       tay
 C3BF: B9 9E CF lda	$cf9e, y
-C3C2: 85 47    sta	$0047
+C3C2: 85 47    sta	palette_pointer_0047
 C3C4: B9 9F CF lda	$cf9f, y
 C3C7: 85 48    sta	$0048
 C3C9: A0 00    ldy #$00
@@ -8428,15 +8474,15 @@ C3CD: 99 00 20 sta	$2000, y
 C3D0: C8       iny
 C3D1: C0 8F    cpy #$8f
 C3D3: 90 F6    bcc	$c3cb
-C3D5: EE 45 06 inc	$0645
-C3D8: AD 45 06 lda	$0645
+C3D5: EE 45 06 inc	screen_fade_counter_0645
+C3D8: AD 45 06 lda	screen_fade_counter_0645
 C3DB: C9 0A    cmp #$0a
 C3DD: D0 05    bne	$c3e4
 C3DF: A9 14    lda #$14
-C3E1: 8D 45 06 sta	$0645
+C3E1: 8D 45 06 sta	screen_fade_counter_0645
 C3E4: 60       rts
 C3E5: 20 52 D5 jsr	$d552
-C3E8: A5 08    lda	$0008
+C3E8: A5 08    lda	game_state_0008
 C3EA: C9 F0    cmp #$f0
 C3EC: F0 01    beq	$c3ef
 C3EE: 60       rts
@@ -8486,7 +8532,7 @@ C460: AD 7F 06 lda	$067f
 C463: C9 3B    cmp #$3b
 C465: 90 09    bcc	$c470
 C467: A9 00    lda #$00
-C469: 85 77    sta	$0077
+C469: 85 77    sta	player_active_array_0077
 C46B: 85 78    sta	$0078
 C46D: 20 AD A5 jsr	$a5ad
 C470: 60       rts
@@ -8509,14 +8555,14 @@ C507: C6 87    dec	$0087
 C509: C9 01    cmp #$01
 C50B: D0 14    bne	$c521
 C50D: A5 8F    lda	$008f
-C50F: 85 1B    sta	$001b
+C50F: 85 1B    sta	current_player_control_status_001b
 C511: 18       clc
 C512: 69 01    adc #$01
 C514: 29 03    and #$03
 C516: 85 8F    sta	$008f
 C518: 20 2A 9F jsr	$9f2a
 C51B: B0 04    bcs	$c521
-C51D: A5 1B    lda	$001b
+C51D: A5 1B    lda	current_player_control_status_001b
 C51F: 85 8F    sta	$008f
 C521: 20 E8 9E jsr	$9ee8
 C524: 20 8F 9E jsr	clear_player_grid_9E8F
@@ -8524,9 +8570,9 @@ C527: 60       rts
 C528: C9 10    cmp #$10
 C52A: D0 16    bne	$c542
 C52C: A9 90    lda #$90
-C52E: 85 1F    sta	$001f
+C52E: 85 1F    sta	logical_grid_address_lsb_001f
 C530: A9 03    lda #$03
-C532: 85 20    sta	$0020
+C532: 85 20    sta	logical_grid_address_msb_or_controls_0020
 C534: A0 03    ldy #$03
 C536: A9 08    lda #$08
 C538: 91 1F    sta ($1f), y
@@ -8550,7 +8596,7 @@ C55A: 20 2E A0 jsr	$a02e
 C55D: 20 2E A0 jsr	$a02e
 C560: 20 6B C6 jsr	$c66b
 C563: 60       rts
-C564: A5 08    lda	$0008
+C564: A5 08    lda	game_state_0008
 C566: C9 EC    cmp #$ec
 C568: F0 01    beq	$c56b
 C56A: 60       rts
@@ -8629,7 +8675,7 @@ C61A: 20 45 A9 jsr	$a945
 C61D: 60       rts
 
 C66B: A9 00    lda #$00
-C66D: 85 1B    sta	$001b
+C66D: 85 1B    sta	current_player_control_status_001b
 C66F: A9 02    lda #$02
 C671: 85 1C    sta	$001c
 C673: A0 60    ldy #$60
@@ -8653,22 +8699,22 @@ C691: 85 05    sta	$0005
 C693: A9 5D    lda #$5d
 C695: 20 70 D6 jsr	$d670
 C698: A9 10    lda #$10
-C69A: 85 1B    sta	$001b
+C69A: 85 1B    sta	current_player_control_status_001b
 C69C: A9 11    lda #$11
 C69E: 85 1C    sta	$001c
 C6A0: A2 00    ldx #$00
 C6A2: BD AA 08 lda	$08aa, x
 C6A5: 85 1E    sta	$001e
 C6A7: BD AB 08 lda	$08ab, x
-C6AA: 85 1F    sta	$001f
+C6AA: 85 1F    sta	logical_grid_address_lsb_001f
 C6AC: A0 02    ldy #$02
 C6AE: 20 58 C8 jsr	$c858
 C6B1: A9 01    lda #$01
 C6B3: 20 A1 C8 jsr	$c8a1
-C6B6: A5 1B    lda	$001b
+C6B6: A5 1B    lda	current_player_control_status_001b
 C6B8: 18       clc
 C6B9: 69 80    adc #$80
-C6BB: 85 1B    sta	$001b
+C6BB: 85 1B    sta	current_player_control_status_001b
 C6BD: A5 1C    lda	$001c
 C6BF: 69 00    adc #$00
 C6C1: 85 1C    sta	$001c
@@ -8677,24 +8723,24 @@ C6C4: E8       inx
 C6C5: E0 0E    cpx #$0e
 C6C7: 90 D9    bcc	$c6a2
 C6C9: A9 90    lda #$90
-C6CB: 85 1B    sta	$001b
+C6CB: 85 1B    sta	current_player_control_status_001b
 C6CD: A9 14    lda #$14
 C6CF: 85 1C    sta	$001c
 C6D1: A2 14    ldx #$14
 C6D3: BD AA 08 lda	$08aa, x
-C6D6: 85 1F    sta	$001f
+C6D6: 85 1F    sta	logical_grid_address_lsb_001f
 C6D8: BD AB 08 lda	$08ab, x
 C6DB: 85 1E    sta	$001e
 C6DD: BD AC 08 lda	$08ac, x
-C6E0: 85 1D    sta	$001d
+C6E0: 85 1D    sta	unknown_001d
 C6E2: A0 03    ldy #$03
 C6E4: 20 58 C8 jsr	$c858
 C6E7: A9 00    lda #$00
 C6E9: 20 A1 C8 jsr	$c8a1
-C6EC: A5 1B    lda	$001b
+C6EC: A5 1B    lda	current_player_control_status_001b
 C6EE: 18       clc
 C6EF: 69 80    adc #$80
-C6F1: 85 1B    sta	$001b
+C6F1: 85 1B    sta	current_player_control_status_001b
 C6F3: A5 1C    lda	$001c
 C6F5: 69 00    adc #$00
 C6F7: 85 1C    sta	$001c
@@ -8704,7 +8750,7 @@ C6FB: E8       inx
 C6FC: E0 1D    cpx #$1d
 C6FE: 90 D3    bcc	$c6d3
 C700: A9 10    lda #$10
-C702: 85 1B    sta	$001b
+C702: 85 1B    sta	current_player_control_status_001b
 C704: A9 16    lda #$16
 C706: 85 1C    sta	$001c
 C708: A9 00    lda #$00
@@ -8734,22 +8780,22 @@ C73F: A9 01    lda #$01
 C741: 8D E0 06 sta	$06e0
 C744: 20 79 C7 jsr	$c779
 C747: A9 2A    lda #$2a
-C749: 85 1B    sta	$001b
+C749: 85 1B    sta	current_player_control_status_001b
 C74B: A9 11    lda #$11
 C74D: 85 1C    sta	$001c
 C74F: A2 1E    ldx #$1e
 C751: BD AA 08 lda	$08aa, x
 C754: 85 1E    sta	$001e
 C756: BD AB 08 lda	$08ab, x
-C759: 85 1F    sta	$001f
+C759: 85 1F    sta	logical_grid_address_lsb_001f
 C75B: A0 02    ldy #$02
 C75D: 20 58 C8 jsr	$c858
 C760: A9 01    lda #$01
 C762: 20 A1 C8 jsr	$c8a1
-C765: A5 1B    lda	$001b
+C765: A5 1B    lda	current_player_control_status_001b
 C767: 18       clc
 C768: 69 80    adc #$80
-C76A: 85 1B    sta	$001b
+C76A: 85 1B    sta	current_player_control_status_001b
 C76C: A5 1C    lda	$001c
 C76E: 69 00    adc #$00
 C770: 85 1C    sta	$001c
@@ -8787,16 +8833,16 @@ C7B8: 20 D0 C8 jsr	$c8d0
 C7BB: AD DC 06 lda	$06dc
 C7BE: 85 1E    sta	$001e
 C7C0: AD DD 06 lda	$06dd
-C7C3: 85 1F    sta	$001f
+C7C3: 85 1F    sta	logical_grid_address_lsb_001f
 C7C5: A0 02    ldy #$02
 C7C7: 20 58 C8 jsr	$c858
 C7CA: A9 03    lda #$03
 C7CC: 20 A1 C8 jsr	$c8a1
 C7CF: AD DE 06 lda	$06de
-C7D2: 85 1F    sta	$001f
+C7D2: 85 1F    sta	logical_grid_address_lsb_001f
 C7D4: 8D DD 06 sta	$06dd
 C7D7: AD DF 06 lda	$06df
-C7DA: 85 20    sta	$0020
+C7DA: 85 20    sta	logical_grid_address_msb_or_controls_0020
 C7DC: 8D DE 06 sta	$06de
 C7DF: A9 00    lda #$00
 C7E1: 8D DF 06 sta	$06df
@@ -8809,18 +8855,18 @@ C7F3: 6E DD 06 ror	$06dd
 C7F6: 6E DC 06 ror	$06dc
 C7F9: A9 00    lda #$00
 C7FB: 85 21    sta	$0021
-C7FD: 06 1F    asl	$001f
-C7FF: 26 20    rol	$0020
+C7FD: 06 1F    asl	logical_grid_address_lsb_001f
+C7FF: 26 20    rol	logical_grid_address_msb_or_controls_0020
 C801: 26 21    rol	$0021
-C803: 06 1F    asl	$001f
-C805: 26 20    rol	$0020
+C803: 06 1F    asl	logical_grid_address_lsb_001f
+C805: 26 20    rol	logical_grid_address_msb_or_controls_0020
 C807: 26 21    rol	$0021
 C809: AD DC 06 lda	$06dc
 C80C: 38       sec
-C80D: E5 1F    sbc	$001f
+C80D: E5 1F    sbc	logical_grid_address_lsb_001f
 C80F: 8D DC 06 sta	$06dc
 C812: AD DD 06 lda	$06dd
-C815: E5 20    sbc	$0020
+C815: E5 20    sbc	logical_grid_address_msb_or_controls_0020
 C817: 8D DD 06 sta	$06dd
 C81A: AD DE 06 lda	$06de
 C81D: E5 21    sbc	$0021
@@ -8833,21 +8879,21 @@ C82D: AD DC 06 lda	$06dc
 C830: C9 3C    cmp #$3c
 C832: 90 02    bcc	$c836
 C834: A9 3B    lda #$3b
-C836: 85 1F    sta	$001f
+C836: 85 1F    sta	logical_grid_address_lsb_001f
 C838: A0 01    ldy #$01
 C83A: 20 58 C8 jsr	$c858
-C83D: A5 1B    lda	$001b
+C83D: A5 1B    lda	current_player_control_status_001b
 C83F: 18       clc
 C840: 69 04    adc #$04
-C842: 85 1B    sta	$001b
+C842: 85 1B    sta	current_player_control_status_001b
 C844: A9 3A    lda #$3a
 C846: A0 00    ldy #$00
 C848: 91 1B    sta ($1b), y
 C84A: C8       iny
 C84B: A9 B0    lda #$b0
 C84D: 91 1B    sta ($1b), y
-C84F: E6 1B    inc	$001b
-C851: E6 1B    inc	$001b
+C84F: E6 1B    inc	current_player_control_status_001b
+C851: E6 1B    inc	current_player_control_status_001b
 C853: A9 03    lda #$03
 C855: 4C A1 C8 jmp	$c8a1
 C858: 8A       txa
@@ -8859,9 +8905,9 @@ C862: 8D D9 06 sta	$06d9
 C865: 8D DA 06 sta	$06da
 C868: BE 9D C8 ldx	$c89d, y
 C86B: F8       sed
-C86C: 06 1D    asl	$001d
+C86C: 06 1D    asl	unknown_001d
 C86E: 26 1E    rol	$001e
-C870: 26 1F    rol	$001f
+C870: 26 1F    rol	logical_grid_address_lsb_001f
 C872: AD DA 06 lda	$06da
 C875: 6D DA 06 adc	$06da
 C878: 8D DA 06 sta	$06da
@@ -8943,19 +8989,19 @@ C919: A9 00    lda #$00
 C91B: 85 21    sta	$0021
 C91D: 85 22    sta	$0022
 C91F: A2 02    ldx #$02
-C921: A4 1B    ldy	$001b
+C921: A4 1B    ldy	current_player_control_status_001b
 C923: 20 6D C9 jsr	$c96d
-C926: A5 1B    lda	$001b
+C926: A5 1B    lda	current_player_control_status_001b
 C928: 18       clc
 C929: 69 04    adc #$04
 C92B: A8       tay
 C92C: 20 6D C9 jsr	$c96d
-C92F: A5 1B    lda	$001b
+C92F: A5 1B    lda	current_player_control_status_001b
 C931: 18       clc
 C932: 69 08    adc #$08
 C934: A8       tay
 C935: 20 6D C9 jsr	$c96d
-C938: A5 1B    lda	$001b
+C938: A5 1B    lda	current_player_control_status_001b
 C93A: 18       clc
 C93B: 69 0C    adc #$0c
 C93D: A8       tay
@@ -8963,17 +9009,17 @@ C93E: 20 6D C9 jsr	$c96d
 C941: E8       inx
 C942: E0 0E    cpx #$0e
 C944: 90 DB    bcc	$c921
-C946: A6 1F    ldx	$001f
-C948: A4 1D    ldy	$001d
+C946: A6 1F    ldx	logical_grid_address_lsb_001f
+C948: A4 1D    ldy	unknown_001d
 C94A: A5 21    lda	$0021
 C94C: 18       clc
 C94D: 69 0C    adc #$0c
 C94F: C5 22    cmp	$0022
 C951: B0 04    bcs	$c957
-C953: A6 20    ldx	$0020
+C953: A6 20    ldx	logical_grid_address_msb_or_controls_0020
 C955: A4 1E    ldy	$001e
 C957: 8E 31 06 stx	$0631
-C95A: A5 1B    lda	$001b
+C95A: A5 1B    lda	current_player_control_status_001b
 C95C: C9 10    cmp #$10
 C95E: D0 09    bne	$c969
 C960: E0 01    cpx #$01
@@ -9010,12 +9056,12 @@ C9A1: 79 FC CB adc	$cbfc, y
 C9A4: C5 21    cmp	$0021
 C9A6: 90 0B    bcc	$c9b3
 C9A8: 85 21    sta	$0021
-C9AA: 86 1D    stx	$001d
+C9AA: 86 1D    stx	unknown_001d
 C9AC: 98       tya
 C9AD: 4A       lsr a
 C9AE: 4A       lsr a
 C9AF: 29 03    and #$03
-C9B1: 85 1F    sta	$001f
+C9B1: 85 1F    sta	logical_grid_address_lsb_001f
 C9B3: 60       rts
 C9B4: BD C0 05 lda	$05c0, x
 C9B7: 85 1C    sta	$001c
@@ -9066,32 +9112,32 @@ CA12: 98       tya
 CA13: 4A       lsr a
 CA14: 4A       lsr a
 CA15: 29 03    and #$03
-CA17: 85 20    sta	$0020
+CA17: 85 20    sta	logical_grid_address_msb_or_controls_0020
 CA19: 60       rts
-CA1A: B5 8B    lda	$008b, x
+CA1A: B5 8B    lda	current_shape_array_008b, x
 CA1C: 0A       asl a
 CA1D: 0A       asl a
 CA1E: 0A       asl a
 CA1F: 0A       asl a
-CA20: 85 1B    sta	$001b
+CA20: 85 1B    sta	current_player_control_status_001b
 CA22: A9 50    lda #$50
-CA24: 85 1F    sta	$001f
+CA24: 85 1F    sta	logical_grid_address_lsb_001f
 CA26: 24 0B    bit	$000b
 CA28: 10 02    bpl	$ca2c
 CA2A: A2 02    ldx #$02
 CA2C: BD 8C 9E lda	$9e8c, x
-CA2F: 85 20    sta	$0020
+CA2F: 85 20    sta	logical_grid_address_msb_or_controls_0020
 CA31: A2 00    ldx #$00
 CA33: A0 00    ldy #$00
 CA35: 8C D0 05 sty	$05d0
-CA38: A5 20    lda	$0020
+CA38: A5 20    lda	logical_grid_address_msb_or_controls_0020
 CA3A: 85 1E    sta	$001e
-CA3C: A5 1F    lda	$001f
-CA3E: 85 1D    sta	$001d
-CA40: A5 1D    lda	$001d
+CA3C: A5 1F    lda	logical_grid_address_lsb_001f
+CA3E: 85 1D    sta	unknown_001d
+CA40: A5 1D    lda	unknown_001d
 CA42: 18       clc
 CA43: 69 10    adc #$10
-CA45: 85 1D    sta	$001d
+CA45: 85 1D    sta	unknown_001d
 CA47: 90 02    bcc	$ca4b
 CA49: E6 1E    inc	$001e
 CA4B: B1 1D    lda ($1d), y
@@ -9099,11 +9145,11 @@ CA4D: F0 F1    beq	$ca40
 ; useless load+shift, A overwritten at CA52
 CA4F: A5 1E    lda	$001e
 CA51: 4A       lsr a
-CA52: A5 1D    lda	$001d
+CA52: A5 1D    lda	unknown_001d
 CA54: 6A       ror a
 CA55: 29 F8    and #$f8
 CA57: 9D C0 05 sta	$05c0, x
-CA5A: E6 1F    inc	$001f
+CA5A: E6 1F    inc	logical_grid_address_lsb_001f
 CA5C: E8       inx
 CA5D: E0 10    cpx #$10
 CA5F: 90 D7    bcc	$ca38
@@ -9112,13 +9158,13 @@ CA62: AD A8 06 lda	$06a8
 CA65: 29 01    and #$01
 CA67: D0 0C    bne	$ca75
 CA69: A9 EF    lda #$ef
-CA6B: 85 08    sta	$0008
+CA6B: 85 08    sta	game_state_0008
 CA6D: A9 FB    lda #$fb
 CA6F: 4C A9 CA jmp	$caa9
 CA72: B8       clv
 CA73: 50 17    bvc	$ca8c
 CA75: A9 EE    lda #$ee
-CA77: 85 08    sta	$0008
+CA77: 85 08    sta	game_state_0008
 CA79: A9 0F    lda #$0f
 CA7B: 8D 7D 06 sta	$067d
 CA7E: A9 08    lda #$08
@@ -9137,9 +9183,9 @@ CA99: AD A8 06 lda	$06a8
 CA9C: 29 03    and #$03
 CA9E: D0 05    bne	$caa5
 CAA0: A9 0A    lda #$0a
-CAA2: 20 59 E6 jsr	$e659
+CAA2: 20 59 E6 jsr	set_sound_event_e659
 CAA5: A9 FB    lda #$fb
-CAA7: 85 08    sta	$0008
+CAA7: 85 08    sta	game_state_0008
 CAA9: A9 02    lda #$02
 CAAB: 85 07    sta	$0007
 CAAD: 8D AC 06 sta	$06ac
@@ -9151,21 +9197,21 @@ CABA: 8D B5 06 sta	$06b5
 CABD: 8D B6 06 sta	$06b6
 CAC0: 8D 7D 06 sta	$067d
 CAC3: 8D 44 06 sta	$0644
-CAC6: 8D 45 06 sta	$0645
+CAC6: 8D 45 06 sta	screen_fade_counter_0645
 CAC9: 8D 46 06 sta	$0646
-CACC: 8D 47 06 sta	$0647
+CACC: 8D 47 06 sta	palette_address_index_0647
 CACF: 8D AB 06 sta	$06ab
 CAD2: 8D 59 06 sta	$0659
 CAD5: 8D 5A 06 sta	$065a
 CAD8: 8D 37 06 sta	$0637
 CADB: 85 13    sta	$0013
-CADD: 85 14    sta	$0014
+CADD: 85 14    sta	fadeout_in_progress_timer_0014
 CADF: 85 09    sta	$0009
 CAE1: 85 93    sta	$0093
 CAE3: 85 94    sta	$0094
 CAE5: 85 95    sta	$0095
 CAE7: 85 96    sta	$0096
-CAE9: 85 4E    sta	$004e
+CAE9: 85 4E    sta	continue_timer_array_004e
 CAEB: 85 4F    sta	$004f
 CAED: A9 08    lda #$08
 CAEF: 20 18 88 jsr display_screen_and_other_stuff_8818
@@ -9181,10 +9227,10 @@ CAFF: A9 2A    lda #$2a
 CB01: 20 70 D6 jsr	$d670
 CB04: 60       rts
 CB05: A9 FE    lda #$fe
-CB07: 85 08    sta	$0008
+CB07: 85 08    sta	game_state_0008
 CB09: A9 00    lda #$00
 CB0B: 85 46    sta	$0046
-CB0D: 20 59 E6 jsr	$e659
+CB0D: 20 59 E6 jsr	set_sound_event_e659
 CB10: A9 14    lda #$14
 CB12: 8D B4 06 sta	$06b4
 CB15: A9 06    lda #$06
@@ -9197,9 +9243,9 @@ CB22: 20 C0 CB jsr	$cbc0
 CB25: AC 19 06 ldy	$0619
 CB28: B9 3A CB lda	$cb3a, y
 CB2B: 85 0B    sta	$000b
-CB2D: 85 91    sta	$0091
+CB2D: 85 91    sta	fall_timeout_timer_0091
 CB2F: A9 02    lda #$02
-CB31: 20 59 E6 jsr	$e659
+CB31: 20 59 E6 jsr	set_sound_event_e659
 CB34: A9 3F    lda #$3f
 CB36: 20 70 D6 jsr	$d670
 CB39: 60       rts
@@ -9225,7 +9271,7 @@ CB65: 29 0E    and #$0e
 CB67: F0 08    beq	$cb71
 CB69: 20 98 CB jsr	$cb98
 CB6C: A9 15    lda #$15
-CB6E: 20 59 E6 jsr	$e659
+CB6E: 20 59 E6 jsr	set_sound_event_e659
 CB71: A5 29    lda	$0029
 CB73: AC 19 06 ldy	$0619
 CB76: C0 01    cpy #$01
@@ -9242,7 +9288,7 @@ CB89: 85 76    sta	$0076
 CB8B: A0 04    ldy #$04
 CB8D: 20 4C F1 jsr	$f14c
 CB90: A9 16    lda #$16
-CB92: 20 59 E6 jsr	$e659
+CB92: 20 59 E6 jsr	set_sound_event_e659
 CB95: 4C E9 A8 jmp	$a8e9
 CB98: 48       pha
 CB99: A9 00    lda #$00
@@ -9265,29 +9311,29 @@ CBB9: 38       sec
 CBBA: E9 01    sbc #$01
 CBBC: 85 46    sta	$0046
 CBBE: A9 01    lda #$01
-CBC0: 85 1D    sta	$001d
+CBC0: 85 1D    sta	unknown_001d
 CBC2: 48       pha
 CBC3: A5 46    lda	$0046
 CBC5: 0A       asl a
 CBC6: A8       tay
 CBC7: B9 F6 CB lda	$cbf6, y
-CBCA: 85 02    sta	$0002
+CBCA: 85 02    sta	screen_address_lsb_0002
 CBCC: B9 F7 CB lda	$cbf7, y
-CBCF: 85 03    sta	$0003
+CBCF: 85 03    sta	screen_address_msb_0003
 CBD1: A9 B0    lda #$b0
 CBD3: 85 05    sta	$0005
 CBD5: 68       pla
 CBD6: F0 02    beq	$cbda
 CBD8: A9 3E    lda #$3e
-CBDA: 20 4A D6 jsr	$d64a
+CBDA: 20 4A D6 jsr	write_tile_to_screen_d64a
 CBDD: B9 FC CB lda	$cbfc, y
-CBE0: 85 02    sta	$0002
+CBE0: 85 02    sta	screen_address_lsb_0002
 CBE2: B9 FD CB lda	$cbfd, y
-CBE5: 85 03    sta	$0003
-CBE7: A5 1D    lda	$001d
+CBE5: 85 03    sta	screen_address_msb_0003
+CBE7: A5 1D    lda	unknown_001d
 CBE9: F0 02    beq	$cbed
 CBEB: A9 3F    lda #$3f
-CBED: 20 4A D6 jsr	$d64a
+CBED: 20 4A D6 jsr	write_tile_to_screen_d64a
 CBF0: 60       rts
 
 CC7C: EE A9 06 inc	$06a9
@@ -9299,18 +9345,18 @@ CC87: A9 00    lda #$00
 CC89: 8D A9 06 sta	$06a9
 CC8C: A9 00    lda #$00
 CC8E: 85 19    sta	$0019
-CC90: AD 47 06 lda	$0647
+CC90: AD 47 06 lda	palette_address_index_0647
 CC93: 29 01    and #$01
 CC95: F0 04    beq	$cc9b
 CC97: A9 01    lda #$01
 CC99: 85 19    sta	$0019
 CC9B: AD AD 06 lda	$06ad
 CC9E: D0 4F    bne	$ccef
-CCA0: AD 47 06 lda	$0647
+CCA0: AD 47 06 lda	palette_address_index_0647
 CCA3: 0A       asl a
 CCA4: A8       tay
-CCA5: B9 4E CE lda	$ce4e, y
-CCA8: 85 47    sta	$0047
+CCA5: B9 4E CE lda	palette_address_table_ce4e, y
+CCA8: 85 47    sta	palette_pointer_0047
 CCAA: B9 4F CE lda	$ce4f, y
 CCAD: 85 48    sta	$0048
 CCAF: AD 46 06 lda	$0646
@@ -9355,13 +9401,13 @@ CCFB: D0 24    bne	$cd21
 CCFD: A9 00    lda #$00
 CCFF: 8D 46 06 sta	$0646
 CD02: 8D AD 06 sta	$06ad
-CD05: EE 47 06 inc	$0647
-CD08: AD 47 06 lda	$0647
+CD05: EE 47 06 inc	palette_address_index_0647
+CD08: AD 47 06 lda	palette_address_index_0647
 CD0B: C9 04    cmp #$04
 CD0D: D0 05    bne	$cd14
 CD0F: A9 00    lda #$00
-CD11: 8D 47 06 sta	$0647
-CD14: AD 47 06 lda	$0647
+CD11: 8D 47 06 sta	palette_address_index_0647
+CD14: AD 47 06 lda	palette_address_index_0647
 CD17: CD AC 06 cmp	$06ac
 CD1A: D0 05    bne	$cd21
 CD1C: A9 01    lda #$01
@@ -9374,13 +9420,13 @@ CD29: D0 24    bne	$cd4f
 CD2B: A9 00    lda #$00
 CD2D: 8D 46 06 sta	$0646
 CD30: 8D AD 06 sta	$06ad
-CD33: EE 47 06 inc	$0647
-CD36: AD 47 06 lda	$0647
+CD33: EE 47 06 inc	palette_address_index_0647
+CD36: AD 47 06 lda	palette_address_index_0647
 CD39: C9 04    cmp #$04
 CD3B: D0 05    bne	$cd42
 CD3D: A9 00    lda #$00
-CD3F: 8D 47 06 sta	$0647
-CD42: AD 47 06 lda	$0647
+CD3F: 8D 47 06 sta	palette_address_index_0647
+CD42: AD 47 06 lda	palette_address_index_0647
 CD45: CD AC 06 cmp	$06ac
 CD48: D0 05    bne	$cd4f
 CD4A: A9 01    lda #$01
@@ -9406,7 +9452,7 @@ CD74: AD AC 06 lda	$06ac
 CD77: 0A       asl a
 CD78: A8       tay
 CD79: B9 56 CE lda	$ce56, y
-CD7C: 85 47    sta	$0047
+CD7C: 85 47    sta	palette_pointer_0047
 CD7E: B9 57 CE lda	$ce57, y
 CD81: 85 48    sta	$0048
 CD83: AD AB 06 lda	$06ab
@@ -9452,7 +9498,7 @@ CDD1: A9 00    lda #$00
 CDD3: 8D AB 06 sta	$06ab
 CDD6: 8D AE 06 sta	$06ae
 CDD9: EE AC 06 inc	$06ac
-CDDC: A5 08    lda	$0008
+CDDC: A5 08    lda	game_state_0008
 CDDE: C9 F8    cmp #$f8
 CDE0: F0 0F    beq	$cdf1
 CDE2: AD AC 06 lda	$06ac
@@ -9468,7 +9514,7 @@ CDF6: D0 05    bne	$cdfd
 CDF8: A9 00    lda #$00
 CDFA: 8D AC 06 sta	$06ac
 CDFD: AD AC 06 lda	$06ac
-CE00: CD 47 06 cmp	$0647
+CE00: CD 47 06 cmp	palette_address_index_0647
 CE03: D0 05    bne	$ce0a
 CE05: A9 01    lda #$01
 CE07: 8D AE 06 sta	$06ae
@@ -9481,7 +9527,7 @@ CE14: A9 00    lda #$00
 CE16: 8D AB 06 sta	$06ab
 CE19: 8D AE 06 sta	$06ae
 CE1C: EE AC 06 inc	$06ac
-CE1F: A5 08    lda	$0008
+CE1F: A5 08    lda	game_state_0008
 CE21: C9 F8    cmp #$f8
 CE23: F0 0F    beq	$ce34
 CE25: AD AC 06 lda	$06ac
@@ -9497,7 +9543,7 @@ CE39: D0 05    bne	$ce40
 CE3B: A9 00    lda #$00
 CE3D: 8D AC 06 sta	$06ac
 CE40: AD AC 06 lda	$06ac
-CE43: CD 47 06 cmp	$0647
+CE43: CD 47 06 cmp	palette_address_index_0647
 CE46: D0 05    bne	$ce4d
 CE48: A9 01    lda #$01
 CE4A: 8D AE 06 sta	$06ae
@@ -9517,7 +9563,7 @@ D562: 29 01    and #$01
 D564: D0 01    bne	$d567
 D566: 60       rts
 D567: A9 16    lda #$16
-D569: 20 59 E6 jsr	$e659
+D569: 20 59 E6 jsr	set_sound_event_e659
 D56C: A5 29    lda	$0029
 D56E: 29 01    and #$01
 D570: F0 08    beq	$d57a
@@ -9528,7 +9574,7 @@ D578: 50 05    bvc	$d57f
 D57A: A9 01    lda #$01
 D57C: 8D 19 06 sta	$0619
 D57F: A9 00    lda #$00
-D581: 85 77    sta	$0077
+D581: 85 77    sta	player_active_array_0077
 D583: 85 78    sta	$0078
 D585: AC 19 06 ldy	$0619
 D588: AD 18 06 lda	$0618
@@ -9537,7 +9583,7 @@ D58C: F9 3E CB sbc	$cb3e, y
 D58F: C9 30    cmp #$30
 D591: B0 05    bcs	$d598
 D593: A9 14    lda #$14
-D595: 4C 59 E6 jmp	$e659
+D595: 4C 59 E6 jmp	set_sound_event_e659
 D598: 8D 18 06 sta	$0618
 D59B: 78       sei
 D59C: AD C1 00 lda number_of_credits_00c1
@@ -9547,13 +9593,14 @@ D5A3: 8D C1 00 sta number_of_credits_00c1
 D5A6: 58       cli
 D5A7: B9 3A CB lda	$cb3a, y
 D5AA: 85 0B    sta	$000b
-D5AC: A5 4E    lda	$004e
+D5AC: A5 4E    lda	continue_timer_array_004e
 D5AE: 05 4F    ora	$004f
 D5B0: D0 03    bne	$d5b5
 D5B2: 4C 05 CB jmp	$cb05
 D5B5: 4C 45 A9 jmp	$a945
 
 switch_to_bank_0_D5B8:
+switch_to_bank_00_D5B8:
 D5B8: 08       php
 D5B9: 78       sei
 D5BA: AD 00 60 lda bank_switch_start_6000
@@ -9562,6 +9609,7 @@ D5C0: 28       plp
 D5C1: 60       rts
 
 switch_to_bank_0_d5c2:
+switch_to_bank_01_d5c2:
 D5C2: 08       php
 D5C3: 78       sei
 D5C4: AD 00 60 lda bank_switch_start_6000
@@ -9569,12 +9617,13 @@ D5C7: AD 90 60 lda	$6090
 D5CA: 28       plp
 D5CB: 60       rts
 
+copy_to_screen_d5cc:
 D5CC: 85 04    sta	$0004
 D5CE: 84 06    sty	$0006
 D5D0: A0 00    ldy #$00
 D5D2: B1 00    lda ($00), y
 D5D4: 91 02    sta ($02), y
-D5D6: E6 02    inc	$0002
+D5D6: E6 02    inc	screen_address_lsb_0002
 D5D8: A5 05    lda	$0005
 D5DA: 91 02    sta ($02), y
 D5DC: C8       iny
@@ -9582,6 +9631,8 @@ D5DD: C4 04    cpy	$0004
 D5DF: 90 F1    bcc	$d5d2
 D5E1: A4 06    ldy	$0006
 D5E3: 60       rts
+
+draw_shape_row_d5e4:
 D5E4: 85 04    sta	$0004
 D5E6: 84 06    sty	$0006
 D5E8: 08       php
@@ -9606,7 +9657,7 @@ D60E: 29 0F    and #$0f
 D610: 18       clc
 D611: 6D 05 65 adc	$6505
 D614: 91 02    sta ($02), y
-D616: E6 02    inc	$0002
+D616: E6 02    inc	screen_address_lsb_0002
 D618: B1 00    lda ($00), y
 D61A: F0 0D    beq	$d629
 D61C: C9 F0    cmp #$f0
@@ -9622,6 +9673,8 @@ D62C: C4 04    cpy	$0004
 D62E: 90 D2    bcc	$d602
 D630: A4 06    ldy	$0006
 D632: 60       rts
+
+copy_data_to_screen_d633:
 D633: 85 04    sta	$0004
 D635: 84 06    sty	$0006
 D637: A0 00    ldy #$00
@@ -9635,6 +9688,8 @@ D643: C6 04    dec	$0004
 D645: D0 F2    bne	$d639
 D647: A4 06    ldy	$0006
 D649: 60       rts
+
+write_tile_to_screen_d64a:
 D64A: 85 04    sta	$0004
 D64C: 84 06    sty	$0006
 D64E: A0 00    ldy #$00
@@ -9645,10 +9700,12 @@ D655: A5 05    lda	$0005
 D657: 91 02    sta ($02), y
 D659: A4 06    ldy	$0006
 D65B: 60       rts
+
+display_text_d65c:
 D65C: A0 00    ldy #$00
 D65E: B1 00    lda ($00), y
 D660: 91 02    sta ($02), y
-D662: E6 02    inc	$0002
+D662: E6 02    inc	screen_address_lsb_0002
 D664: A5 05    lda	$0005
 D666: 91 02    sta ($02), y
 D668: C8       iny
@@ -9676,10 +9733,10 @@ D692: 85 01    sta	$0001
 D694: A0 00    ldy #$00
 D696: B1 00    lda ($00), y
 D698: F0 1F    beq	$d6b9
-D69A: 85 02    sta	$0002
+D69A: 85 02    sta	screen_address_lsb_0002
 D69C: C8       iny
 D69D: B1 00    lda ($00), y
-D69F: 85 03    sta	$0003
+D69F: 85 03    sta	screen_address_msb_0003
 D6A1: C8       iny
 D6A2: B1 00    lda ($00), y
 D6A4: 85 05    sta	$0005
@@ -9690,7 +9747,7 @@ D6AA: 85 00    sta	$0000
 D6AC: A5 01    lda	$0001
 D6AE: 69 00    adc #$00
 D6B0: 85 01    sta	$0001
-D6B2: 20 5C D6 jsr	$d65c
+D6B2: 20 5C D6 jsr	display_text_d65c
 D6B5: C8       iny
 D6B6: 4C 96 D6 jmp	$d696
 D6B9: 60       rts
@@ -9702,7 +9759,7 @@ D6C1: 60       rts
 D6C2: A9 10    lda #$10
 D6C4: 85 1C    sta	$001c
 D6C6: A9 00    lda #$00
-D6C8: 85 1B    sta	$001b
+D6C8: 85 1B    sta	current_player_control_status_001b
 D6CA: A9 00    lda #$00
 D6CC: AA       tax
 D6CD: A8       tay
@@ -9714,29 +9771,29 @@ D6D5: E8       inx
 D6D6: E0 10    cpx #$10
 D6D8: D0 F4    bne	$d6ce
 D6DA: 60       rts
-D6DB: A5 25    lda	$0025
+D6DB: A5 25    lda	pokey_controls_copy_0025
 D6DD: 85 23    sta	$0023
 D6DF: A5 26    lda	$0026
 D6E1: 85 24    sta	$0024
 D6E3: 8D 1B 28 sta	$281b
 D6E6: AD 18 28 lda	$2818
-D6E9: 85 25    sta	$0025
+D6E9: 85 25    sta	pokey_controls_copy_0025
 D6EB: 4A       lsr a
 D6EC: 4A       lsr a
 D6ED: 4A       lsr a
 D6EE: 4A       lsr a
 D6EF: 85 26    sta	$0026
-D6F1: A5 27    lda	$0027
+D6F1: A5 27    lda	player_control_status_array_0027
 D6F3: 49 FF    eor #$ff
-D6F5: 25 25    and	$0025
+D6F5: 25 25    and	pokey_controls_copy_0025
 D6F7: 85 29    sta	$0029
 D6F9: A5 28    lda	$0028
 D6FB: 49 FF    eor #$ff
 D6FD: 25 26    and	$0026
 D6FF: 85 2A    sta	$002a
 D701: A5 23    lda	$0023
-D703: 05 25    ora	$0025
-D705: 85 27    sta	$0027
+D703: 05 25    ora	pokey_controls_copy_0025
+D705: 85 27    sta	player_control_status_array_0027
 D707: A5 24    lda	$0024
 D709: 05 26    ora	$0026
 D70B: 85 28    sta	$0028
@@ -9744,6 +9801,7 @@ D70D: 60       rts
 
 periodic_interrupt_D70E:
 ; save registers
+periodic_interrupt_D70E:
 D70E: 48       pha
 D70F: 8A       txa
 D710: 48       pha
@@ -9753,9 +9811,9 @@ D712: 48       pha
 D713: AD 00 40 lda	$4000
 D716: 85 0D    sta first_byte_of_bank_0d
 D718: D8       cld
-D719: 8D 0B 28 sta	$280b
-D71C: AD 08 28 lda	$2808
-D71F: 8D 00 07 sta	$0700
+D719: 8D 0B 28 sta	potgo_280b
+D71C: AD 08 28 lda	allpot_2808
+D71F: 8D 00 07 sta	pokey1_state_copy_0700
 D722: 10 21    bpl	$d745
 D724: 29 40    and #$40
 D726: D0 1A    bne	$d742
@@ -9763,7 +9821,7 @@ D728: E6 AC    inc	$00ac
 D72A: E6 09    inc	$0009
 D72C: E6 13    inc	$0013
 D72E: D0 02    bne	$d732
-D730: E6 14    inc	$0014
+D730: E6 14    inc	fadeout_in_progress_timer_0014
 D732: E6 0F    inc	$000f
 D734: D0 02    bne	$d738
 D736: E6 10    inc	$0010
@@ -9777,14 +9835,14 @@ D745: 29 40    and #$40
 D747: D0 23    bne	$d76c
 D749: A5 09    lda	$0009
 D74B: 10 03    bpl	$d750
-D74D: 4C 9B 82 jmp	$829b
+D74D: 4C 9B 82 jmp	assert_failed_829b
 D750: 8D 00 30 sta watchdog_3000
 D753: E6 09    inc	$0009
 D755: 20 10 D8 jsr	$d810
 D758: E6 13    inc	$0013
 D75A: E6 0F    inc	$000f
 D75C: D0 04    bne	$d762
-D75E: E6 14    inc	$0014
+D75E: E6 14    inc	fadeout_in_progress_timer_0014
 D760: E6 10    inc	$0010
 D762: A5 0F    lda	$000f
 D764: 29 07    and #$07
@@ -9813,7 +9871,7 @@ D794: 85 51    sta	$0051
 D796: 90 08    bcc	$d7a0
 D798: 20 16 BC jsr	$bc16
 D79B: A9 13    lda #$13
-D79D: 20 59 E6 jsr	$e659
+D79D: 20 59 E6 jsr	set_sound_event_e659
 D7A0: A5 52    lda	$0052
 D7A2: 49 80    eor #$80
 D7A4: 2D C7 00 and	$00c7
@@ -9838,7 +9896,7 @@ D7CE: 4A       lsr a
 D7CF: 4A       lsr a
 D7D0: 29 30    and #$30
 D7D2: 85 0E    sta	$000e
-D7D4: 20 51 E6 jsr	$e651
+D7D4: 20 51 E6 jsr	switch_to_bank_1_and_handle_music_e651
 D7D7: 20 1D EB jsr	$eb1d
 ; first_byte_of_bank_0d tells if we need to switch bank
 D7DA: A5 0D    lda first_byte_of_bank_0d
@@ -9857,8 +9915,8 @@ D7F5: 28       plp
 
 D7F6: A5 0E    lda	$000e
 D7F8: 8D 00 3C sta	$3c00
-D7FB: 8D 0B 28 sta	$280b
-D7FE: AD 08 28 lda	$2808
+D7FB: 8D 0B 28 sta	potgo_280b
+D7FE: AD 08 28 lda	allpot_2808
 D801: 85 58    sta	$0058
 D803: 29 40    and #$40
 D805: F0 F4    beq	$d7fb
@@ -9887,7 +9945,7 @@ D828: AD 41 75 lda	$7541
 D82B: AD 43 75 lda	$7543
 D82E: AD 52 75 lda	$7552
 D831: AD 90 60 lda	$6090
-D834: 20 CA D8 jsr	$d8ca
+D834: 20 CA D8 jsr	set_palette_d8ca
 D837: A9 00    lda #$00
 D839: 8D A2 06 sta	$06a2
 D83C: A9 00    lda #$00
@@ -9919,9 +9977,9 @@ D871: AD 53 75 lda	$7553
 D874: 85 B9    sta	$00b9
 D876: AD 90 60 lda	$6090
 D879: 85 BD    sta	$00bd
-D87B: 20 F9 E0 jsr	$e0f9
-D87E: 20 CA D8 jsr	$d8ca
-D881: A5 08    lda	$0008
+D87B: 20 F9 E0 jsr	animate_title_screen_colors_e0f9
+D87E: 20 CA D8 jsr	set_palette_d8ca
+D881: A5 08    lda	game_state_0008
 D883: C9 FB    cmp #$fb
 D885: F0 36    beq	$d8bd
 D887: C9 EF    cmp #$ef
@@ -9947,13 +10005,15 @@ D8B1: B8       clv
 D8B2: 50 03    bvc	$d8b7
 D8B4: 20 7A E5 jsr	$e57a
 D8B7: 20 EE E4 jsr	$e4ee
-D8BA: 20 0C E1 jsr	$e10c
-D8BD: A5 08    lda	$0008
+D8BA: 20 0C E1 jsr	cycle_some_colors_e10c
+D8BD: A5 08    lda	game_state_0008
 D8BF: C9 F8    cmp #$f8
 D8C1: D0 06    bne	$d8c9
 D8C3: 20 7C CC jsr	$cc7c
 D8C6: 20 50 CD jsr	$cd50
 D8C9: 60       rts
+
+set_palette_d8ca:
 D8CA: A5 07    lda	$0007
 D8CC: F0 1A    beq	$d8e8
 D8CE: 0A       asl a
@@ -9972,31 +10032,33 @@ D8E6: 85 07    sta	$0007
 D8E8: 60       rts
 
 
-E0F9: A5 08    lda	$0008
+animate_title_screen_colors_e0f9:
+E0F9: A5 08    lda	game_state_0008
 E0FB: C9 FB    cmp #$fb
 E0FD: D0 03    bne	$e102
 E0FF: 20 91 C3 jsr fade_out_C391
-E102: A5 08    lda	$0008
+E102: A5 08    lda	game_state_0008
 E104: C9 EF    cmp #$ef
 E106: D0 03    bne	$e10b
 E108: 20 91 C3 jsr fade_out_C391
 E10B: 60       rts
 
-E10C: AD 41 06 lda	$0641
+cycle_some_colors_e10c:
+E10C: AD 41 06 lda	zero_to_seven_palette_index_counter_0641
 E10F: 18       clc
 E110: 69 01    adc #$01
 E112: 29 07    and #$07
-E114: 8D 41 06 sta	$0641
+E114: 8D 41 06 sta	zero_to_seven_palette_index_counter_0641
 E117: AA       tax
 E118: BD 35 E1 lda	$e135, x
 E11B: 8D FB 20 sta	$20fb
 E11E: A5 11    lda	$0011
 E120: D0 12    bne	$e134
-E122: AD 42 06 lda	$0642
+E122: AD 42 06 lda	zero_to_seven_palette_index_counter_0642
 E125: 18       clc
 E126: 69 01    adc #$01
 E128: 29 07    and #$07
-E12A: 8D 42 06 sta	$0642
+E12A: 8D 42 06 sta	zero_to_seven_palette_index_counter_0642
 E12D: AA       tax
 E12E: BD 3D E1 lda	$e13d, x
 E131: 8D F6 20 sta	$20f6
@@ -10094,7 +10156,7 @@ E21E: F0 08    beq	$e228
 E220: 20 6C E3 jsr	$e36c
 E223: A9 00    lda #$00
 E225: 8D C6 06 sta	$06c6
-E228: A5 08    lda	$0008
+E228: A5 08    lda	game_state_0008
 E22A: F0 01    beq	$e22d
 E22C: 60       rts
 E22D: A5 2D    lda	$002d
@@ -10124,25 +10186,25 @@ E258: 4C 9B E2 jmp	$e29b
 E25B: A5 36    lda	$0036
 E25D: F0 03    beq	$e262
 E25F: 4C 9B E2 jmp	$e29b
-E262: A5 30    lda	$0030
+E262: A5 30    lda	remaining_rows_tenths_0030
 E264: C5 32    cmp	$0032
 E266: B0 05    bcs	$e26d
 E268: A9 01    lda #$01
 E26A: 8D 9A 06 sta	$069a
 E26D: A5 32    lda	$0032
-E26F: C5 30    cmp	$0030
+E26F: C5 30    cmp	remaining_rows_tenths_0030
 E271: B0 05    bcs	$e278
 E273: A9 02    lda #$02
 E275: 8D 9A 06 sta	$069a
 E278: AD 9A 06 lda	$069a
 E27B: D0 16    bne	$e293
-E27D: A5 31    lda	$0031
+E27D: A5 31    lda	remaining_rows_units_0031
 E27F: C5 33    cmp	$0033
 E281: B0 05    bcs	$e288
 E283: A9 01    lda #$01
 E285: 8D 9A 06 sta	$069a
 E288: A5 33    lda	$0033
-E28A: C5 31    cmp	$0031
+E28A: C5 31    cmp	remaining_rows_units_0031
 E28C: B0 05    bcs	$e293
 E28E: A9 02    lda #$02
 E290: 8D 9A 06 sta	$069a
@@ -10157,7 +10219,7 @@ E2A4: 8A       txa
 E2A5: 0A       asl a
 E2A6: AA       tax
 E2A7: BD FD E2 lda	$e2fd, x
-E2AA: 85 47    sta	$0047
+E2AA: 85 47    sta	palette_pointer_0047
 E2AC: BD FE E2 lda	$e2fe, x
 E2AF: 85 48    sta	$0048
 E2B1: AD 54 06 lda	$0654
@@ -10179,7 +10241,7 @@ E2CE: 8A       txa
 E2CF: 0A       asl a
 E2D0: AA       tax
 E2D1: BD FD E2 lda	$e2fd, x
-E2D4: 85 47    sta	$0047
+E2D4: 85 47    sta	palette_pointer_0047
 E2D6: BD FE E2 lda	$e2fe, x
 E2D9: 20 1D E3 jsr	$e31d
 E2DC: 90 F0    bcc	$e2ce
@@ -10193,7 +10255,7 @@ E2EC: 8A       txa
 E2ED: 0A       asl a
 E2EE: AA       tax
 E2EF: BD 0D E3 lda	$e30d, x
-E2F2: 85 47    sta	$0047
+E2F2: 85 47    sta	palette_pointer_0047
 E2F4: BD 0E E3 lda	$e30e, x
 E2F7: 20 1D E3 jsr	$e31d
 E2FA: 90 F0    bcc	$e2ec
@@ -10252,7 +10314,7 @@ E378: 8A       txa
 E379: 0A       asl a
 E37A: AA       tax
 E37B: BD FD E2 lda	$e2fd, x
-E37E: 85 47    sta	$0047
+E37E: 85 47    sta	palette_pointer_0047
 E380: BD FE E2 lda	$e2fe, x
 E383: 85 48    sta	$0048
 E385: AD C2 06 lda	$06c2
@@ -10269,7 +10331,7 @@ E395: AA       tax
 E396: A5 0F    lda	$000f
 E398: 29 01    and #$01
 E39A: D0 35    bne	$e3d1
-E39C: A5 77    lda	$0077
+E39C: A5 77    lda	player_active_array_0077
 E39E: F0 2E    beq	$e3ce
 E3A0: AD 0E E4 lda	$e40e
 E3A3: 85 5A    sta	$005a
@@ -10279,16 +10341,16 @@ E3AA: AD 15 06 lda	$0615
 E3AD: C9 01    cmp #$01
 E3AF: 90 1D    bcc	$e3ce
 E3B1: A2 00    ldx #$00
-E3B3: 86 47    stx	$0047
+E3B3: 86 47    stx	palette_pointer_0047
 E3B5: AD 15 06 lda	$0615
 E3B8: 38       sec
 E3B9: E9 01    sbc #$01
 E3BB: A8       tay
 E3BC: BD 04 E4 lda	$e404, x
-E3BF: C4 47    cpy	$0047
+E3BF: C4 47    cpy	palette_pointer_0047
 E3C1: B0 02    bcs	$e3c5
 E3C3: A9 00    lda #$00
-E3C5: A4 47    ldy	$0047
+E3C5: A4 47    ldy	palette_pointer_0047
 E3C7: 91 5A    sta ($5a), y
 E3C9: E8       inx
 E3CA: E0 09    cpx #$09
@@ -10305,16 +10367,16 @@ E3DF: 85 5A    sta	$005a
 E3E1: AD 11 E4 lda	$e411
 E3E4: 85 5B    sta	$005b
 E3E6: A2 00    ldx #$00
-E3E8: 86 47    stx	$0047
+E3E8: 86 47    stx	palette_pointer_0047
 E3EA: AD 17 06 lda	$0617
 E3ED: 38       sec
 E3EE: E9 01    sbc #$01
 E3F0: A8       tay
 E3F1: BD 04 E4 lda	$e404, x
-E3F4: C4 47    cpy	$0047
+E3F4: C4 47    cpy	palette_pointer_0047
 E3F6: B0 02    bcs	$e3fa
 E3F8: A9 00    lda #$00
-E3FA: A4 47    ldy	$0047
+E3FA: A4 47    ldy	palette_pointer_0047
 E3FC: 91 5A    sta ($5a), y
 E3FE: E8       inx
 E3FF: E0 09    cpx #$09
@@ -10346,7 +10408,7 @@ E439: 85 4C    sta	$004c
 E43B: A4 45    ldy	$0045
 E43D: B9 EB E4 lda	$e4eb, y
 E440: 85 4D    sta	$004d
-E442: B5 77    lda	$0077, x
+E442: B5 77    lda	player_active_array_0077, x
 E444: F0 45    beq	$e48b
 E446: B5 35    lda	$0035, x
 E448: C9 02    cmp #$02
@@ -10359,7 +10421,7 @@ E456: A9 00    lda #$00
 E458: 8D 74 06 sta	$0674
 E45B: A8       tay
 E45C: B9 D4 E4 lda	$e4d4, y
-E45F: 85 47    sta	$0047
+E45F: 85 47    sta	palette_pointer_0047
 E461: A2 00    ldx #$00
 E463: 8A       txa
 E464: 0A       asl a
@@ -10374,7 +10436,7 @@ E474: A5 4C    lda	$004c
 E476: E0 06    cpx #$06
 E478: 90 02    bcc	$e47c
 E47A: A5 4D    lda	$004d
-E47C: E4 47    cpx	$0047
+E47C: E4 47    cpx	palette_pointer_0047
 E47E: D0 02    bne	$e482
 E480: A5 49    lda	$0049
 E482: A0 00    ldy #$00
@@ -10384,7 +10446,7 @@ E487: E0 0C    cpx #$0c
 E489: 90 D8    bcc	$e463
 E48B: 60       rts
 
-E4EE: A5 08    lda	$0008                                             
+E4EE: A5 08    lda	game_state_0008                                             
 E4F0: C9 FE    cmp #$fe
 E4F2: D0 75    bne	$e569
 E4F4: A5 0F    lda	$000f
@@ -10402,7 +10464,7 @@ E50A: A9 00    lda #$00
 E50C: 8D 74 06 sta	$0674
 E50F: A8       tay
 E510: B9 D4 E4 lda	$e4d4, y
-E513: 85 47    sta	$0047
+E513: 85 47    sta	palette_pointer_0047
 E515: A2 00    ldx #$00
 E517: 8A       txa
 E518: 0A       asl a
@@ -10434,7 +10496,7 @@ E550: AD EB E4 lda	$e4eb
 E553: A4 46    ldy	$0046
 E555: CC 8C 06 cpy	$068c
 E558: D0 06    bne	$e560
-E55A: E4 47    cpx	$0047
+E55A: E4 47    cpx	palette_pointer_0047
 E55C: D0 02    bne	$e560
 E55E: A5 49    lda	$0049
 E560: A0 00    ldy #$00
@@ -10468,7 +10530,7 @@ E596: 85 4C    sta	$004c
 E598: A4 45    ldy	$0045
 E59A: B9 EB E4 lda	$e4eb, y
 E59D: 85 4D    sta	$004d
-E59F: A5 77    lda	$0077
+E59F: A5 77    lda	player_active_array_0077
 E5A1: F0 79    beq	$e61c
 E5A3: A9 00    lda #$00
 E5A5: 85 4A    sta	$004a
@@ -10511,7 +10573,7 @@ E5F3: 9D 75 06 sta	$0675, x
 E5F6: 0A       asl a
 E5F7: A8       tay
 E5F8: B9 1D E6 lda	$e61d, y
-E5FB: 85 47    sta	$0047
+E5FB: 85 47    sta	palette_pointer_0047
 E5FD: B9 1E E6 lda	$e61e, y
 E600: 85 48    sta	$0048
 E602: A2 00    ldx #$00
@@ -10536,7 +10598,7 @@ E62F: A5 4D    lda	$004d
 E631: A4 4A    ldy	$004a
 E633: C0 00    cpy #$00
 E635: D0 0C    bne	$e643
-E637: E4 47    cpx	$0047
+E637: E4 47    cpx	palette_pointer_0047
 E639: D0 02    bne	$e63d
 E63B: A5 49    lda	$0049
 E63D: E4 48    cpx	$0048
@@ -10552,15 +10614,17 @@ E64A: 20 C2 D5 jsr switch_to_bank_0_d5c2
 E64D: 68       pla
 E64E: 4C 2D 40 jmp	$402d
 
+switch_to_bank_1_and_handle_music_e651:
 E651: 48       pha
 E652: 20 C2 D5 jsr switch_to_bank_0_d5c2
 E655: 68       pla
-E656: 4C 04 40 jmp	$4004
+E656: 4C 04 40 jmp	handle_music_4004
 
+set_sound_event_e659:
 E659: 48       pha
 E65A: 20 C2 D5 jsr switch_to_bank_0_d5c2
 E65D: 68       pla
-E65E: 4C 41 41 jmp	$4141
+E65E: 4C 41 41 jmp	set_sound_event_4141
 
 continue_startup_e661:
 E661: 78       sei
@@ -10578,11 +10642,11 @@ E676: AD 52 75 lda	$7552
 E679: AD 90 60 lda	$6090
 E67C: A0 18    ldy #$18
 E67E: A9 30    lda #$30
-; put	$0030 in	$0600-$617
-E680: 99 00 06 sta	$0600, y
+; put	remaining_rows_tenths_0030 in	score_digit_1_0600-$617
+E680: 99 00 06 sta	score_digit_1_0600, y
 E683: 88       dey
 E684: 10 FA    bpl	$e680
-; put	$0020 in a lot of RAM locations
+; put	logical_grid_address_msb_or_controls_0020 in a lot of RAM locations
 E686: A9 20    lda #$20
 E688: 8D 5B 06 sta	$065b
 E68B: 8D 5C 06 sta	$065c
@@ -10595,12 +10659,13 @@ E69D: 8D 62 06 sta	$0662
 E6A0: E8       inx			; X=1
 E6A1: 86 17    stx	$0017		; store 1 in	$0017
 E6A3: 20 CE EE jsr	$eece
-E6A6: 20 AD E6 jsr	$e6ad
+E6A6: 20 AD E6 jsr	install_highscores_e6ad
 E6A9: 58       cli
 E6AA: 4C 45 9A jmp continue_startup_9a45
 
+install_highscores_e6ad:
 E6AD: A0 00    ldy #$00
-E6AF: B9 79 09 lda	$0979, y
+E6AF: B9 79 09 lda	current_highscore_table_0979, y
 E6B2: C9 30    cmp #$30
 E6B4: 90 43    bcc	$e6f9
 E6B6: C9 3A    cmp #$3a
@@ -10609,7 +10674,7 @@ E6BA: C8       iny
 E6BB: C0 24    cpy #$24
 E6BD: 90 F0    bcc	$e6af
 E6BF: A0 00    ldy #$00
-E6C1: B9 79 09 lda	$0979, y
+E6C1: B9 79 09 lda	current_highscore_table_0979, y
 E6C4: C9 30    cmp #$30
 E6C6: D0 0E    bne	$e6d6
 E6C8: B9 7A 09 lda	$097a, y
@@ -10625,7 +10690,7 @@ E6DA: A8       tay
 E6DB: C0 24    cpy #$24
 E6DD: 90 E2    bcc	$e6c1
 E6DF: A0 00    ldy #$00
-E6E1: B9 D9 09 lda	$09d9, y
+E6E1: B9 D9 09 lda	current_highscore_names_09d9, y
 E6E4: C9 20    cmp #$20
 E6E6: F0 08    beq	$e6f0
 E6E8: C9 41    cmp #$41
@@ -10640,39 +10705,39 @@ E6F7: D0 07    bne	$e700
 E6F9: A9 01    lda #$01
 E6FB: 20 D4 F1 jsr	$f1d4
 E6FE: A0 00    ldy #$00
-E700: 84 1D    sty	$001d
-E702: A6 1D    ldx	$001d
+E700: 84 1D    sty	unknown_001d
+E702: A6 1D    ldx	unknown_001d
 E704: A9 03    lda #$03
-E706: 85 1B    sta	$001b
-E708: B9 FA F2 lda	$f2fa, y
+E706: 85 1B    sta	current_player_control_status_001b
+E708: B9 FA F2 lda	default_highscore_table_f2fa, y
 E70B: 4A       lsr a
 E70C: 4A       lsr a
 E70D: 4A       lsr a
 E70E: 4A       lsr a
 E70F: 09 30    ora #$30
-E711: 9D 79 09 sta	$0979, x
+E711: 9D 79 09 sta	current_highscore_table_0979, x
 E714: E8       inx
-E715: B9 FA F2 lda	$f2fa, y
+E715: B9 FA F2 lda	default_highscore_table_f2fa, y
 E718: 29 0F    and #$0f
 E71A: 09 30    ora #$30
-E71C: 9D 79 09 sta	$0979, x
+E71C: 9D 79 09 sta	current_highscore_table_0979, x
 E71F: E8       inx
 E720: C8       iny
-E721: C6 1B    dec	$001b
+E721: C6 1B    dec	current_player_control_status_001b
 E723: D0 E3    bne	$e708
-E725: A5 1D    lda	$001d
+E725: A5 1D    lda	unknown_001d
 E727: 4A       lsr a
 E728: AA       tax
-E729: B9 FA F2 lda	$f2fa, y
-E72C: 9D D9 09 sta	$09d9, x
+E729: B9 FA F2 lda	default_highscore_table_f2fa, y
+E72C: 9D D9 09 sta	current_highscore_names_09d9, x
 E72F: C8       iny
 E730: E8       inx
-E731: B9 FA F2 lda	$f2fa, y
-E734: 9D D9 09 sta	$09d9, x
+E731: B9 FA F2 lda	default_highscore_table_f2fa, y
+E734: 9D D9 09 sta	current_highscore_names_09d9, x
 E737: C8       iny
 E738: E8       inx
-E739: B9 FA F2 lda	$f2fa, y
-E73C: 9D D9 09 sta	$09d9, x
+E739: B9 FA F2 lda	default_highscore_table_f2fa, y
+E73C: 9D D9 09 sta	current_highscore_names_09d9, x
 E73F: C8       iny
 E740: E8       inx
 E741: C0 60    cpy #$60
@@ -10693,7 +10758,7 @@ E78A: 19 5D 06 ora	$065d, y
 E78D: F0 04    beq	$e793
 E78F: C9 20    cmp #$20
 E791: D0 30    bne	$e7c3
-E793: AD 0A 28 lda	$280a
+E793: AD 0A 28 lda	random_280a
 E796: 29 3C    and #$3c
 E798: AA       tax
 E799: 08       php
@@ -10713,7 +10778,7 @@ E7B7: BD 5D 76 lda	$765d, x
 E7BA: 99 5C 06 sta	$065c, y
 E7BD: BD 5E 76 lda	$765e, x
 E7C0: 99 5D 06 sta	$065d, y
-E7C3: A6 1B    ldx	$001b
+E7C3: A6 1B    ldx	current_player_control_status_001b
 E7C5: A9 01    lda #$01
 E7C7: 9D 65 06 sta	$0665, x
 E7CA: A9 00    lda #$00
@@ -10726,9 +10791,11 @@ E7D8: 18       clc
 E7D9: 69 52    adc #$52
 E7DB: 20 70 D6 jsr	$d670
 E7DE: A9 0D    lda #$0d
-E7E0: 20 59 E6 jsr	$e659
+E7E0: 20 59 E6 jsr	set_sound_event_e659
 E7E3: 60       rts
-E7E4: 86 1B    stx	$001b
+
+enter_highscore_e7e4:
+E7E4: 86 1B    stx	current_player_control_status_001b
 E7E6: BD 6B 06 lda	$066b, x
 E7E9: F0 0A    beq	$e7f5
 E7EB: A4 12    ldy	$0012
@@ -10775,7 +10842,7 @@ E842: 50 03    bvc	$e847
 E844: 4C CF E8 jmp	$e8cf
 E847: B8       clv
 E848: 50 2F    bvc	$e879
-E84A: B5 27    lda	$0027, x
+E84A: B5 27    lda	player_control_status_array_0027, x
 E84C: 29 0E    and #$0e
 E84E: F0 24    beq	$e874
 E850: BD 67 06 lda	$0667, x
@@ -10786,7 +10853,7 @@ E859: C9 0C    cmp #$0c
 E85B: 90 14    bcc	$e871
 E85D: A9 00    lda #$00
 E85F: 9D 67 06 sta	$0667, x
-E862: B5 27    lda	$0027, x
+E862: B5 27    lda	player_control_status_array_0027, x
 E864: 29 04    and #$04
 E866: F0 06    beq	$e86e
 E868: 4C AC E8 jmp	$e8ac
@@ -10803,16 +10870,16 @@ E87E: 8A       txa
 E87F: 0A       asl a
 E880: A8       tay
 E881: B9 76 E7 lda	$e776, y
-E884: 85 02    sta	$0002
+E884: 85 02    sta	screen_address_lsb_0002
 E886: B9 77 E7 lda	$e777, y
-E889: 85 03    sta	$0003
+E889: 85 03    sta	screen_address_msb_0003
 E88B: 98       tya
 E88C: 0A       asl a
 E88D: AA       tax
 E88E: A0 00    ldy #$00
 E890: BD 5B 06 lda	$065b, x
 E893: 91 02    sta ($02), y
-E895: E6 02    inc	$0002
+E895: E6 02    inc	screen_address_lsb_0002
 E897: C4 1C    cpy	$001c
 E899: D0 04    bne	$e89f
 E89B: A9 80    lda #$80
@@ -10823,7 +10890,7 @@ E8A3: E8       inx
 E8A4: C8       iny
 E8A5: C0 03    cpy #$03
 E8A7: 90 E7    bcc	$e890
-E8A9: A6 1B    ldx	$001b
+E8A9: A6 1B    ldx	current_player_control_status_001b
 E8AB: 60       rts
 E8AC: B9 5B 06 lda	$065b, y
 E8AF: C9 5A    cmp #$5a
@@ -10858,7 +10925,7 @@ E8E8: D0 03    bne	$e8ed
 E8EA: 38       sec
 E8EB: E9 01    sbc #$01
 E8ED: 99 5B 06 sta	$065b, y
-E8F0: A6 1B    ldx	$001b
+E8F0: A6 1B    ldx	current_player_control_status_001b
 E8F2: BD 65 06 lda	$0665, x
 E8F5: F0 0E    beq	$e905
 E8F7: A9 00    lda #$00
@@ -10868,7 +10935,7 @@ E8FF: 18       clc
 E900: 69 A0    adc #$a0
 E902: 9D 6B 06 sta	$066b, x
 E905: A9 15    lda #$15
-E907: 4C 59 E6 jmp	$e659
+E907: 4C 59 E6 jmp	set_sound_event_e659
 E90A: E0 00    cpx #$00
 E90C: D0 04    bne	$e912
 E90E: A9 C0    lda #$c0
@@ -10879,9 +10946,9 @@ E916: 8A       txa
 E917: 0A       asl a
 E918: A8       tay
 E919: B9 7A E7 lda	$e77a, y
-E91C: 85 02    sta	$0002
+E91C: 85 02    sta	screen_address_lsb_0002
 E91E: B9 7B E7 lda	$e77b, y
-E921: 85 03    sta	$0003
+E921: 85 03    sta	screen_address_msb_0003
 E923: A0 00    ldy #$00
 E925: BD 6B 06 lda	$066b, x
 E928: 4A       lsr a
@@ -10911,7 +10978,7 @@ E950: 50 06    bvc	$e958
 E952: A9 20    lda #$20
 E954: 91 02    sta ($02), y
 E956: A9 00    lda #$00
-E958: 85 1F    sta	$001f
+E958: 85 1F    sta	logical_grid_address_lsb_001f
 E95A: C8       iny
 E95B: A5 05    lda	$0005
 E95D: 91 02    sta ($02), y
@@ -10921,7 +10988,7 @@ E963: 4A       lsr a
 E964: 4A       lsr a
 E965: 4A       lsr a
 E966: 38       sec
-E967: E5 1F    sbc	$001f
+E967: E5 1F    sbc	logical_grid_address_lsb_001f
 E969: 09 30    ora #$30
 E96B: 91 02    sta ($02), y
 E96D: C8       iny
@@ -10942,7 +11009,7 @@ E984: C9 3F    cmp #$3f
 E986: D0 05    bne	$e98d
 E988: A9 20    lda #$20
 E98A: 9D 5B 06 sta	$065b, x
-E98D: 99 D9 09 sta	$09d9, y
+E98D: 99 D9 09 sta	current_highscore_names_09d9, y
 E990: 8D 03 08 sta	$0803
 E993: BD 5C 06 lda	$065c, x
 E996: C9 3F    cmp #$3f
@@ -10969,18 +11036,18 @@ E9C3: 49 FF    eor #$ff
 E9C5: C9 24    cmp #$24
 E9C7: B0 28    bcs	$e9f1
 E9C9: 8A       txa
-E9CA: 85 1B    sta	$001b
+E9CA: 85 1B    sta	current_player_control_status_001b
 E9CC: 4A       lsr a
-E9CD: 65 1B    adc	$001b
+E9CD: 65 1B    adc	current_player_control_status_001b
 E9CF: AA       tax
 E9D0: A0 00    ldy #$00
-E9D2: BD 00 06 lda	$0600, x
+E9D2: BD 00 06 lda	score_digit_1_0600, x
 E9D5: 0A       asl a
 E9D6: 0A       asl a
 E9D7: 0A       asl a
 E9D8: 0A       asl a
 E9D9: 85 1C    sta	$001c
-E9DB: BD 01 06 lda	$0601, x
+E9DB: BD 01 06 lda	score_digit_2_0601, x
 E9DE: 29 0F    and #$0f
 E9E0: 05 1C    ora	$001c
 E9E2: 99 00 08 sta	$0800, y
@@ -10990,7 +11057,7 @@ E9E7: E8       inx
 E9E8: C0 03    cpy #$03
 E9EA: 90 E6    bcc	$e9d2
 E9EC: 20 A1 EF jsr	$efa1
-E9EF: A6 1B    ldx	$001b
+E9EF: A6 1B    ldx	current_player_control_status_001b
 E9F1: 8A       txa
 E9F2: 4A       lsr a
 E9F3: 4A       lsr a
@@ -11020,10 +11087,10 @@ EA1D: 20 24 EA jsr	$ea24
 EA20: 8A       txa
 EA21: 49 01    eor #$01
 EA23: AA       tax
-EA24: 86 1B    stx	$001b
+EA24: 86 1B    stx	current_player_control_status_001b
 EA26: 8A       txa
 EA27: 0A       asl a
-EA28: 65 1B    adc	$001b
+EA28: 65 1B    adc	current_player_control_status_001b
 EA2A: 0A       asl a
 EA2B: A8       tay
 EA2C: AD 19 06 lda	$0619
@@ -11031,23 +11098,23 @@ EA2F: C9 03    cmp #$03
 EA31: 90 0B    bcc	$ea3e
 EA33: 98       tya
 EA34: F0 08    beq	$ea3e
-EA36: A6 1B    ldx	$001b
+EA36: A6 1B    ldx	current_player_control_status_001b
 EA38: A9 80    lda #$80
 EA3A: 9D 63 06 sta	$0663, x
 EA3D: 60       rts
 EA3E: A2 5A    ldx #$5a
-EA40: B9 05 06 lda	$0605, y
+EA40: B9 05 06 lda	score_digit_6_0605, y
 EA43: DD 7E 09 cmp	$097e, x
-EA46: B9 04 06 lda	$0604, y
+EA46: B9 04 06 lda	score_digit_5_0604, y
 EA49: FD 7D 09 sbc	$097d, x
-EA4C: B9 03 06 lda	$0603, y
+EA4C: B9 03 06 lda	score_digit_4_0603, y
 EA4F: FD 7C 09 sbc	$097c, x
-EA52: B9 02 06 lda	$0602, y
+EA52: B9 02 06 lda	score_digit_3_0602, y
 EA55: FD 7B 09 sbc	$097b, x
-EA58: B9 01 06 lda	$0601, y
+EA58: B9 01 06 lda	score_digit_2_0601, y
 EA5B: FD 7A 09 sbc	$097a, x
-EA5E: B9 00 06 lda	$0600, y
-EA61: FD 79 09 sbc	$0979, x
+EA5E: B9 00 06 lda	score_digit_1_0600, y
+EA61: FD 79 09 sbc	current_highscore_table_0979, x
 EA64: 90 06    bcc	$ea6c
 EA66: 8A       txa
 EA67: E9 06    sbc #$06
@@ -11063,7 +11130,7 @@ EA76: A2 5A    ldx #$5a
 EA78: E4 1C    cpx	$001c
 EA7A: F0 20    beq	$ea9c
 EA7C: CA       dex
-EA7D: BD 79 09 lda	$0979, x
+EA7D: BD 79 09 lda	current_highscore_table_0979, x
 EA80: 9D 7F 09 sta	$097f, x
 EA83: E4 1C    cpx	$001c
 EA85: D0 F5    bne	$ea7c
@@ -11072,53 +11139,53 @@ EA89: 4A       lsr a
 EA8A: 85 1C    sta	$001c
 EA8C: A2 2D    ldx #$2d
 EA8E: CA       dex
-EA8F: BD D9 09 lda	$09d9, x
+EA8F: BD D9 09 lda	current_highscore_names_09d9, x
 EA92: 9D DC 09 sta	$09dc, x
 EA95: E4 1C    cpx	$001c
 EA97: D0 F5    bne	$ea8e
 EA99: 8A       txa
 EA9A: 0A       asl a
 EA9B: AA       tax
-EA9C: B9 05 06 lda	$0605, y
+EA9C: B9 05 06 lda	score_digit_6_0605, y
 EA9F: 9D 7E 09 sta	$097e, x
-EAA2: B9 04 06 lda	$0604, y
+EAA2: B9 04 06 lda	score_digit_5_0604, y
 EAA5: 9D 7D 09 sta	$097d, x
-EAA8: B9 03 06 lda	$0603, y
+EAA8: B9 03 06 lda	score_digit_4_0603, y
 EAAB: 9D 7C 09 sta	$097c, x
-EAAE: B9 02 06 lda	$0602, y
+EAAE: B9 02 06 lda	score_digit_3_0602, y
 EAB1: 9D 7B 09 sta	$097b, x
-EAB4: B9 01 06 lda	$0601, y
+EAB4: B9 01 06 lda	score_digit_2_0601, y
 EAB7: 9D 7A 09 sta	$097a, x
-EABA: B9 00 06 lda	$0600, y
-EABD: 9D 79 09 sta	$0979, x
+EABA: B9 00 06 lda	score_digit_1_0600, y
+EABD: 9D 79 09 sta	current_highscore_table_0979, x
 EAC0: 8A       txa
 EAC1: 4A       lsr a
-EAC2: A6 1B    ldx	$001b
+EAC2: A6 1B    ldx	current_player_control_status_001b
 EAC4: 9D 63 06 sta	$0663, x
 EAC7: 60       rts
-EAC8: A6 1B    ldx	$001b
+EAC8: A6 1B    ldx	current_player_control_status_001b
 EACA: A9 80    lda #$80
 EACC: 9D 63 06 sta	$0663, x
 EACF: 60       rts
-EAD0: 86 1B    stx	$001b
+EAD0: 86 1B    stx	current_player_control_status_001b
 EAD2: 8A       txa
 EAD3: 0A       asl a
-EAD4: 65 1B    adc	$001b
+EAD4: 65 1B    adc	current_player_control_status_001b
 EAD6: 0A       asl a
 EAD7: A8       tay
 EAD8: A2 5A    ldx #$5a
-EADA: B9 05 06 lda	$0605, y
+EADA: B9 05 06 lda	score_digit_6_0605, y
 EADD: DD 7E 09 cmp	$097e, x
-EAE0: B9 04 06 lda	$0604, y
+EAE0: B9 04 06 lda	score_digit_5_0604, y
 EAE3: FD 7D 09 sbc	$097d, x
-EAE6: B9 03 06 lda	$0603, y
+EAE6: B9 03 06 lda	score_digit_4_0603, y
 EAE9: FD 7C 09 sbc	$097c, x
-EAEC: B9 02 06 lda	$0602, y
+EAEC: B9 02 06 lda	score_digit_3_0602, y
 EAEF: FD 7B 09 sbc	$097b, x
-EAF2: B9 01 06 lda	$0601, y
+EAF2: B9 01 06 lda	score_digit_2_0601, y
 EAF5: FD 7A 09 sbc	$097a, x
-EAF8: B9 00 06 lda	$0600, y
-EAFB: FD 79 09 sbc	$0979, x
+EAF8: B9 00 06 lda	score_digit_1_0600, y
+EAFB: FD 79 09 sbc	current_highscore_table_0979, x
 EAFE: 90 06    bcc	$eb06
 EB00: 8A       txa
 EB01: E9 06    sbc #$06
@@ -11129,11 +11196,11 @@ EB07: 18       clc
 EB08: 69 06    adc #$06
 EB0A: C9 60    cmp #$60
 EB0C: F0 07    beq	$eb15
-EB0E: A6 1B    ldx	$001b
+EB0E: A6 1B    ldx	current_player_control_status_001b
 EB10: 4A       lsr a
 EB11: 9D 63 06 sta	$0663, x
 EB14: 60       rts
-EB15: A6 1B    ldx	$001b
+EB15: A6 1B    ldx	current_player_control_status_001b
 EB17: A9 80    lda #$80
 EB19: 9D 63 06 sta	$0663, x
 EB1C: 60       rts
@@ -11146,23 +11213,23 @@ EB28: C6 60    dec	$0060
 EB2A: D0 2F    bne	$eb5b
 EB2C: A9 FA    lda #$fa
 EB2E: 85 60    sta	$0060
-EB30: A5 08    lda	$0008
+EB30: A5 08    lda	game_state_0008
 EB32: D0 0E    bne	$eb42
 EB34: A2 00    ldx #$00
-EB36: B5 77    lda	$0077, x
+EB36: B5 77    lda	player_active_array_0077, x
 EB38: F0 03    beq	$eb3d
 EB3A: 20 5C EB jsr	$eb5c
 EB3D: E8       inx
 EB3E: E0 02    cpx #$02
 EB40: D0 F4    bne	$eb36
 EB42: A2 00    ldx #$00
-EB44: A5 08    lda	$0008
+EB44: A5 08    lda	game_state_0008
 EB46: D0 10    bne	$eb58
-EB48: A5 77    lda	$0077
+EB48: A5 77    lda	player_active_array_0077
 EB4A: 05 78    ora	$0078
 EB4C: F0 0A    beq	$eb58
 EB4E: A2 04    ldx #$04
-EB50: A5 77    lda	$0077
+EB50: A5 77    lda	player_active_array_0077
 EB52: 25 78    and	$0078
 EB54: F0 02    beq	$eb58
 EB56: A2 08    ldx #$08
@@ -11206,7 +11273,7 @@ EBA6: BD 20 08 lda	$0820, x
 EBA9: E8       inx
 EBAA: A8       tay
 EBAB: 68       pla
-EBAC: 8D 00 34 sta	$3400
+EBAC: 8D 00 34 sta	eeprom_write_enable_3400
 EBAF: 99 E0 25 sta	$25e0, y
 EBB2: E0 28    cpx #$28
 EBB4: 90 02    bcc	$ebb8
@@ -11242,7 +11309,7 @@ EBEC: F0 0E    beq	$ebfc
 EBEE: A9 00    lda #$00
 EBF0: 85 6F    sta	$006f
 EBF2: B9 FB 08 lda	$08fb, y
-EBF5: 8D 00 34 sta	$3400
+EBF5: 8D 00 34 sta	eeprom_write_enable_3400
 EBF8: 91 72    sta ($72), y
 EBFA: 38       sec
 EBFB: 60       rts
@@ -11317,7 +11384,7 @@ EC85: 29 0F    and #$0f
 EC87: 99 A2 08 sta	$08a2, y
 EC8A: A4 6E    ldy	$006e
 EC8C: B9 FB 08 lda	$08fb, y
-EC8F: 8D 00 34 sta	$3400
+EC8F: 8D 00 34 sta	eeprom_write_enable_3400
 EC92: 91 72    sta ($72), y
 EC94: 38       sec
 EC95: 60       rts
@@ -11816,12 +11883,12 @@ F099: 4A       lsr a
 F09A: 4A       lsr a
 F09B: 4A       lsr a
 F09C: 09 30    ora #$30
-F09E: 99 79 09 sta	$0979, y
+F09E: 99 79 09 sta	current_highscore_table_0979, y
 F0A1: C8       iny
 F0A2: BD 66 08 lda	$0866, x
 F0A5: 29 0F    and #$0f
 F0A7: 09 30    ora #$30
-F0A9: 99 79 09 sta	$0979, y
+F0A9: 99 79 09 sta	current_highscore_table_0979, y
 F0AC: A9 00    lda #$00
 F0AE: 9D 66 08 sta	$0866, x
 F0B1: C8       iny
@@ -11847,7 +11914,7 @@ F0D6: 20 F9 F0 jsr	$f0f9
 F0D9: 99 DA 09 sta	$09da, y
 F0DC: BD 66 08 lda	$0866, x
 F0DF: 20 F9 F0 jsr	$f0f9
-F0E2: 99 D9 09 sta	$09d9, y
+F0E2: 99 D9 09 sta	current_highscore_names_09d9, y
 F0E5: C6 63    dec	$0063
 F0E7: F0 03    beq	$f0ec
 F0E9: 4C 58 F0 jmp	$f058
@@ -12009,7 +12076,7 @@ F218: 20 23 EE jsr	$ee23
 F21B: A6 74    ldx	$0074
 F21D: A0 00    ldy #$00
 F21F: B9 FB 08 lda	$08fb, y
-F222: 8D 00 34 sta	$3400
+F222: 8D 00 34 sta	eeprom_write_enable_3400
 F225: 91 72    sta ($72), y
 F227: 20 DD F2 jsr	$f2dd
 F22A: C8       iny
@@ -12025,7 +12092,7 @@ F239: 68       pla
 F23A: AA       tax
 F23B: A0 00    ldy #$00
 F23D: A9 FF    lda #$ff
-F23F: 8D 00 34 sta	$3400
+F23F: 8D 00 34 sta	eeprom_write_enable_3400
 F242: 91 72    sta ($72), y
 F244: 20 DD F2 jsr	$f2dd
 F247: C8       iny
@@ -12058,20 +12125,20 @@ F27C: A9 D0    lda #$d0
 F27E: 8D B8 08 sta	$08b8
 F281: A2 00    ldx #$00
 F283: A0 00    ldy #$00
-F285: BD FA F2 lda	$f2fa, x
+F285: BD FA F2 lda	default_highscore_table_f2fa, x
 F288: E8       inx
 F289: 20 CF F2 jsr	$f2cf
-F28C: BD FA F2 lda	$f2fa, x
+F28C: BD FA F2 lda	default_highscore_table_f2fa, x
 F28F: E8       inx
 F290: 20 CF F2 jsr	$f2cf
-F293: BD FA F2 lda	$f2fa, x
+F293: BD FA F2 lda	default_highscore_table_f2fa, x
 F296: E8       inx
 F297: 20 CF F2 jsr	$f2cf
-F29A: BD FA F2 lda	$f2fa, x
+F29A: BD FA F2 lda	default_highscore_table_f2fa, x
 F29D: E8       inx
 F29E: 20 ED F0 jsr	$f0ed
 F2A1: 85 61    sta	$0061
-F2A3: BD FA F2 lda	$f2fa, x
+F2A3: BD FA F2 lda	default_highscore_table_f2fa, x
 F2A6: E8       inx
 F2A7: 20 ED F0 jsr	$f0ed
 F2AA: 0A       asl a
@@ -12082,7 +12149,7 @@ F2AE: 26 61    rol	$0061
 F2B0: 0A       asl a
 F2B1: 26 61    rol	$0061
 F2B3: 85 62    sta	$0062
-F2B5: BD FA F2 lda	$f2fa, x
+F2B5: BD FA F2 lda	default_highscore_table_f2fa, x
 F2B8: E8       inx
 F2B9: 20 ED F0 jsr	$f0ed
 F2BC: 05 62    ora	$0062
@@ -12095,7 +12162,7 @@ F2CA: C0 1E    cpy #$1e
 F2CC: D0 B7    bne	$f285
 F2CE: 60       rts
 
-F2CF: 8D 00 34 sta	$3400
+F2CF: 8D 00 34 sta	eeprom_write_enable_3400
 F2D2: 99 E0 25 sta	$25e0, y
 F2D5: 99 48 08 sta	$0848, y
 F2D8: C8       iny
@@ -12124,7 +12191,7 @@ F2F9: 60       rts
 
 F37E: A0 00    ldy #$00
 F380: A2 01    ldx #$01
-F382: AD 00 07 lda	$0700
+F382: AD 00 07 lda	pokey1_state_copy_0700
 F385: E0 01    cpx #$01
 F387: F0 01    beq	$f38a
 F389: 4A       lsr a
@@ -12170,8 +12237,8 @@ F3CF: F0 02    beq	$f3d3
 F3D1: A9 01    lda #$01
 F3D3: 38       sec
 F3D4: 48       pha
-F3D5: 65 C2    adc	$00c2
-F3D7: 85 C2    sta	$00c2
+F3D5: 65 C2    adc	number_of_inserted_coins_00c2
+F3D7: 85 C2    sta	number_of_inserted_coins_00c2
 F3D9: 68       pla
 F3DA: 38       sec
 F3DB: 65 C4    adc	$00c4
@@ -12190,13 +12257,13 @@ F3ED: 4A       lsr a
 F3EE: 49 07    eor #$07
 F3F0: F0 32    beq	$f424
 F3F2: A8       tay
-F3F3: A5 C2    lda	$00c2
+F3F3: A5 C2    lda	number_of_inserted_coins_00c2
 F3F5: 38       sec
 ; real code but makes no sense at F407
 ; reached when credit is inserted
 F3F6: F9 07 F4 sbc	$f407, y
 F3F9: 30 14    bmi	$f40f	; seems to always branch
-F3FB: 85 C2    sta	$00c2
+F3FB: 85 C2    sta	number_of_inserted_coins_00c2
 F3FD: E6 C3    inc	$00c3
 F3FF: C0 04    cpy #$04
 F401: D0 F2    bne	$f3f5
@@ -12218,7 +12285,7 @@ F41A: 65 C3    adc	$00c3
 F41C: 30 0A    bmi	$f428
 F41E: 85 C3    sta	$00c3
 F420: A9 00    lda #$00
-F422: E6 C1    inc	$00c1
+F422: E6 C1    inc	number_of_credits_00c1
 F424: 85 C4    sta	$00c4
 F426: D0 E7    bne	$f40f
 F428: E6 C9    inc	$00c9

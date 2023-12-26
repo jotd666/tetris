@@ -1,8 +1,10 @@
-- delayed tile write: mark dirty and refresh during vblank only
+credits infinite when running from floppy: check floppy command like (and floppy startup!)
+options in non-whdload command line
 
 low pri:
 
-- simulate "drums" in 2 tunes: currently not played
+- simulate "drums" in 2 tunes: currently not played:
+  break 45a5 A==1, break on write to 2818 value 50...
 - ATM forced volume for music
 - check what service mode sets in EEPROM
   to allow some settings: difficulty is the only interesting setting

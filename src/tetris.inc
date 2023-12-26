@@ -52,6 +52,7 @@
 	.equ	START_SND,                      3
 	.equ	RANDOM_BLOCK_SND,                      4
 	.equ	ADVANCING_LINE_SND,                      5
+	.equ	DRUM_SND,                      6
 
 
 

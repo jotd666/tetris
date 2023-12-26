@@ -22,7 +22,7 @@ hq_sample_rate = 22050
 
 
 noise = 3
-
+drum = 2
 
 EMPTY_SND = "EMPTY_SND"
 sound_dict = {
@@ -33,6 +33,7 @@ sound_dict = {
 "START_SND"             :{"index":3,"channel":noise,"sample_rate":hq_sample_rate,"priority":1},
 "RANDOM_BLOCK_SND"             :{"index":4,"channel":noise,"sample_rate":hq_sample_rate,"priority":10},
 "ADVANCING_LINE_SND"             :{"index":5,"channel":noise,"sample_rate":hq_sample_rate,"priority":10},
+"DRUM_SND"             :{"index":6,"channel":noise,"sample_rate":hq_sample_rate,"priority":1},
 
 }
 

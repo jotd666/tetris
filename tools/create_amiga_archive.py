@@ -22,8 +22,9 @@ else:
 for file in ["readme.md",gamename,f"{gamename}.slave"]:
     shutil.copy(os.path.join(progdir,file),outdir)
 
-#shutil.copy(os.path.join(progdir,"assets","amiga","Bagman.info"),outdir)
-#shutil.copy(os.path.join(progdir,"assets","amiga","boxart.png"),outdir)
+for icon in glob.glob(os.path.join(progdir,"assets","amiga","*.info")):
+    shutil.copy(icon,outdir)
+
 
 # pack the file for floppy
 subprocess.check_output(["cranker_windows.exe","-f",os.path.join(progdir,gamename),"-o",os.path.join(progdir,f"{gamename}.rnc")])
