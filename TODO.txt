@@ -1,5 +1,5 @@
-credits infinite when running from floppy: check floppy command like (and floppy startup!)
-options in non-whdload command line
+- non whd version can crash when quit+started again
+- double buffering 
 
 low pri:
 

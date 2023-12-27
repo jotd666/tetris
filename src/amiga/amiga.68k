@@ -172,6 +172,8 @@ _user:
     jsr _LVOOpenLibrary(a6)
     move.l  d0,_dosbase
 
+	move.l	#5,number_of_credits
+	
 	lea	read_args_string(pc),a0
 	lea	program_args(pc),a1
 	move.l	#program_args_end-program_args,d0
@@ -189,7 +191,21 @@ _user:
 	* cheat isn't used as long as no cheat key is used
 	or.l	#0x1,cheat_flags
 2:
-
+	move.l	(A0)+,D0	| NUMCREDITS/K
+	beq.b	2f
+	bsr		bcpl_string_to_int
+	move.l	d0,number_of_credits
+	nop
+2:
+	move.l	(A0)+,D0	| INFCREDITS/S
+	beq.b	2f
+	st		unlimited_credits_flag
+	st		cheat_used
+2:
+	move.l	(A0)+,D0	| ALTWAVEFORM/S
+	beq.b	2f
+	move.l	#1,music_style
+2:
 
 	lea		_custom,a5
 	lea		debug_copperlist,a0
@@ -250,6 +266,13 @@ _user:
 	move.l	number_of_credits,d0
 	seq		unlimited_credits_flag
 	move.b	d0,start_number_of_credits	| 0: game sets to 5
+
+	tst.l	music_style
+	beq.b	0f
+	move.l	#tri_high_channel_table,high_channel_table
+	move.l	#tri_very_high_channel_table,very_high_channel_table
+	move.l	#tri_medium_channel_table,medium_channel_table
+0:
 
 	.ifne	0
 	move.l	dip_switch_difficulty(pc),d0
@@ -756,9 +779,9 @@ osd_write_audio_pokey:
 	
 	moveq	#0,d1
 
-	lea		medium_channel_table(pc),a1
+	move.l		medium_channel_table(pc),a1
 	move.b	#104,d1
-	lea		high_channel_table(pc),a1
+	move.l		high_channel_table(pc),a1
 	move.b	#56,d1
 
 	* which waveform to use? low, medium, ... 
@@ -766,7 +789,7 @@ osd_write_audio_pokey:
 	cmp.w	#0x300,d2
 	bcc.b	1f
 	* switch to very high
-	lea		very_high_channel_table(pc),a1
+	move.l		very_high_channel_table(pc),a1
 	move.b	#65/2,d1
 
 1:
@@ -1654,29 +1677,7 @@ osd_write_high_scores:
 se_soundfreq = 6
 se_soundvol = 8
 
-
-
-sound_test:
-	sub.l	a0,a0
-	move.b	#00,d0
-	bsr		osd_write_audio_pokey
-	add.l	#2,a0
-	move.b	#0x02,d0
-	bsr		osd_write_audio_pokey
 	
-
-	blitz
-	rts
-	
-sound_test_xx:
-	lea		TRI_WFORM_MEDIUM_sound_0,a0
-	*move.w	#630,(se_soundfreq,a0)   | 4096
-	move.w	#827,(se_soundfreq,a0)   | 0x1500
-	lea		_custom,a6
-	* looped sound
-	jsr		_mt_loopfx
-	blitz
-	rts
 	
 	.include	"sound_entries.68k"
 	
@@ -1702,23 +1703,57 @@ sound_test_xx:
 	WAVEFORM_ENTRY		TRI_WFORM_VERYHIGH,10,2,400,64,1
 	WAVEFORM_ENTRY		TRI_WFORM_VERYHIGH,10,3,400,64,1
 
-medium_channel_table:
+	WAVEFORM_ENTRY		SQU_WFORM_MEDIUM,28,0,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_MEDIUM,28,1,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_MEDIUM,28,2,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_MEDIUM,28,3,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_HIGH,16,0,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_HIGH,16,1,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_HIGH,16,2,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_HIGH,16,3,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_VERYHIGH,10,0,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_VERYHIGH,10,1,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_VERYHIGH,10,2,400,64,1
+	WAVEFORM_ENTRY		SQU_WFORM_VERYHIGH,10,3,400,64,1
+
+tri_medium_channel_table:
 	.long	TRI_WFORM_MEDIUM_sound_0
 	.long	TRI_WFORM_MEDIUM_sound_1
 	.long	TRI_WFORM_MEDIUM_sound_2
 	.long	TRI_WFORM_MEDIUM_sound_3
-high_channel_table:
+tri_high_channel_table:
 	.long	TRI_WFORM_HIGH_sound_0
 	.long	TRI_WFORM_HIGH_sound_1
 	.long	TRI_WFORM_HIGH_sound_2
 	.long	TRI_WFORM_HIGH_sound_3
-very_high_channel_table:
+tri_very_high_channel_table:
 	.long	TRI_WFORM_VERYHIGH_sound_0
 	.long	TRI_WFORM_VERYHIGH_sound_1
 	.long	TRI_WFORM_VERYHIGH_sound_2
 	.long	TRI_WFORM_VERYHIGH_sound_3
 	
-
+squ_medium_channel_table:
+	.long	SQU_WFORM_MEDIUM_sound_0
+	.long	SQU_WFORM_MEDIUM_sound_1
+	.long	SQU_WFORM_MEDIUM_sound_2
+	.long	SQU_WFORM_MEDIUM_sound_3
+squ_high_channel_table:
+	.long	SQU_WFORM_HIGH_sound_0
+	.long	SQU_WFORM_HIGH_sound_1
+	.long	SQU_WFORM_HIGH_sound_2
+	.long	SQU_WFORM_HIGH_sound_3
+squ_very_high_channel_table:
+	.long	SQU_WFORM_VERYHIGH_sound_0
+	.long	SQU_WFORM_VERYHIGH_sound_1
+	.long	SQU_WFORM_VERYHIGH_sound_2
+	.long	SQU_WFORM_VERYHIGH_sound_3
+	
+medium_channel_table:
+	.long	squ_medium_channel_table
+high_channel_table:
+	.long	squ_high_channel_table
+very_high_channel_table:
+	.long	squ_very_high_channel_table
 	
 level2_interrupt:
 	bsr		handle_keyboard
@@ -1821,7 +1856,7 @@ program_args_end:
 	.align	4
 read_args_string:
 	.byte	read_args_string_end-read_args_string
-	.ascii	"CHEATKEYS/S"
+	.ascii	"CHEATKEYS/S,NUMCREDITS/K,INFCREDITS/S,ALTWAVEFORM/S"
 read_args_string_end:
 
 	.ifndef	RELEASE
@@ -1872,7 +1907,7 @@ cheat_flags:
 		.long	WHDLTAG_CUSTOM2_GET
 number_of_credits:
 		.long	0
-
+music_style:
 		.long	WHDLTAG_CUSTOM3_GET
 misc_options:
 		.long	0
@@ -2125,10 +2160,6 @@ sprites:
 	.align	8
 	
 	
-RANGE_VERYHIGH = $01E
-RANGE_HIGH = $079
-RANGE_MEDIUM = $1DD
-
 TRI_WFORM_MEDIUM:
 	dc.b	0,0
 	dc.b	00,-10,-20,-30
@@ -2138,26 +2169,6 @@ TRI_WFORM_MEDIUM:
 	dc.b	20,30,40,50
 	dc.b	60,70,60,50
 	dc.b	40,30,20,10
-
-
-TRI_WFORM_LOW:
-	dc.b	0,0
-	dc.b	00,-5,-10,-15
-	dc.b	-20,-25,-30,-35
-	dc.b	-40,-45,-50,-55
-	dc.b	-60,-65,-70,-65
-	dc.b	-60,-55,-50,-45
-	dc.b	-40,-35,-30,-25
-	dc.b	-20,-15,-10,-5
-
-	dc.b	00,5,10,15
-	dc.b	20,25,30,35
-	dc.b	40,45,50,55
-	dc.b	60,65,70,65
-	dc.b	60,55,50,45
-	dc.b	40,35,30,25
-	dc.b	20,15,10,5
-
 
 
 TRI_WFORM_HIGH:
@@ -2171,7 +2182,7 @@ TRI_WFORM_VERYHIGH:
 	dc.b	00,35,70,35,0,-35,-70,-35
 
 
-SQR_WFORM_MEDIUM:
+SQU_WFORM_MEDIUM:
 	dc.b	60,60,60,60
 	dc.b	60,60,60,60
 	dc.b	60,60,60,60
@@ -2183,30 +2194,12 @@ SQR_WFORM_MEDIUM:
 	dc.b	-60,-60,-60,-60
 
 
-SQR_WFORM_LOW:
-	dc.b	60,60,60,60
-	dc.b	60,60,60,60
-	dc.b	60,60,60,60
-	dc.b	60,60,60,60
-	dc.b	60,60,60,60
-	dc.b	60,60,60,60
-	dc.b	60,30,15,00
-
-	dc.b	 00,-15,-30,-60
-	dc.b	-60,-60,-60,-60
-	dc.b	-60,-60,-60,-60
-	dc.b	-60,-60,-60,-60
-	dc.b	-60,-60,-60,-60
-	dc.b	-60,-60,-60,-60
-	dc.b	-60,-60,-60,-60
-
-
-SQR_WFORM_HIGH:
+SQU_WFORM_HIGH:
 	dc.b	60,60,60,60,60,60,30
 	dc.b	-30,-60,-60,-60,-60,-60,-60
 	
 
-SQR_WFORM_VERYHIGH:
+SQU_WFORM_VERYHIGH:
 	dc.b	50,60,30,0,-30,-60,-50
 	
 	
