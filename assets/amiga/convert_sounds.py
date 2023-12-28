@@ -122,10 +122,13 @@ with open(sndfile,"w") as fst,open(outfile,"w") as fw:
             maxsigned = max(signed_data)
             minsigned = min(signed_data)
 
-            amp_ratio = max(maxsigned,abs(minsigned))/44
+            amp_ratio = max(maxsigned,abs(minsigned))/64
 
             wav = os.path.splitext(wav_name)[0]
-            sound_table[sound_index] = "    SOUND_ENTRY {},{},{},{},{},{}\n".format(wav,len(signed_data)//2,channel,used_sampling_rate,int(64*amp_ratio),used_priority)
+            volume = int(64*amp_ratio)
+            # for this game I'm sticking all sounds to the max
+            volume = 64
+            sound_table[sound_index] = "    SOUND_ENTRY {},{},{},{},{},{}\n".format(wav,len(signed_data)//2,channel,used_sampling_rate,volume,used_priority)
             sound_table_set[sound_index] = f"\t.word\t1,{int(details.get('loops',0))}\n\t.long\t{wav}_sound"
 
             if amp_ratio > 0:

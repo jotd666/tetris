@@ -1,5 +1,4 @@
 - non whd version can crash when quit+started again
-- double buffering 
 
 low pri:
 

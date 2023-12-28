@@ -15,8 +15,15 @@ AFB_68010 = 0
 AFB_68020 = 1
 
 
-DIRECT_DRAW = 1
-
+* set direct draw: immediate update, possible tearing
+OPT_DIRECT_DRAW = 0
+	.ifeq	OPT_DIRECT_DRAW
+OPT_ENABLE_DOUBLE_BUFFERING_BG = 0   | do not change!
+	.else
+	* if direct draw not set, can enable double buffering
+OPT_ENABLE_DOUBLE_BUFFERING_BG = 1
+	.endif
+	
 SCREEN_ADDRESS = 0x1000
 PALETTE_ADDRESS = 0x2000
 
@@ -39,7 +46,6 @@ ONE_TICK = 1
 	.endif
 	
 
-OPT_ENABLE_DOUBLE_BUFFERING_BG = 0
 
 _custom = 0xDFF000
 
@@ -202,6 +208,12 @@ _user:
 	st		unlimited_credits_flag
 	st		cheat_used
 2:
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
+	move.l	(A0)+,D0	| DOUBLEBUF/S/S
+	beq.b	2f
+	move.l	#1,double_buffering
+	.endif
+2:
 	move.l	(A0)+,D0	| ALTWAVEFORM/S
 	beq.b	2f
 	move.l	#1,music_style
@@ -247,6 +259,10 @@ _user:
 .startup:
 
 * no multitask
+	.ifeq  OPT_ENABLE_DOUBLE_BUFFERING_BG
+	clr.l	double_buffering
+	.endif
+
     tst.l   _resload
     bne.b   .no_forbid
     *move.l  _gfxbase(pc),a4
@@ -597,7 +613,7 @@ _vblank:
 	move.w	#0x10,(intreq,a5)
 	
 	* update screen
-	.ifeq	DIRECT_DRAW
+	.ifeq	OPT_DIRECT_DRAW
 	jbsr		update_screen
 	lea		_custom,a5
 	.endif
@@ -619,7 +635,10 @@ _vblank:
 	jbsr		tetris_irq	
 23:
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING_BG
+	tst.b	double_buffering+3
+	beq.b	24f
 	bsr		switch_screen_buffers
+24:
 	.endif
 
 	* now we check copper interrupt again
@@ -1008,14 +1027,14 @@ osd_sound_stop:
 	
 
 
-switch_screen_buffers:	
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
+switch_screen_buffers:	
 	* let's switch screen buffers, background (chars)
 	* toggle fg planes (double buffering)
 	lea		bg_drawed_screen_ptr(pc),a0
 	lea		bg_displayed_screen_ptr(pc),a4
-	lea		bg_screen_data_1,a1
-	lea		bg_screen_data_2,a5
+	move.l		bg_screen_data_ptr_1,a1
+	move.l		bg_screen_data_ptr_2,a5
 	* also switch previous state memory
 	cmp.l	(a0),a1
 	bne.b	2f
@@ -1026,9 +1045,9 @@ switch_screen_buffers:
 	move.l	a1,(a0)
 	move.l	a5,(a4)
 	jbsr		set_bg_bitplanes
-	.endif
 	
 	rts
+	.endif
 
 	
 store_system:
@@ -1206,12 +1225,25 @@ platform_init:
 	addq.w	#8,a1
 	dbf		d1,0b
 	
-	lea	bg_screen_buffer,a0
+	lea	bg_screen_buffer_1,a0
 	addq	#8,a0
 	move.l	a0,d0
 	and.w	#0xFFF8,d0
 	move.l	d0,a0
 	move.l	a0,bg_drawed_screen_ptr
+	move.l	a0,bg_screen_data_ptr_1
+	move.l	a0,bg_screen_data_ptr_2
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
+	tst.l	double_buffering
+	beq.b	0f
+	lea	bg_screen_buffer_2,a0
+	addq	#8,a0
+	move.l	a0,d0
+	and.w	#0xFFF8,d0
+	move.l	d0,a0
+	move.l	a0,bg_screen_data_ptr_2
+	.endif
+0:
 	move.l	a0,bg_displayed_screen_ptr
 	
 	bsr		set_bg_bitplanes
@@ -1321,7 +1353,7 @@ osd_r_videoram:
 	tst.b	d0	| very important as it replaces a lda
 	rts
 
-	.ifeq	DIRECT_DRAW
+	.ifeq	OPT_DIRECT_DRAW
 * called once in bottom of frame so dirty tiles are rewritten there and
 * not directly, to avoid tearing (possible double buffering too with that method)
 *
@@ -1335,7 +1367,11 @@ update_screen:
 	tst.b	(a6,d7.w)
 	beq.b	5f
 	* ack line
-	clr.b	(a6,d7.w)
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
+	subq.b	#1,(a6,d7.w)
+	.else
+	clr.b	(a6,d7.w)	
+	.endif
 	
 	lea		bg_videoram,a4
 	lea		dirty_rows_array(pc),a5
@@ -1349,7 +1385,11 @@ update_screen:
 	tst.b	(a5)+
 	beq.b	2f
 	* needs update
+	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
+	subq.b	#1,(-1,a5)		| ack tile
+	.else
 	clr.b	(-1,a5)		| ack tile
+	.endif
 	* get 16-bit word for tile&color
 	move.w	(a4),d0
 	move.w	d4,d1		| line offset
@@ -1411,7 +1451,7 @@ osd_w_colorram:
 	move.w	a0,d1		| address offset
 	lsr.w	#1,d1		| offset /= 2
 
-	.ifne	DIRECT_DRAW
+	.ifne	OPT_DIRECT_DRAW
 	* draw tile now (induces tearing on slow machines)
 	bclr	#0,d0
 	move.l	d0,a1
@@ -1420,15 +1460,17 @@ osd_w_colorram:
 
 	jbsr		update_tile
 	.else	
+
 	* mirrors video RAM layout (only 1 byte per tile, not 2)
 	lea		dirty_rows_array(pc),a0
-	move.b	#1,(a0,d1.w)
+	* double buffering needs 2 updates when a change is made
+	move.b	#OPT_ENABLE_DOUBLE_BUFFERING_BG+1,(a0,d1.w)
 	
 	* just mark row & col as dirty so lookup will be faster
 	* only test row if row flag is set
 	lea		dirty_line_list(pc),a0
 	lsr.w	#6,d1			| 64 bytes per row
-	move.b	#1,(a0,d1.w)
+	move.b	#OPT_ENABLE_DOUBLE_BUFFERING_BG+1,(a0,d1.w)
 	
 	.endif
 	
@@ -1864,7 +1906,7 @@ program_args_end:
 	.align	4
 read_args_string:
 	.byte	read_args_string_end-read_args_string
-	.ascii	"CHEATKEYS/S,NUMCREDITS/K,INFCREDITS/S,ALTWAVEFORM/S"
+	.ascii	"CHEATKEYS/S,NUMCREDITS/K,INFCREDITS/S,DOUBLEBUF/S,ALTWAVEFORM/S"
 read_args_string_end:
 
 	.ifndef	RELEASE
@@ -1915,12 +1957,11 @@ cheat_flags:
 		.long	WHDLTAG_CUSTOM2_GET
 number_of_credits:
 		.long	0
-music_style:
 		.long	WHDLTAG_CUSTOM3_GET
-misc_options:
+music_style:
 		.long	0
 		.long	WHDLTAG_CUSTOM4_GET
-dip_switch_difficulty:
+double_buffering:
 		.long	0
 		.long	WHDLTAG_CUSTOM5_GET
 dip_switch_start_lives:
@@ -1950,7 +1991,7 @@ is_vblank:
 keyboard_table:
 	ds.b	0x100
 
-	
+
 pause_flag:
 	.word	0
 
@@ -1991,6 +2032,10 @@ bg_displayed_screen_ptr:
 lfsr_index:
 	dc.l	(1<<17)-1
 
+bg_screen_data_ptr_1:
+	.long	0
+bg_screen_data_ptr_2:
+	.long	0
 	
 _keyexit:
 	.byte	0x45	| ESC by default unless whdload overwrites it
@@ -2213,14 +2258,15 @@ SQU_WFORM_VERYHIGH:
 	
 		.section .bsschip
 
-bg_screen_buffer:
+bg_screen_buffer_1:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3
 	ds.b	8		| for alignment
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING_BG
-bg_screen_data_2:
+bg_screen_buffer_2:
 	ds.b	BG_SCREEN_SIZE
 	ds.b	NB_BYTES_PER_ROW*12*3
+	ds.b	8		| for alignment
 	.endif
 	.align	8
 

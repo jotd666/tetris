@@ -35,6 +35,7 @@ _config
 	dc.b    "C1:X:cheat keys:0;"
 	dc.b    "C2:L:number of credits:infinite,1,2,3,4,5,6,7,8,9;"
 	dc.b    "C3:L:music:square,triangle;"
+	dc.b    "C4:B:double buffering;"
 	dc.b	0
 
 	IFD BARFLY
