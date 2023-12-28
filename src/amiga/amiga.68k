@@ -1789,8 +1789,16 @@ handle_keyboard:
 	cmp.b	#0x50,d0	| F1 key
 	bne.b	0f
 	st.b	cheat_used
-	* complete level
+	* complete level - player 1
 	lea		game_ram+0x30,a0
+	move.b	#0x30,(a0)+
+	move.b	#0x30,(a0)
+0:
+	cmp.b	#0x51,d0	| F2 key
+	bne.b	0f
+	st.b	cheat_used
+	* complete level - player 2
+	lea		game_ram+0x32,a0
 	move.b	#0x30,(a0)+
 	move.b	#0x30,(a0)
 	

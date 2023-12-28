@@ -8,7 +8,8 @@ Credits:
 
 Cheat keys (Amiga):
 
-F1: next block completes level
+F1: next block completes level - player 1
+F2: next block completes level - player 2
 
 Options (Amiga):
 

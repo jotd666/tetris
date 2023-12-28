@@ -18863,11 +18863,10 @@ l_e47c:
 	move.b	(a0),d0                         	| [$e480: lda	$0049]
 l_e482:
 	clr.b	d2                               	| [$e482: ldy #$00]
-	PUSH_SR
-	GET_ADDRESS_Y	0x5a                     	| [$e484: sta ($5a), y]
-	move.b	d0,(a0,d2.w)                    	| [$e484: sta ($5a), y]
 
-	POP_SR
+	GET_PALETTE_ADDRESS_Y	0x005a                    	| [$e484: sta ($5a), y]
+	jbsr	osd_set_palette_entry                      	| [$e484: sta ($5a), y]
+
 	addq.b	#1,d1                           	| [$e486: inx]
 	cmp.b	#0x0c,d1                         	| [$e487: cpx #$0c]
 	* bcc=>bcs
