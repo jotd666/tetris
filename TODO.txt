@@ -1,10 +1,7 @@
 - non whd version can crash when quit+started again
-
-low pri:
-
+- ATM forced volume for music
 - simulate "drums" in 2 tunes: currently not played:
   break 45a5 A==1, break on write to 2818 value 50...
-- ATM forced volume for music
 - check what service mode sets in EEPROM
   to allow some settings: difficulty is the only interesting setting
 - don't decrease a credit in "continue" with infinite credits (5->4 but it's

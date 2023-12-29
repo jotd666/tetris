@@ -3419,7 +3419,7 @@ l_4c99:
     move.b	d0,(a0,d1.w)                 	| [$4c9f: sta	$0d01, x]
 	SET_XC_FLAGS                           	| [$4ca2: sec]
 	rts                                    	| [$4ca3: rts]
-l_4ca4:
+change_tempo_4ca4:
 	                           	| [$4ca4: clc]
 	GET_ADDRESS	0x0d6f                     	| [$4ca5: adc	$0d6f, x]
 	add.b	(a0,d1.w),d0	| [$4ca5: adc	$0d6f, x]
@@ -4850,7 +4850,7 @@ l_82b5:
 
 jump_table_4bb2:
 	.long	l_4cb8
-	.long	l_4ca4
+	.long	change_tempo_4ca4
 	.long	l_4cda
 	.long	l_4cc3
 	.long	l_4cec

@@ -1464,13 +1464,15 @@ osd_w_colorram:
 	* mirrors video RAM layout (only 1 byte per tile, not 2)
 	lea		dirty_rows_array(pc),a0
 	* double buffering needs 2 updates when a change is made
-	move.b	#OPT_ENABLE_DOUBLE_BUFFERING_BG+1,(a0,d1.w)
+	move.b	double_buffering+3(pc),d0
+	addq.b	#1,d0
+	move.b	d0,(a0,d1.w)
 	
 	* just mark row & col as dirty so lookup will be faster
 	* only test row if row flag is set
 	lea		dirty_line_list(pc),a0
 	lsr.w	#6,d1			| 64 bytes per row
-	move.b	#OPT_ENABLE_DOUBLE_BUFFERING_BG+1,(a0,d1.w)
+	move.b	d0,(a0,d1.w)
 	
 	.endif
 	
