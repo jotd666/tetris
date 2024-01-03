@@ -1416,7 +1416,7 @@ update_screen:
 * should preserve all registers
 
 osd_w_colorram:
-	movem.l	d0-d3/d6/a0-a2,-(a7)
+	movem.l	d0-d3/d5/d6/a0-a2,-(a7)
 	
 	cmp.w	#SCREEN_ADDRESS,a0
 	bcs.b	0f
@@ -1477,7 +1477,7 @@ osd_w_colorram:
 	.endif
 	
 0:
-	movem.l	(a7)+,d0-d3/d6/a0-a2
+	movem.l	(a7)+,d0-d3/d5/d6/a0-a2
 	rts
 	
 * < A0=screen address (preserved)
@@ -1553,6 +1553,7 @@ update_tile:
 	add.w	d3,a1
 	add.w	d1,a1
 
+	move.w	#BG_SCREEN_PLANE_SIZE,d5
 
 *	* optimization when a well-known
 *	* empty character is passed (standard charset)
@@ -1594,7 +1595,7 @@ update_tile:
 	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 5:
-	add.w	#BG_SCREEN_PLANE_SIZE,a1
+	add.w	d5,a1
 	dbf		d3,3b
 	rts
 0:
@@ -1615,7 +1616,7 @@ update_tile:
 	clr.b	(offset,a1)
 	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
-	add.w	#BG_SCREEN_PLANE_SIZE,a1
+	add.w	d5,a1
 	dbf		d3,11b
 2:
 	rts
