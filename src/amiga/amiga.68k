@@ -1507,15 +1507,40 @@ osd_w_videoram:
 	movem.l	(a7)+,d0-d3/d6/a0-a2
 	rts
 
+	.macro	COMPUTE_TILE_REGS
+	* layout is simple: X = offset % 0x40
+	*                   Y = offset // 0x40
+	move.w	d1,d3
+	and.w	#0x3F,d1	| X
+	cmp.w	#LOGICAL_NB_BYTES_PER_ROW,d1
+	jcc		0f			| last tiles are invisible
+	lsr.w	#6,d3		| Y
+	
+	lea		mulNB_BYTES_PER_ROW_table(pc),a0
+
+	move.l	bg_drawed_screen_ptr(pc),a1
+	* D3 = Y
+
+	add.w	d3,d3
+	move.w	(a0,d3.w),d3
+	lsl.w	#3,d3		| times 8
+	add.w	d3,a1
+	add.w	d1,a1
+
+	move.w	#BG_SCREEN_PLANE_SIZE,d5
+	moveq	#NB_PLAYFIELD_PLANES-1,d3
+	
+	.endm
 	
 * < D0.W: tile+color 
 * < D1.W: screen offset
 update_tile:
 	move.w	d0,d2
+	jeq		blank_tile	| 0+0 = clear: happens a lot
 	ror.w	#8,d0		| invert bytes
 	and.w	#0x07FF,d0	| 2048 tiles: tile index
 	and.w	#0xF0,d2
-	lsr.w	#4,d2		| tile CLUT (ignored ATM)
+	lsr.w	#4,d2		| tile CLUT
 	
 	.ifne	OPT_ENABLE_LOGGING
 	* when logging is enabled, play a while
@@ -1533,45 +1558,13 @@ update_tile:
 	movem.w	(a7)+,d0-d1
 	.endif
 	
-	* layout is simple: X = offset % 0x40
-	*                   Y = offset // 0x40
-	move.w	d1,d3
-	and.w	#0x3F,d1	| X
-	cmp.w	#LOGICAL_NB_BYTES_PER_ROW,d1
-	jcc		0f			| last tiles are invisible
-	lsr.w	#6,d3		| Y
-	
-	lea		mulNB_BYTES_PER_ROW_table(pc),a0
-
-	
-	move.l	bg_drawed_screen_ptr(pc),a1
-	* D3 = Y
-
-	add.w	d3,d3
-	move.w	(a0,d3.w),d3
-	lsl.w	#3,d3		| times 8
-	add.w	d3,a1
-	add.w	d1,a1
-
-	move.w	#BG_SCREEN_PLANE_SIZE,d5
-
-*	* optimization when a well-known
-*	* empty character is passed (standard charset)
-*	* doesn't seem to depend on the attribute
-*	cmp.w	#0xE0,d0	| empty character
-*	jeq	11f
-*	cmp.w	#0x1E0,d0	| empty character
-*	jeq	11f
-*	cmp.w	#0x3E0,d0	| empty character
-*	jeq	11f
-*	cmp.w	#0x10,d0	| empty character
-*	jeq	11f
+	COMPUTE_TILE_REGS
 
 	lea		character_table,a0
 	add.w	d0,d0
 	add.w	d0,d0
 	move.l	(a0,d0.w),d0
-	jeq	2f				| isn't declared as used
+	jeq	0f				| isn't declared as used
 	move.l	d0,a0		| pointer on clut table
 	* now we use d2 (attribute) to get relative pointer on list of bitplanes
 	add.w	d2,d2
@@ -1579,7 +1572,6 @@ update_tile:
 	cmp.l	d0,a0
 	jeq		12f		| should not happen
 
-	moveq	#NB_PLAYFIELD_PLANES-1,d3
 	move.l	a0,a2
 	lea		planes_table,a3
 3:
@@ -1602,15 +1594,25 @@ update_tile:
 	rts
 
 6:
-	* clear tile
+	* clear tile plane
 	.set	offset,0
 	.rept	8
 	clr.b	(offset,a1)
 	.set	offset,offset+NB_BYTES_PER_ROW
 	.endr
 	bra.b	5b
+
+12:
+	* clut/tile combo not declared as used
+	**blitz
+	rts
 	
+blank_tile:
+	* optimization when a well-known
+	* empty character is passed (standard charset)
+	COMPUTE_TILE_REGS
 11:
+	* clear whole tile (all planes)
 	.set	offset,0
 	.rept	8
 	clr.b	(offset,a1)
@@ -1618,13 +1620,8 @@ update_tile:
 	.endr
 	add.w	d5,a1
 	dbf		d3,11b
-2:
 	rts
 
-12:
-	* clut/tile combo not declared as used
-	**blitz
-	rts
 
 
 			
