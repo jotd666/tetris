@@ -5,6 +5,7 @@ Credits:
 
 - jotd: 6502 to 68000 conversion
 - DanyPPC & Pascal: icons
+- Atari: arcade conversion of the original game
 
 Cheat keys (Amiga):
 
@@ -16,5 +17,6 @@ Options (Amiga):
 CHEATKEYS: enable cheat keys
 NUMCREDITS: set start number of credits (default 5)
 INFCREDITS: infinite credits
+DOUBLEBUF: enables double buffering
 ALTWAVEFORM: select triangle square wave for music
 

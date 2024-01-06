@@ -35,7 +35,8 @@ _config
 	dc.b    "C1:X:cheat keys:0;"
 	dc.b    "C2:L:number of credits:infinite,1,2,3,4,5,6,7,8,9;"
 	dc.b    "C3:L:music:square,triangle;"
-	dc.b    "C4:B:double buffering;"
+	dc.b    "C4:X:double buffering:0;"
+	dc.b    "C4:X:music off:1;"
 	dc.b	0
 
 	IFD BARFLY
@@ -43,7 +44,7 @@ _config
 	ENDC
 
 DECL_VERSION:MACRO
-	dc.b	"1.0"
+	dc.b	"1.1"
 	IFD BARFLY
 		dc.b	" "
 		INCBIN	"T:date"
@@ -55,7 +56,7 @@ DECL_VERSION:MACRO
 	ENDM
 _data   dc.b    0
 _name	dc.b	'Tetris',0
-_copy	dc.b	'2023 JOTD',0
+_copy	dc.b	'2023-2024 JOTD',0
 _info
 	dc.b	"Version "
     DECL_VERSION

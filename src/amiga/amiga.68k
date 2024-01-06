@@ -211,12 +211,16 @@ _user:
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
 	move.l	(A0)+,D0	| DOUBLEBUF/S/S
 	beq.b	2f
-	move.l	#1,double_buffering
+	bset	#0,misc_options+3
 	.endif
 2:
 	move.l	(A0)+,D0	| ALTWAVEFORM/S
 	beq.b	2f
 	move.l	#1,music_style
+2:
+	move.l	(A0)+,D0	| MUSICOFF/S
+	beq.b	2f
+	bset	#1,misc_options+3
 2:
 
 	lea		_custom,a5
@@ -260,7 +264,7 @@ _user:
 
 * no multitask
 	.ifeq  OPT_ENABLE_DOUBLE_BUFFERING_BG
-	clr.l	double_buffering
+	tst.b	double_buffering
 	.endif
 
     tst.l   _resload
@@ -290,34 +294,12 @@ _user:
 	move.l	#tri_medium_channel_table,medium_channel_table
 0:
 
-	.ifne	0
-	move.l	dip_switch_difficulty(pc),d0
-	lsl.b	#3,d0
-	
-
 	move.l	misc_options,d1
 	btst	#0,d1
-	
+	sne		double_buffering
 	btst	#1,d1
-	beq.b	0f
-	bset	#5,d0
-0:
-	btst	#2,d1
-	
-	move.b	d0,dip_switches
+	sne		music_off
 
-
-	
-
-	move.l	cheat_flags,d0
-	btst	#0,d0
-	
-	btst	#1,d0
-	
-	btst	#2,d0
-	
-	btst	#3,d0
-	.endif
 	
 	jsr	 _detect_controller_types 
 	clr.b	controller_joypad_0
@@ -635,7 +617,7 @@ _vblank:
 	jbsr		tetris_irq	
 23:
 	.ifne  OPT_ENABLE_DOUBLE_BUFFERING_BG
-	tst.b	double_buffering+3
+	btst.b	#0,misc_options+3
 	beq.b	24f
 	bsr		switch_screen_buffers
 24:
@@ -748,6 +730,10 @@ osd_get_random:
 * < D0: value to write
 * < A0: address (minus 0x2800)
 osd_write_audio_pokey:
+	tst.b	music_off
+	beq.b	0f
+	rts
+0:
 	movem.l	d0-d5/a0/a1/a5/a6,-(a7)
 	lea		_custom,a6
 	moveq	#0,d5
@@ -1234,7 +1220,7 @@ platform_init:
 	move.l	a0,bg_screen_data_ptr_1
 	move.l	a0,bg_screen_data_ptr_2
 	.ifne	OPT_ENABLE_DOUBLE_BUFFERING_BG
-	tst.l	double_buffering
+	btst	#0,misc_options+3
 	beq.b	0f
 	lea	bg_screen_buffer_2,a0
 	addq	#8,a0
@@ -1464,7 +1450,7 @@ osd_w_colorram:
 	* mirrors video RAM layout (only 1 byte per tile, not 2)
 	lea		dirty_rows_array(pc),a0
 	* double buffering needs 2 updates when a change is made
-	move.b	double_buffering+3(pc),d0
+	move.b	double_buffering(pc),d0
 	addq.b	#1,d0
 	move.b	d0,(a0,d1.w)
 	
@@ -1646,14 +1632,6 @@ set_bg_bitplanes:
     rts
 
 
-osd_read_dipswitches:
-	* actual dipswitches
-	move.b	dip_switches(pc),d0
-	not.b	d0		| active low
-	
-
-	rts
-	
 
 
 
@@ -1906,7 +1884,7 @@ program_args_end:
 	.align	4
 read_args_string:
 	.byte	read_args_string_end-read_args_string
-	.ascii	"CHEATKEYS/S,NUMCREDITS/K,INFCREDITS/S,DOUBLEBUF/S,ALTWAVEFORM/S"
+	.ascii	"CHEATKEYS/S,NUMCREDITS/K,INFCREDITS/S,DOUBLEBUF/S,ALTWAVEFORM/S,MUSICOFF/S"
 read_args_string_end:
 
 	.ifndef	RELEASE
@@ -1961,25 +1939,22 @@ number_of_credits:
 music_style:
 		.long	0
 		.long	WHDLTAG_CUSTOM4_GET
-double_buffering:
-		.long	0
-		.long	WHDLTAG_CUSTOM5_GET
-dip_switch_start_lives:
+misc_options:
 		.long	0
 	.long	0
-dip_switches:
-		.byte	0x20	| default english
-		.byte	0
+
 
 system_vbr:
 	.long	0
 	
-orig_color_4:
-	.word	0
 	
 high_score_buffer:
 	ds.b	SCORE_FILE_SIZE
 
+double_buffering:
+	.byte	0
+music_off:
+	.byte	0
 highscore_needs_saving:
 	.byte	0
 highscore_loaded:
