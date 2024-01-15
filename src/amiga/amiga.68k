@@ -1,7 +1,7 @@
 *
-*	Amiga-specific portions of Super Bagman
+*	Amiga-specific portions of Tetris
 *
-* (c) JOTD 2023
+* (c) JOTD 2023-2024
 *
 
 .include "../src/tetris.inc"
@@ -30,7 +30,7 @@ PALETTE_ADDRESS = 0x2000
 
 SCORE_FILE_SIZE = 0x90
 
-
+BORDERBLANK = 1
 
 	.ifdef	RELEASE
 OPT_ENABLE_PROFILING = 0         | DO NOT CHANGE THIS
@@ -298,7 +298,7 @@ _user:
 	btst	#0,d1
 	sne		double_buffering
 	btst	#1,d1
-	sne		music_off
+	sne		music_off_flag
 
 	
 	jsr	 _detect_controller_types 
@@ -610,7 +610,6 @@ _vblank:
 	st.b	two_ticks
 	clr.w d0    
 22:
-	
 	jbsr		tetris_irq
 	tst.b	two_ticks
 	beq.b	23f
@@ -730,10 +729,6 @@ osd_get_random:
 * < D0: value to write
 * < A0: address (minus 0x2800)
 osd_write_audio_pokey:
-	tst.b	music_off
-	beq.b	0f
-	rts
-0:
 	movem.l	d0-d5/a0/a1/a5/a6,-(a7)
 	lea		_custom,a6
 	moveq	#0,d5
@@ -891,8 +886,11 @@ osd_write_audio_pokey:
 
 osd_read_pokey1:
 	moveq	#0,d0
+	tst.b	pause_flag
+	bne.b	1f
 	tst.b	is_vblank
 	bne.b	0f
+1:
 	* not vblank: set VBLANK bit (apparently inverted logic)
 	bset	#6,d0
 0:
@@ -1178,9 +1176,9 @@ platform_init:
     move.w d0,bpl2mod(a5)
 	
 	
-    move.w #0x0210,bplcon0(a5) | 8 bitplanes
+    move.w #0x0210+BORDERBLANK,bplcon0(a5) | 8 bitplanes, borderblank
     move.w #0x0024,bplcon2(a5)
-    move.w #0x0C00,bplcon3(a5)     | no AGA specificities, default ECS
+    move.w #0x0C00+BORDERBLANK<<5,bplcon3(a5)     | no AGA specificities, default ECS
 
 
 	* init color table
@@ -1424,8 +1422,8 @@ osd_w_colorram:
 	add.w	a0,a1
 
 	move.b	d0,(a1)	| update logical grid
-	move.l	a1,d0
 	.ifndef	RELEASE
+	move.l	a1,d0
 	btst	#0,d0
 	bne.b	1f
 	lea		write_colorram_called_on_even_address(pc),a0
@@ -1487,8 +1485,32 @@ osd_w_videoram:
 	.endif
 	bra.b	2f
 1:
-	lea		bg_videoram-SCREEN_ADDRESS,a1
-	move.b	d0,(a1,a0.w)	| update logical grid
+	sub.w	#SCREEN_ADDRESS,a0
+	lea		bg_videoram,a1
+	add.w	a0,a1
+
+	move.b	d0,(a1)	| update logical grid
+
+	.ifeq	OPT_DIRECT_DRAW
+	move.w	a0,d1		| address offset
+	lsr.w	#1,d1		| offset /= 2
+
+	* mirrors video RAM layout (only 1 byte per tile, not 2)
+	lea		dirty_rows_array(pc),a0
+	* double buffering needs 2 updates when a change is made
+	move.b	double_buffering(pc),d0
+	addq.b	#1,d0
+	move.b	d0,(a0,d1.w)
+	
+	* just mark row & col as dirty so lookup will be faster
+	* only test row if row flag is set
+	lea		dirty_line_list(pc),a0
+	lsr.w	#6,d1			| 64 bytes per row
+	move.b	d0,(a0,d1.w)
+	
+	.endif
+
+	
 2:
 	movem.l	(a7)+,d0-d3/d6/a0-a2
 	rts
@@ -1953,8 +1975,6 @@ high_score_buffer:
 
 double_buffering:
 	.byte	0
-music_off:
-	.byte	0
 highscore_needs_saving:
 	.byte	0
 highscore_loaded:
@@ -2117,7 +2137,7 @@ bg_bitplanes:
 	DECL_BITPLANES	0
 copperlist_colors:
 	.rept	8
-	.word	bplcon3,bpl_count<<13
+	.word	bplcon3,(bpl_count<<13)+(BORDERBLANK<<5)
 	.set	bpl_count,bpl_count+1
 	DECL_32_COLORS
 	.endr

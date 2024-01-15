@@ -1,3 +1,6 @@
+- If you leave the attract mode running you get some characters left on the instructions when it clears for the next set of text.
+  (noticed when losing a game too: continue screen leaves pieces)
+
 - non whd version can crash when quit+started again
 - ATM forced volume for music
 - simulate "drums" in 2 tunes: currently not played:

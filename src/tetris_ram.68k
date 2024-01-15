@@ -7,6 +7,7 @@
 	.global		vb_ticks_count
 	.global		start_number_of_credits
 	.global		unlimited_credits_flag
+	.global		music_off_flag
 	.ifndef		RELEASE
 	.global		memory_dump
 	.endif
@@ -35,3 +36,7 @@ start_number_of_credits:
 	ds.b	1
 unlimited_credits_flag:
 	ds.b	1
+music_off_flag:
+	ds.b	1
+	
+	

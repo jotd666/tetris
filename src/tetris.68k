@@ -868,11 +868,11 @@ extra_sound_event_table:
 	.long	do_rts				                | 02
 	.long	do_rts                              | 03
 	.long	do_rts                              | 04
-	.long	do_rts                              | 05
-	.long	do_rts                              | 06
-	.long	do_rts                              | 07
-	.long	do_rts                              | 08
-	.long	do_stop_sound                      | 09: stop
+	.long	do_in_game_music                    | 05  Loginska tune
+	.long	do_in_game_music                    | 06  Bradinsky tune
+	.long	do_in_game_music                    | 07  Kalinka tune
+	.long	do_in_game_music                    | 08  Troika tune
+	.long	do_stop_sound                       | 09: stop
 	.long	do_rts                              | 0A
 	.long	do_rts                              | 0B
 	.long	do_rts                              | 0C
@@ -984,6 +984,14 @@ do_stop_sound:
 do_rts:
 	moveq	#0,d0
 	rts
+	
+do_in_game_music:
+	tst.b	music_off_flag
+	beq.b	do_rts
+	* music is off: in-game music command does nothing
+	moveq	#1,d0
+	rts
+	
 play_random_block:
 	move.w	#RANDOM_BLOCK_SND,d0
 	jbsr	osd_sound_start
