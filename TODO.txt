@@ -1,5 +1,4 @@
-- If you leave the attract mode running you get some characters left on the instructions when it clears for the next set of text.
-  (noticed when losing a game too: continue screen leaves pieces)
+- optional NES randomizer https://harddrop.com/wiki/Tetris_(Game_Boy)#Randomizer
 
 - non whd version can crash when quit+started again
 - ATM forced volume for music
