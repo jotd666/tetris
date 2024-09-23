@@ -103,7 +103,7 @@ with open(sndfile,"w") as fst,open(outfile,"w") as fw:
             wav_file = os.path.join(sound_dir,wav_name+".wav")
 
             def get_sox_cmd(sr,output):
-                return [sox,"--volume","0.92",wav_file,"--channels","1","--bits","8","-r",str(sr),"--encoding","signed-integer",output]
+                return [sox,"--volume","0.92",wav_file,"--channels","1","-D","--bits","8","-r",str(sr),"--encoding","signed-integer",output]
 
 
             used_sampling_rate = details["sample_rate"]
