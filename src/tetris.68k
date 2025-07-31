@@ -321,6 +321,11 @@ coin_counters_3C00 = 0x3C00
 	POP_SR
 	.endm
 
+	.macro	BIT	arg
+	move.b	d0,d4
+	and.b	\arg,d4
+	.endm
+
 	.macro GET_ADDRESS	offset
 	lea	\offset,a0
 	jbsr	get_address
@@ -4381,7 +4386,7 @@ l_8032:
 *	move.b	d0,(a0)                         	| [$809a: sta	$280b]
 *	POP_SR
 *	GET_ADDRESS	allpot_2808                     	| [$809d: bit	$2808]
-*	tst.b	(a0)                             	| [$809d: bit	$2808]
+*	BIT	(a0)                             	| [$809d: bit	$2808]
 *	bmi	service_mode_80a8                             	| [$80a0: bmi	$80a8]
 	jbsr	l_e649                            	| [$80a2: jsr	$e649]
 	jmp	continue_startup_e661              	| [$80a5: jmp continue_startup_e661]
@@ -4523,10 +4528,10 @@ l_8128:
 l_8134:
 	addq.b	#1,d2                           	| [$8134: iny]
 	bne	l_8128                             	| [$8135: bne	$8128]
-	PUSH_SR
+	
                                          | [$8137: sta watchdog_3000]
                                          | [$8137: sta watchdog_3000]
-	POP_SR
+	
 	GET_ADDRESS	screen_address_msb_00ae                     	| [$813a: lda	$00ae]
 	move.b	(a0),d0                         	| [$813a: lda	$00ae]
 	cmp.b	#0x20,d0                         	| [$813c: cmp #$20]
@@ -4669,30 +4674,30 @@ l_81d8:
 	move.b	#0x40,d1                        	| [$81fc: ldx #$40]
 	move.b	#0xc0,d2                        	| [$81fe: ldy #$c0]
 	jbsr	l_8ca0                            	| [$8200: jsr	$8ca0]
-	CLR_XC_FLAGS                           	| [$8203: clc]
+	                           	| [$8203: clc]
 	GET_ADDRESS	0x6000                     	| [$8204: adc	$6000]
 	move.b	(a0),d4	| [$8204: adc	$6000]
-	addx.b	d4,d0                         	| [$8204: adc	$6000]
+	add.b	d4,d0                         	| [$8204: adc	$6000]
 	cmp.b	#0xff,d0                         	| [$8207: cmp #$ff]
 	beq	l_8223                             	| [$8209: beq	$8223]
 	move.b	#0x24,d2                        	| [$820b: ldy #$24]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0002                     	| [$820d: sty	$0002]
 	move.b	d2,(a0)                         	| [$820d: sty	$0002]
-	POP_SR
+	
 	move.b	#0x12,d2                        	| [$820f: ldy #$12]
-	PUSH_SR
+	
 	GET_ADDRESS	0x0003                     	| [$8211: sty	$0003]
 	move.b	d2,(a0)                         	| [$8211: sty	$0003]
-	POP_SR
+	
 	jbsr	l_9264                            	| [$8213: jsr	$9264]
 	GET_ADDRESS	0x00af                     	| [$8216: lda	$00af]
 	move.b	(a0),d0                         	| [$8216: lda	$00af]
 	or.b	#0x04,d0                          	| [$8218: ora #$04]
-	PUSH_SR
+	
 	GET_ADDRESS	0x00af                     	| [$821a: sta	$00af]
 	move.b	d0,(a0)                         	| [$821a: sta	$00af]
-	POP_SR
+	
 	move.b	#0x04,d0                        	| [$821c: lda #$04]
 	clr.b	d2                               	| [$821e: ldy #$00]
 	jbsr	l_8cbc                            	| [$8220: jsr	$8cbc]
@@ -5777,7 +5782,7 @@ display_screen_and_other_stuff_8818:
 	clr.b	(a0)                         	| [$8822: sta sync_variable_06a3]
 l_8825:
 	GET_ADDRESS	sync_variable_06a3         	| [$8825: lda sync_variable_06a3]
-	tst.b	(a0)                         	| [$8825: lda sync_variable_06a3]
+	BIT	(a0)                         	| [$8825: lda sync_variable_06a3]
 	beq	l_8825                             	| [$8828: beq	$8825]
 	
 	* now screen is in sync, display screen
@@ -8042,7 +8047,7 @@ l_9cf3:
 l_9d0a:
 	clr.b	d0                               	| [$9d0a: lda #$00]
 	GET_ADDRESS	0x000b                     	| [$9d0c: bit	$000b]
-	tst.b	(a0)                             	| [$9d0c: bit	$000b]
+	BIT	(a0)                             	| [$9d0c: bit	$000b]
 	bpl	l_9d1a                             	| [$9d0e: bpl	$9d1a]
 	GET_ADDRESS	player_active_array_0077                     	| [$9d10: sta	$0077]
 	move.b	d0,(a0)                         	| [$9d10: sta	$0077]
@@ -8065,7 +8070,7 @@ l_9d1a:
 	* (lower than 5 => some fireworks are trashed in the highscore
 	* screen, so it's probably not designed for that)
 	GET_ADDRESS	number_of_credits_00c1
-	tst.b	(a0)
+	BIT	(a0)
 	jne		0f
 	move.b	#0x05,d0
 0:
@@ -8255,7 +8260,7 @@ l_9dfa:
 	GET_ADDRESS	0x001e                     	| [$9dfa: stx	$001e]
 	move.b	d1,(a0)                         	| [$9dfa: stx	$001e]
 	GET_ADDRESS	0x000b                     	| [$9dfc: bit	$000b]
-	tst.b	(a0)                             	| [$9dfc: bit	$000b]
+	BIT	(a0)                             	| [$9dfc: bit	$000b]
 	bpl	l_9e02                             	| [$9dfe: bpl	$9e02]
 	move.b	#0x02,d1                        	| [$9e00: ldx #$02]
 l_9e02:
@@ -8679,7 +8684,7 @@ l_a05f:
 	GET_ADDRESS	logical_grid_address_msb_or_controls_0020                     	| [$a05f: stx	$0020]
 	move.b	d1,(a0)                         	| [$a05f: stx	$0020]
 	GET_ADDRESS	0x000b                     	| [$a061: bit	$000b]
-	tst.b	(a0)                             	| [$a061: bit	$000b]
+	BIT	(a0)                             	| [$a061: bit	$000b]
 	bpl	l_a07b                             	| [$a063: bpl	$a07b]
 	move.b	d1,d0                           	| [$a065: txa]
 	eor.b	#0x01,d0                         	| [$a066: eor #$01]
@@ -8701,7 +8706,7 @@ l_a07b:
 	GET_ADDRESS	logical_grid_address_lsb_001f                     	| [$a081: sta	$001f]
 	move.b	d0,(a0)                         	| [$a081: sta	$001f]
 	GET_ADDRESS	0x000b                     	| [$a083: bit	$000b]
-	tst.b	(a0)                             	| [$a083: bit	$000b]
+	BIT	(a0)                             	| [$a083: bit	$000b]
 	bpl	l_a089                             	| [$a085: bpl	$a089]
 	clr.b	d1                               	| [$a087: ldx #$00]
 l_a089:
@@ -8881,7 +8886,7 @@ l_a14a:
     move.b	d0,(a0,d1.w)                 	| [$a160: sta	$0097, x]
 l_a162:
 	GET_ADDRESS	0x000b                     	| [$a162: bit	$000b]
-	tst.b	(a0)                             	| [$a162: bit	$000b]
+	BIT	(a0)                             	| [$a162: bit	$000b]
 	bpl	l_a17a                             	| [$a164: bpl	$a17a]
 	move.b	d1,d0                           	| [$a166: txa]
 	eor.b	#0x01,d0                         	| [$a167: eor #$01]
@@ -9291,7 +9296,7 @@ l_a337:
 l_a347:
 	move.b	#0xf0,d0                        	| [$a347: lda #$f0]
 	GET_ADDRESS	0x000b                     	| [$a349: bit	$000b]
-	tst.b	(a0)                             	| [$a349: bit	$000b]
+	BIT	(a0)                             	| [$a349: bit	$000b]
 	bpl	l_a34f                             	| [$a34b: bpl	$a34f]
 	clr.b	d0                               	| [$a34d: lda #$00]
 l_a34f:
@@ -9330,7 +9335,7 @@ l_a34f:
 	move.b	d0,(a0,d2.w)                    	| [$a36f: sta ($1f), y]
 	move.b	#0xf0,d0                        	| [$a371: lda #$f0]
 	GET_ADDRESS	0x000b                     	| [$a373: bit	$000b]
-	tst.b	(a0)                             	| [$a373: bit	$000b]
+	BIT	(a0)                             	| [$a373: bit	$000b]
 	bpl	l_a379                             	| [$a375: bpl	$a379]
 	clr.b	d0                               	| [$a377: lda #$00]
 l_a379:
@@ -9341,7 +9346,7 @@ l_a379:
 l_a37d:
 	move.b	#0xf0,d0                        	| [$a37d: lda #$f0]
 	GET_ADDRESS	0x000b                     	| [$a37f: bit	$000b]
-	tst.b	(a0)                             	| [$a37f: bit	$000b]
+	BIT	(a0)                             	| [$a37f: bit	$000b]
 	bpl	l_a385                             	| [$a381: bpl	$a385]
 	move.b	#0x08,d0                        	| [$a383: lda #$08]
 l_a385:
@@ -9380,7 +9385,7 @@ l_a385:
 	move.b	d0,(a0,d2.w)                    	| [$a3a5: sta ($1f), y]
 	move.b	#0xf0,d0                        	| [$a3a7: lda #$f0]
 	GET_ADDRESS	0x000b                     	| [$a3a9: bit	$000b]
-	tst.b	(a0)                             	| [$a3a9: bit	$000b]
+	BIT	(a0)                             	| [$a3a9: bit	$000b]
 	bpl	l_a3af                             	| [$a3ab: bpl	$a3af]
 	move.b	#0x08,d0                        	| [$a3ad: lda #$08]
 l_a3af:
@@ -9506,7 +9511,7 @@ update_video_memory_a43a:
 	and.b	#0xfe,d0                         	| [$a440: and #$fe]
 	move.b	d0,(a0)                         	| [$a442: sta	$0020]
 	GET_ADDRESS	0x000b                     	| [$a444: bit	$000b]
-	tst.b	(a0)                             	| [$a444: bit	$000b]
+	BIT	(a0)                             	| [$a444: bit	$000b]
 	bpl	l_a44a                             	| [$a446: bpl	$a44a]
 	move.b	#0x02,d1                        	| [$a448: ldx #$02]
 l_a44a:
@@ -9913,7 +9918,7 @@ l_a642:
 	bmi	l_a657                             	| [$a64b: bmi	$a657]
 l_a64d:
 	GET_ADDRESS	unknown_001d                     	| [$a64d: bit	$001d]
-	tst.b	(a0)                             	| [$a64d: bit	$001d]
+	BIT	(a0)                             	| [$a64d: bit	$001d]
 	bmi	l_a657                             	| [$a64f: bmi	$a657]
 	cmp.b	#0x12,d2                         	| [$a651: cpy #$12]
 	* bcs=>bcc
@@ -12070,7 +12075,7 @@ l_b12f:
 	move.b	d1,d0                           	| [$b12f: txa]
 	move.b	d0,d2                           	| [$b130: tay]
 	GET_ADDRESS	0x000b                     	| [$b131: bit	$000b]
-	tst.b	(a0)                             	| [$b131: bit	$000b]
+	BIT	(a0)                             	| [$b131: bit	$000b]
 	bpl	l_b137                             	| [$b133: bpl	$b137]
 	move.b	#0x02,d2                        	| [$b135: ldy #$02]
 l_b137:
@@ -12957,7 +12962,7 @@ l_b4f1:
 	                           	| [$b4f7: clc]
 	addq.b	#0x01,d0                        	| [$b4f8: adc #$01]
 	GET_ADDRESS	0x000b                     	| [$b4fa: bit	$000b]
-	tst.b	(a0)                             	| [$b4fa: bit	$000b]
+	BIT	(a0)                             	| [$b4fa: bit	$000b]
 	bpl	l_b501                             	| [$b4fc: bpl	$b501]
 	                           	| [$b4fe: clc]
 	add.b	#0x03,d0                        	| [$b4ff: adc #$03]
@@ -13168,7 +13173,7 @@ l_b607:
 	GET_ADDRESS	0x001c                     	| [$b620: sta	$001c]
 	move.b	d0,(a0)                         	| [$b620: sta	$001c]
 	GET_ADDRESS	0x000b                     	| [$b622: bit	$000b]
-	tst.b	(a0)                             	| [$b622: bit	$000b]
+	BIT	(a0)                             	| [$b622: bit	$000b]
 	bpl	l_b634                             	| [$b624: bpl	$b634]
 	GET_ADDRESS	game_state_0008                     	| [$b626: lda	$0008]
 	move.b	(a0),d0                         	| [$b626: lda	$0008]
@@ -16612,7 +16617,7 @@ l_ca1a:
 	move.b	d0,(a0)                         	| [$ca24: sta	$001f]
 	POP_SR
 	GET_ADDRESS	0x000b                     	| [$ca26: bit	$000b]
-	tst.b	(a0)                             	| [$ca26: bit	$000b]
+	BIT	(a0)                             	| [$ca26: bit	$000b]
 	bpl	l_ca2c                             	| [$ca28: bpl	$ca2c]
 	move.b	#0x02,d1                        	| [$ca2a: ldx #$02]
 l_ca2c:
@@ -19857,7 +19862,7 @@ l_ea14:
 	rts                                    	| [$ea14: rts]
 l_ea15:
 	GET_ADDRESS	0x000b                     	| [$ea15: bit	$000b]
-	tst.b	(a0)                             	| [$ea15: bit	$000b]
+	BIT	(a0)                             	| [$ea15: bit	$000b]
 	bpl	l_ea24                             	| [$ea17: bpl	$ea24]
 	move.b	d1,d0                           	| [$ea19: txa]
 	eor.b	#0x01,d0                         	| [$ea1a: eor #$01]
