@@ -5782,7 +5782,7 @@ display_screen_and_other_stuff_8818:
 	clr.b	(a0)                         	| [$8822: sta sync_variable_06a3]
 l_8825:
 	GET_ADDRESS	sync_variable_06a3         	| [$8825: lda sync_variable_06a3]
-	BIT	(a0)                         	| [$8825: lda sync_variable_06a3]
+	tst.b	(a0)                         	| [$8825: lda sync_variable_06a3]
 	beq	l_8825                             	| [$8828: beq	$8825]
 	
 	* now screen is in sync, display screen
@@ -8440,7 +8440,7 @@ l_9ec3:
 	PUSH_SR			| required
 	move.b	d4,(a0)	| [$9ec3: asl	$001b]
 	POP_SR			| required
-	bcc	l_9ecc                             	| [$9ec5: bcc	$9ecc]
+	jcc	l_9ecc                             	| [$9ec5: bcc	$9ecc]
 	clr.b	d0                               	| [$9ec7: lda #$00]
 	GET_ADDRESS	0x0148                     	| [$9ec9: sta	$0148, x]
     move.b	d0,(a0,d1.w)                 	| [$9ec9: sta	$0148, x]
