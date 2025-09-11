@@ -227,26 +227,26 @@ coin_counters_3C00 = 0x3C00
 
 	
 	.macro INVERT_XC_FLAGS
-	PUSH_SR
-	move.w	(sp),d4
-	eor.b	#0x11,d4
-	move.w	d4,(sp)
-	POP_SR
+	eor.b	#0x11,ccr
 	.endm
 	
 	.macro CLR_XC_FLAGS
-	moveq	#0,d7
-	roxl.b	#1,d7
-	.endm
-	.macro SET_XC_FLAGS
-	st	d7
-	roxl.b	#1,d7
+	and.b	#0xEE,ccr		| bit 4 = X, bit 0 = C
 	.endm
 	
+	.macro SET_XC_FLAGS
+	or.b	#0x11,ccr		| bit 4 = X, bit 0 = C
+	.endm
+	
+	.macro	SET_Z_FLAG
+	cmp.b	d4,d4
+	.endm
+
 	.macro	SBC_X	address
 	INVERT_XC_FLAGS
 	GET_ADDRESS	\address
 	move.b	(a0,d1.w),d4
+	SET_Z_FLAG		| set Z flag as subx never sets it!
 	subx.b	d4,d0
 	INVERT_XC_FLAGS
 	.endm
@@ -255,6 +255,7 @@ coin_counters_3C00 = 0x3C00
 	INVERT_XC_FLAGS
 	GET_ADDRESS	\address
 	move.b	(a0,d2.w),d4
+	SET_Z_FLAG		| set Z flag as subx never sets it!
 	subx.b	d4,d0
 	INVERT_XC_FLAGS
 	.endm
@@ -263,6 +264,7 @@ coin_counters_3C00 = 0x3C00
 	INVERT_XC_FLAGS
 	GET_ADDRESS	\address
 	move.b	(a0),d4
+	SET_Z_FLAG		| set Z flag as subx never sets it!
 	subx.b	d4,d0
 	INVERT_XC_FLAGS
 	.endm
@@ -270,6 +272,7 @@ coin_counters_3C00 = 0x3C00
 	.macro	SBC_IMM	param
 	INVERT_XC_FLAGS
 	move.b	#\param,d4
+	SET_Z_FLAG		| set Z flag as subx never sets it!
 	subx.b	d4,d0
 	INVERT_XC_FLAGS
 	.endm
@@ -17656,13 +17659,13 @@ l_d696:
 	GET_ADDRESS	0x0000                     	| [$d6a8: adc	$0000]
 	move.b	(a0),d4	| [$d6a8: adc	$0000]
 	addx.b	d4,d0                         	| [$d6a8: adc	$0000]
-	GET_ADDRESS	0x0000                     	| [$d6aa: sta	$0000]
+	                     	| [$d6aa: sta	$0000]
 	move.b	d0,(a0)                         	| [$d6aa: sta	$0000]
 	GET_ADDRESS	0x0001                     	| [$d6ac: lda	$0001]
 	move.b	(a0),d0                         	| [$d6ac: lda	$0001]
 	clr.b	d4	| [$d6ae: adc #$00]
 	addx.b	d4,d0                        	| [$d6ae: adc #$00]
-	GET_ADDRESS	0x0001                     	| [$d6b0: sta	$0001]
+	                     	| [$d6b0: sta	$0001]
 	move.b	d0,(a0)                         	| [$d6b0: sta	$0001]
 	jbsr	display_text_d65c             	| [$d6b2: jsr	$d65c]
 	addq.b	#1,d2                           	| [$d6b5: iny]
@@ -17869,7 +17872,7 @@ l_d78a:
 	cmp.b	(a0),d0                          	| [$d790: cmp	$0051]
 	beq	l_d7a0                             	| [$d792: beq	$d7a0]
 	PUSH_SR		| required
-	GET_ADDRESS	0x0051                     	| [$d794: sta	$0051]
+	                     	| [$d794: sta	$0051]
 	move.b	d0,(a0)                         	| [$d794: sta	$0051]
 	POP_SR		| required
 	* bcc=>bcs (cmp)
