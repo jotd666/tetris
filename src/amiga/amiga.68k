@@ -1894,7 +1894,6 @@ handle_keyboard:
 	move.b	#0x30,(a0)+
 	move.b	#0x30,(a0)
 	
-
 0:
 10:
 	.ifndef	RELEASE
